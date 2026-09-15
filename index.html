@@ -1,20 +1,158 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>AirTrack Pro - 合宙 Air8202G 全景时空多端交互系统</title>
+    
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- ECharts 5 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 腾讯地图 GLJS SDK -->
+    <script src="https://map.qq.com/api/gljs?v=1.exp&key=EZNBZ-VA6KW-ASMRR-3UE4S-M3QCO-EYBC6"></script>
+
     <script>
-      var coverSupport = 'CSS' in window && typeof CSS.supports === 'function' && (CSS.supports('top: env(a)') ||
-        CSS.supports('top: constant(a)'))
-      document.write(
-        '<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0' +
-        (coverSupport ? ', viewport-fit=cover' : '') + '" />')
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              cyber: {
+                950: '#030712',
+                900: '#070d1d',
+                850: '#0c152a',
+                800: '#121f3d',
+                700: '#192b54',
+                primary: '#00f0ff',
+                emerald: '#10b981',
+                amber: '#f59e0b',
+                rose: '#f43f5e',
+                indigo: '#6366f1'
+              }
+            },
+            boxShadow: {
+              'glow-cyan': '0 0 20px -2px rgba(0, 240, 255, 0.45)',
+              'glow-emerald': '0 0 20px -2px rgba(16, 185, 129, 0.45)',
+              'glow-rose': '0 0 20px -2px rgba(244, 63, 94, 0.45)',
+              'handle-glow': '0 0 14px rgba(0, 240, 255, 0.95)',
+              'popover-shadow': '0 20px 40px -10px rgba(0, 0, 0, 0.85), 0 0 25px rgba(0, 240, 255, 0.25)',
+              'sheet-shadow': '0 -10px 30px -5px rgba(0, 0, 0, 0.85), 0 -2px 10px rgba(0, 240, 255, 0.15)',
+              'fab-shadow': '0 8px 24px -4px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 240, 255, 0.45)'
+            }
+          }
+        }
+      }
     </script>
-    <title></title>
-    <!--preload-links-->
-    <!--app-context-->
+
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: rgba(7, 13, 29, 0.4); }
+      ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.25); border-radius: 99px; }
+      ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+      
+      .glass-panel {
+        background: rgba(7, 13, 29, 0.92);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .drawer-transition {
+        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .compass-ring {
+        border: 2px dashed rgba(0, 240, 255, 0.35);
+        border-radius: 50%;
+      }
+
+      @keyframes pulse-cyan {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.3; transform: scale(1.25); }
+      }
+      .animate-pulse-cyan {
+        animation: pulse-cyan 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+
+      .playhead-needle {
+        box-shadow: 0 0 10px #ffffff, 0 0 20px rgba(0, 240, 255, 0.85);
+      }
+
+      .timeline-ticks {
+        background: repeating-linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.08) 0,
+          rgba(255, 255, 255, 0.08) 1px,
+          transparent 1px,
+          transparent 2.5%
+        );
+      }
+
+      .timeline-ticks-major {
+        background: repeating-linear-gradient(
+          90deg,
+          rgba(0, 240, 255, 0.25) 0,
+          rgba(0, 240, 255, 0.25) 1px,
+          transparent 1px,
+          transparent 25%
+        );
+      }
+
+      .hover-needle-dashed {
+        background-image: linear-gradient(to bottom, #00f0ff 60%, rgba(255, 255, 255, 0) 0%);
+        background-position: left;
+        background-size: 1.5px 8px;
+        background-repeat: repeat-y;
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
+      }
+
+      .handle-hit-zone {
+        position: absolute;
+        top: -8px;
+        bottom: -8px;
+        width: 32px;
+        cursor: ew-resize !important;
+        touch-action: none;
+        user-select: none;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .handle-hit-zone-left { left: -16px; }
+      .handle-hit-zone-right { right: -16px; }
+
+      body.is-dragging-handle {
+        cursor: ew-resize !important;
+        user-select: none !important;
+      }
+      body.is-dragging-body {
+        cursor: grabbing !important;
+        user-select: none !important;
+      }
+
+      @media (max-width: 767px) {
+        .sheet-peek {
+          height: 74px !important;
+          overflow: hidden !important;
+        }
+        .sheet-half {
+          height: 48vh !important;
+        }
+        .sheet-full {
+          height: 86vh !important;
+        }
+      }
+    </style>
   </head>
-  <body>
-    <div id="app"><!--app-html--></div>
+  <body class="bg-cyber-950 text-slate-100 font-sans antialiased h-screen w-screen overflow-hidden relative select-none">
+    <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

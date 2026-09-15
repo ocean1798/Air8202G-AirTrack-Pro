@@ -1,104 +1,1792 @@
 <template>
   <div class="relative w-screen h-screen overflow-hidden bg-cyber-950 text-slate-100 font-sans antialiased select-none">
     
-    <!-- 1. 全景地图底座 -->
-    <MapEngine ref="mapRef" class="absolute inset-0 z-0" />
+    <!-- ==================== 1. 全景腾讯 WebGL 地图底座 ==================== -->
+    <div id="main-map" class="absolute inset-0 w-full h-full z-0 bg-cyber-950"></div>
 
-    <!-- 2. 顶部双模隔离导航 Bar -->
+    <!-- ==================== 2. 顶部轻量浮动 Bar (响应式双模严格隔离) ==================== -->
     <header class="absolute top-2 left-2 right-2 md:top-3 md:left-3 md:right-3 z-30 pointer-events-none">
-      <!-- 移动端专享 (< md) -->
-      <DeviceBarMobile @open-auth="showAuthModal = true" />
       
-      <!-- 桌面端专享 (>= md) -->
-      <HeaderDesktop
-        @open-auth="showAuthModal = true"
-        @recenter="handleRecenter"
-        @toggle-dock="isDesktopDockOpen = !isDesktopDockOpen"
-        @toggle-inspector="isDesktopInspectorOpen = !isDesktopInspectorOpen"
-      />
+      <!-- 2.1 移动端独占顶部 Bar (< md 严格呈现，>= md 彻底隐藏) -->
+      <div class="md:hidden glass-panel w-full p-1.5 rounded-2xl flex items-center shadow-xl border border-white/10 pointer-events-auto backdrop-blur-2xl bg-cyber-900/90">
+        
+        <!-- 移动端专享：头条/抖音式多设备横向滑动频道栏 -->
+        <div class="flex-1 overflow-x-auto no-scrollbar flex items-center space-x-1.5 pr-3 [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)]" id="mobile-device-channel-bar">
+          
+          <button @click="selectDeviceTab('864317087173038')" id="mob-tab-dev-864317087173038" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-primary/70 bg-cyber-primary/20 text-cyber-primary shadow-glow-cyan flex items-center space-x-1.5 transition-all active:scale-95">
+            <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
+            <span class="text-xs font-bold text-white whitespace-nowrap">上海测试机</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/20 text-cyber-emerald border border-cyber-emerald/30 font-bold">92%</span>
+          </button>
+
+          <button @click="selectDeviceTab('864317087172121')" id="mob-tab-dev-864317087172121" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+            <span class="text-xs font-medium whitespace-nowrap">开封测试机</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-400">65%</span>
+          </button>
+
+          <button @click="selectDeviceTab('864317087174592')" id="mob-tab-dev-864317087174592" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
+            <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
+            <span class="text-xs font-medium whitespace-nowrap">深圳测试机</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/15 text-cyber-emerald">88%</span>
+          </button>
+
+          <button @click="selectDeviceTab('864317087175110')" id="mob-tab-dev-864317087175110" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            <span class="text-xs font-medium whitespace-nowrap">北京测试机</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-500/15 text-amber-400">45%</span>
+          </button>
+
+          <button @click="selectDeviceTab('864317087176233')" id="mob-tab-dev-864317087176233" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
+            <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
+            <span class="text-xs font-medium whitespace-nowrap">广州测试机</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/15 text-cyber-emerald">72%</span>
+          </button>
+
+        </div>
+
+        <!-- 移动端专享：分隔竖线 -->
+        <div class="w-px h-5 bg-white/10 mx-1.5 shrink-0"></div>
+
+        <!-- 移动端专享：纯用户头像 (不带电话号码) -->
+        <button @click="toggleOfficialModal()" title="官方评测账号管理" class="shrink-0 relative group p-0.5 rounded-full border border-cyber-primary/50 shadow-glow-cyan hover:border-cyber-primary active:scale-95 transition-all bg-cyber-950/80">
+          <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-600/40 via-cyber-800 to-blue-600/50 flex items-center justify-center overflow-hidden border border-white/20">
+            <i data-lucide="user" class="w-3.5 h-3.5 text-cyber-primary"></i>
+          </div>
+          <span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-cyber-emerald border-2 border-cyber-950"></span>
+        </button>
+
+      </div>
+
+      <!-- 2.2 桌面 Web 端独占顶部 Bar (>= md 严格完整呈现) -->
+      <div class="hidden md:flex items-center justify-between w-full pointer-events-none">
+        
+        <!-- 桌面端左侧：品牌与在网状态完整标牌 -->
+        <div class="glass-panel px-3.5 py-2 rounded-2xl flex items-center space-x-3 pointer-events-auto border border-cyber-700/60 shadow-lg">
+          <div class="w-7 h-7 rounded-xl bg-gradient-to-tr from-cyan-500/30 to-blue-600/40 border border-cyber-primary/50 flex items-center justify-center shadow-glow-cyan">
+            <i data-lucide="satellite" class="w-4 h-4 text-cyber-primary"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-1.5">
+              <span class="font-bold text-xs tracking-wider text-white">AirTrack Pro</span>
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold">Web 控制台</span>
+            </div>
+            <div class="text-[10px] text-slate-400 font-mono flex items-center space-x-2">
+              <span id="desktop-top-device-name" class="text-slate-200">8202G·上海测试机 (在线)</span>
+              <span class="text-cyber-emerald">● 4G蜂窝畅通</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 桌面端右侧控制簇：完整评测账号电话号码 + 顶部定位回正 + 左右侧边栏控制键 -->
+        <div class="flex items-center space-x-2 pointer-events-auto">
+          
+          <!-- 桌面端完整保留：评测账号明文胶囊 -->
+          <button @click="toggleOfficialModal()" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
+            <span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan"></span>
+            <span class="text-slate-400">评测账号:</span>
+            <span class="font-bold text-white tracking-wider">18101796680</span>
+          </button>
+
+          <!-- 桌面端顶部回中键 -->
+          <button @click="recenterVehicle()" title="镜头平滑聚焦回当前车辆" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg active:scale-90">
+            <i data-lucide="crosshair" class="w-4 h-4"></i>
+          </button>
+
+          <!-- 桌面端左侧设备坞折叠键 -->
+          <button @click="toggleDeviceDock()" id="btn-dock" title="展开/收起左侧在网设备坞" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
+            <i data-lucide="layers" class="w-4 h-4"></i>
+          </button>
+
+          <!-- 桌面端右侧感知面板折叠键 -->
+          <button @click="toggleInspectorDrawer()" id="btn-inspector" title="展开/收起右侧感知面板" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
+            <i data-lucide="panel-right" class="w-4 h-4"></i>
+          </button>
+
+        </div>
+
+      </div>
     </header>
 
-    <!-- 3. 桌面端左侧设备泊位坞 (hidden md:flex) -->
-    <DeviceDockDesktop :is-open="isDesktopDockOpen" />
+    <!-- ==================== 3. 桌面端独占：左侧在网设备泊位坞 (hidden md:flex) ==================== -->
+    <aside id="device-dock" class="hidden md:flex drawer-transition fixed top-16 left-3 bottom-28 w-72 md:w-80 glass-panel rounded-2xl border border-cyber-700/60 z-20 flex-col pointer-events-auto shadow-2xl">
+      <div class="p-3 border-b border-cyber-700/50 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="navigation-2" class="w-3.5 h-3.5 text-cyber-primary"></i>
+          <span class="text-xs font-bold text-slate-200">在网感知节点</span>
+        </div>
+        <span class="text-[10px] font-mono text-slate-400 bg-cyber-900 px-2 py-0.5 rounded border border-cyber-700">共 5 台</span>
+      </div>
 
-    <!-- 4. 移动端专享：悬浮回正 FAB (md:hidden，零碰撞定位于 bottom-[172px]) -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-2" id="desktop-device-card-list">
+        
+        <!-- 设备 1 卡片: 上海测试机 -->
+        <div @click="selectDeviceTab('864317087173038')" id="card-desk-864317087173038" class="desk-dev-card p-3 rounded-xl border border-cyber-primary/60 bg-cyber-primary/10 cursor-pointer transition-all hover:border-cyber-primary">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
+              <span class="text-xs font-bold text-white">8202G·上海测试机</span>
+            </div>
+            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30">在线</span>
+          </div>
+          <div class="text-[10px] font-mono text-slate-400 mt-1">IMEI: 864317087173038</div>
+          <div class="text-[10px] text-slate-300 mt-1 truncate">上海市静安区海宁路北站街道</div>
+          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono">
+            <span class="text-cyber-emerald font-bold">4080mV (92%)</span>
+            <span class="text-cyber-primary bg-cyber-primary/10 px-1.5 py-0.5 rounded border border-cyber-primary/20">预估 ~42天</span>
+            <span class="text-slate-400">CSQ 31</span>
+          </div>
+        </div>
+
+        <!-- 设备 2 卡片: 开封测试机 -->
+        <div @click="selectDeviceTab('864317087172121')" id="card-desk-864317087172121" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+              <span class="text-xs font-bold text-slate-300">8202G·开封测试机</span>
+            </div>
+            <span class="text-[9px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">待机</span>
+          </div>
+          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087172121</div>
+          <div class="text-[10px] text-slate-400 mt-1 truncate">河南省开封市鼓楼区南苑街道</div>
+          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
+            <span>3820mV (65%)</span>
+            <span>预估 ~28天</span>
+            <span>CSQ 28</span>
+          </div>
+        </div>
+
+        <!-- 设备 3 卡片: 深圳测试机 -->
+        <div @click="selectDeviceTab('864317087174592')" id="card-desk-864317087174592" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-cyber-emerald"></span>
+              <span class="text-xs font-bold text-slate-300">8202G·深圳测试机</span>
+            </div>
+            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded">在线</span>
+          </div>
+          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087174592</div>
+          <div class="text-[10px] text-slate-400 mt-1 truncate">广东省深圳市福田区市民广场</div>
+          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
+            <span>3990mV (88%)</span>
+            <span>预估 ~38天</span>
+            <span>CSQ 31</span>
+          </div>
+        </div>
+
+        <!-- 设备 4 卡片: 北京测试机 -->
+        <div @click="selectDeviceTab('864317087175110')" id="card-desk-864317087175110" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span class="text-xs font-bold text-slate-300">8202G·北京测试机</span>
+            </div>
+            <span class="text-[9px] font-mono text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded">在线</span>
+          </div>
+          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087175110</div>
+          <div class="text-[10px] text-slate-400 mt-1 truncate">北京市东城区东长安街</div>
+          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
+            <span>3750mV (45%)</span>
+            <span>预估 ~16天</span>
+            <span>CSQ 26</span>
+          </div>
+        </div>
+
+        <!-- 设备 5 卡片: 广州测试机 -->
+        <div @click="selectDeviceTab('864317087176233')" id="card-desk-864317087176233" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-cyber-emerald"></span>
+              <span class="text-xs font-bold text-slate-300">8202G·广州测试机</span>
+            </div>
+            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded">在线</span>
+          </div>
+          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087176233</div>
+          <div class="text-[10px] text-slate-400 mt-1 truncate">广东省广州市越秀区人民公园</div>
+          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
+            <span>3910mV (72%)</span>
+            <span>预估 ~32天</span>
+            <span>CSQ 30</span>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- ==================== 4. 移动端独占：右下角悬浮回正 FAB (< md) ==================== -->
     <div class="md:hidden fixed right-3 z-30 transition-all duration-300 bottom-[172px] pointer-events-auto">
-      <button
-        @click="handleRecenter"
-        title="镜头平滑聚焦回当前车辆位置"
-        class="w-10 h-10 rounded-2xl glass-panel border border-cyber-primary/60 text-cyber-primary flex items-center justify-center shadow-fab-shadow hover:bg-cyber-primary/20 hover:scale-105 active:scale-90 transition-all backdrop-blur-xl bg-cyber-900/90 text-sm"
-      >
-        🎯
+      <button @click="recenterVehicle()" title="镜头平滑聚焦回当前车辆位置" class="w-10 h-10 rounded-2xl glass-panel border border-cyber-primary/60 text-cyber-primary flex items-center justify-center shadow-fab-shadow hover:bg-cyber-primary/20 hover:scale-105 active:scale-90 transition-all backdrop-blur-xl group bg-cyber-900/90">
+        <i data-lucide="crosshair" class="w-5 h-5 text-cyber-primary group-hover:rotate-45 transition-transform"></i>
       </button>
     </div>
 
-    <!-- 5. 核心自适应感知面板 (移动端底部弹性三档抽屉 vs 桌面端右侧控制台) -->
-    <InspectorDrawer :is-desktop-open="isDesktopInspectorOpen" />
+    <!-- ==================== 5. 核心：【双端双模感知面板】 ==================== -->
+    <aside id="inspector-drawer" class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-cyber-700/80 glass-panel shadow-sheet-shadow flex flex-col drawer-transition sheet-peek md:fixed md:inset-x-auto md:top-16 md:right-3 md:bottom-28 md:w-80 md:lg:w-96 md:rounded-2xl md:border md:border-cyber-700/60 md:z-20 md:shadow-2xl md:h-auto md:max-h-none">
+      
+      <!-- 移动端把手 -->
+      <div id="sheet-drag-handle" class="w-full flex flex-col items-center pt-1.5 pb-0.5 cursor-pointer md:hidden active:opacity-75 touch-none">
+        <div class="w-10 h-1 bg-slate-400/50 rounded-full hover:bg-cyber-primary transition-colors"></div>
+      </div>
 
-    <!-- 6. 底部自适应时间轴控制台 -->
-    <div
-      class="
-        fixed bottom-[82px] left-2 right-2 z-20 flex flex-col items-center pointer-events-none transition-all duration-300
-        md:fixed md:bottom-3 md:left-3 md:right-3 md:max-w-5xl md:mx-auto md:z-20
-      "
-    >
-      <TimelineHud />
+      <!-- 顶部固定车况头 -->
+      <div id="sheet-header-bar" class="px-3.5 py-2 border-b border-cyber-700/60 bg-cyber-900/95 flex items-center justify-between shrink-0 cursor-pointer md:cursor-default select-none">
+        <div class="flex-1">
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-bold text-white tracking-wide truncate max-w-[140px] sm:max-w-none" id="drawer-vehicle-name">8202G·上海测试机</span>
+            <span class="text-[9px] font-mono text-cyber-primary bg-cyber-primary/10 border border-cyber-primary/30 px-1.5 py-0.2 rounded" id="drawer-gnss-badge">GNSS 3D</span>
+          </div>
+          <div class="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center space-x-1.5 leading-tight">
+            <span id="drawer-coord-text" class="truncate max-w-[150px] sm:max-w-none">31.2407°N, 121.4888°E</span>
+            <span class="font-bold px-1.5 py-0.2 rounded text-[10px] transition-colors" id="drawer-speed-badge">18.2 km/h</span>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button @click.stop="toggleQuickArm()" id="btn-quick-arm" class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-cyber-emerald text-white hover:bg-emerald-600 transition flex items-center space-x-1 shadow-glow-emerald">
+            <i data-lucide="shield-check" class="w-3 h-3"></i>
+            <span id="quick-arm-text">已设防</span>
+          </button>
+
+          <button id="btn-sheet-chevron" class="md:hidden p-1 text-slate-400 hover:text-white transition-transform">
+            <i data-lucide="chevron-up" class="w-4 h-4" id="icon-sheet-chevron"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 纵向平铺流式内容体 -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-3.5 scroll-smooth overscroll-contain">
+        
+        <!-- 模块 1 · 3D姿态与航向拟真 -->
+        <section class="glass-panel p-3 rounded-xl border border-cyber-primary/30 flex flex-col items-center justify-center shadow-lg">
+          <div class="w-full flex items-center justify-between text-[11px] mb-1">
+            <span class="text-slate-200 font-bold flex items-center space-x-1.5">
+              <i data-lucide="compass" class="w-3.5 h-3.5 text-cyber-primary"></i>
+              <span>3D 姿态与航向拟真</span>
+            </span>
+            <span class="text-[9px] font-mono text-cyber-primary bg-cyber-primary/10 px-1.5 py-0.5 rounded border border-cyber-primary/30">25Hz IMU</span>
+          </div>
+
+          <div class="relative w-32 h-32 sm:w-36 sm:h-36 my-2 flex items-center justify-center">
+            <div class="compass-ring w-32 h-32 sm:w-36 sm:h-36 flex items-center justify-center shadow-glow-cyan">
+              <div id="horizon-disc" class="absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border border-cyber-primary/30 flex flex-col items-center justify-center bg-gradient-to-b from-cyan-950/40 via-cyber-900 to-amber-950/40 transition-transform duration-100">
+                <div class="w-full h-0.5 bg-cyber-primary shadow-glow-cyan"></div>
+                <div class="text-[8px] font-mono text-cyber-primary/80 mt-0.5">HORIZON</div>
+              </div>
+              <div id="yaw-pointer" class="absolute w-1 h-24 sm:h-28 bg-gradient-to-t from-transparent via-rose-500 to-rose-400 rounded-full transition-transform duration-100"></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 w-full text-center text-[10px] font-mono mt-1">
+            <div class="bg-cyber-900 p-1.5 rounded-lg border border-cyber-700/50">
+              <div class="text-slate-400">俯仰 (Pitch)</div>
+              <div class="text-xs font-bold text-cyber-primary mt-0.5" id="val-pitch">+4.2°</div>
+            </div>
+            <div class="bg-cyber-900 p-1.5 rounded-lg border border-cyber-700/50">
+              <div class="text-slate-400">横滚 (Roll)</div>
+              <div class="text-xs font-bold text-cyber-emerald mt-0.5" id="val-roll">-1.5°</div>
+            </div>
+            <div class="bg-cyber-900 p-1.5 rounded-lg border border-cyber-700/50">
+              <div class="text-slate-400">航向 (Yaw)</div>
+              <div class="text-xs font-bold text-cyber-amber mt-0.5" id="val-yaw">68.0°</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 模块 2 · 三轴加速度动态波形 -->
+        <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 shadow-lg">
+          <div class="flex items-center justify-between text-[11px] mb-1">
+            <span class="text-slate-200 font-bold flex items-center space-x-1.5">
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-cyber-emerald"></i>
+              <span>三轴加速度波形 (Tag 1293)</span>
+            </span>
+            <span class="text-[9px] font-mono text-cyan-400">Z: 982mg</span>
+          </div>
+          <div id="chart-accel" class="w-full h-32 sm:h-36"></div>
+        </section>
+
+        <!-- 模块 3 · 工业级 Tag 遥测黑匣子明细 -->
+        <section class="glass-panel rounded-xl overflow-hidden border border-cyber-700/60 shadow-lg">
+          <div class="p-2.5 bg-cyber-900/90 border-b border-cyber-700/50 flex items-center justify-between text-[11px]">
+            <span class="text-slate-200 font-bold flex items-center space-x-1.5">
+              <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyber-primary"></i>
+              <span>AirCloud 工业级 Tag 字典</span>
+            </span>
+            <span class="text-[9px] font-mono text-cyber-emerald">实时校验通过</span>
+          </div>
+          <div class="font-mono text-[11px] divide-y divide-cyber-700/40">
+            <div class="p-2.5 flex items-center justify-between bg-cyber-900/40">
+              <span class="text-cyber-primary font-bold">Tag 799 (电池供电)</span>
+              <span class="text-cyber-emerald font-bold" id="tel-tag-batt">4080 mV (92%)</span>
+            </div>
+            <div class="p-2.5 flex items-center justify-between">
+              <span class="text-cyber-primary font-bold">Tag 782 (蜂窝信号)</span>
+              <span class="text-cyan-300 font-bold" id="tel-tag-csq">CSQ 31 (4G满格)</span>
+            </div>
+            <div class="p-2.5 flex items-center justify-between bg-cyber-900/40">
+              <span class="text-cyber-primary font-bold">Tag 512 / 513 (经纬度)</span>
+              <span class="text-slate-200" id="tel-tag-coords">31.2407°N, 121.4888°E</span>
+            </div>
+            <div class="p-2.5 flex items-center justify-between">
+              <span class="text-cyber-primary font-bold">Tag 514 (行驶航速)</span>
+              <span class="text-cyber-emerald font-bold" id="tel-tag-speed">18.2 km/h</span>
+            </div>
+            <div class="p-2.5 flex items-center justify-between bg-cyber-900/40">
+              <span class="text-cyber-primary font-bold">Tag 1294 (差分轨迹包)</span>
+              <span class="text-slate-300">10s 稠密差分同步</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 模块 4 · 智能电子围栏控制 -->
+        <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 space-y-2.5 shadow-lg">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-200 font-bold flex items-center space-x-1.5">
+              <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-cyber-amber"></i>
+              <span>智能电子围栏防盗</span>
+            </span>
+            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1.5 py-0.5 rounded">围栏内 (安全)</span>
+          </div>
+          <p class="text-[10px] text-slate-400">已根据当前驻留锚点设定半径 1000 米安全圈，越界将立即触发飞书与短信告警。</p>
+          <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[10px] font-mono">
+            <span class="text-slate-400">震动防盗灵敏度:</span>
+            <span class="text-cyber-primary font-bold">中级 (0.5g)</span>
+          </div>
+        </section>
+
+        <!-- 模块 5 · 时空行程质检与数据画像 -->
+        <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 space-y-2 shadow-lg">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-200 font-bold flex items-center space-x-1.5">
+              <i data-lucide="file-bar-chart" class="w-3.5 h-3.5 text-cyber-indigo"></i>
+              <span>行程质量与画像评分</span>
+            </span>
+            <span class="text-[9px] font-mono text-slate-400">全量加权</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div class="bg-cyber-900/80 p-2.5 rounded-lg border border-cyber-700/50">
+              <div class="text-[10px] text-slate-400">总行驶里程</div>
+              <div class="text-base font-black text-white mt-0.5">18.6 <span class="text-[10px] text-slate-400 font-normal">km</span></div>
+            </div>
+            <div class="bg-cyber-900/80 p-2.5 rounded-lg border border-cyber-700/50">
+              <div class="text-[10px] text-slate-400">巡航均速</div>
+              <div class="text-base font-black text-cyber-primary mt-0.5">22.4 <span class="text-[10px] text-slate-400 font-normal">km/h</span></div>
+            </div>
+            <div class="bg-cyber-900/80 p-2.5 rounded-lg border border-cyber-700/50">
+              <div class="text-[10px] text-slate-400">怠速驻留累计</div>
+              <div class="text-base font-black text-amber-400 mt-0.5">12.5 <span class="text-[10px] text-slate-400 font-normal">min</span></div>
+            </div>
+            <div class="bg-cyber-900/80 p-2.5 rounded-lg border border-cyber-700/50">
+              <div class="text-[10px] text-slate-400">驾驶评分</div>
+              <div class="text-base font-black text-cyber-emerald mt-0.5">96.8 <span class="text-[10px] text-slate-400 font-normal">分</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 底部防遮挡垫片 -->
+        <div class="h-6"></div>
+      </div>
+    </aside>
+
+    <!-- ==================== 6. 底部核心：【双端自适应时间轴控制台】 ==================== -->
+    <div id="timeline-hud-wrapper" class="fixed bottom-[82px] left-2 right-2 z-20 flex flex-col items-center pointer-events-none transition-all duration-300 md:fixed md:bottom-3 md:left-3 md:right-3 md:max-w-5xl md:mx-auto md:z-20">
+      
+      <!-- 6.0 宏观历史跨度配置弹层 -->
+      <div id="date-range-popover" class="w-full max-w-xl glass-panel p-3.5 sm:p-4 rounded-2xl border border-cyber-primary/40 shadow-popover-shadow mb-2 hidden pointer-events-auto transition-all backdrop-blur-2xl">
+        <div class="flex items-center justify-between pb-2 border-b border-white/10">
+          <div class="flex items-center space-x-1.5 text-xs font-bold text-white">
+            <i data-lucide="calendar-range" class="w-3.5 h-3.5 text-cyber-primary"></i>
+            <span>历史轨迹时空跨度 (AirCloud)</span>
+          </div>
+          <button @click="toggleDateRangePopover()" class="text-slate-400 hover:text-white p-1">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div class="mt-2.5">
+          <div class="text-[10px] font-mono text-slate-400 mb-1">快速跨度:</div>
+          <div class="grid grid-cols-3 sm:grid-cols-6 gap-1 text-[11px] font-mono">
+            <button @click="selectMacroPreset('today')" id="macro-btn-today" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">今日</button>
+            <button @click="selectMacroPreset('yesterday')" id="macro-btn-yesterday" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">昨日</button>
+            <button @click="selectMacroPreset('3d')" id="macro-btn-3d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近3天</button>
+            <button @click="selectMacroPreset('7d')" id="macro-btn-7d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近7天</button>
+            <button @click="selectMacroPreset('30d')" id="macro-btn-30d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近1月</button>
+            <button @click="selectMacroPreset('90d')" id="macro-btn-90d" class="macro-chip py-1 rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition">近1季</button>
+          </div>
+        </div>
+
+        <div class="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between flex-wrap gap-2 text-xs font-mono">
+          <div class="flex items-center space-x-1 text-[11px]">
+            <input type="date" id="input-date-start" value="2026-09-01" class="bg-cyber-950 border border-cyber-700/80 rounded px-1.5 py-0.5 text-slate-200 text-[10px] focus:border-cyber-primary focus:outline-none">
+            <span class="text-slate-500">-</span>
+            <input type="date" id="input-date-end" value="2026-09-10" class="bg-cyber-950 border border-cyber-700/80 rounded px-1.5 py-0.5 text-slate-200 text-[10px] focus:border-cyber-primary focus:outline-none">
+          </div>
+          <button @click="applyCustomDateRange()" class="px-3 py-1 rounded-xl bg-cyber-primary text-cyber-950 font-bold text-xs hover:bg-cyan-300 transition shadow-glow-cyan flex items-center space-x-1">
+            <i data-lucide="search" class="w-3 h-3"></i>
+            <span>加载</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 6.1 超薄一体化控制容器 (高度 74px) -->
+      <div id="timeline-hud-capsule" class="w-full glass-panel px-3 py-2 rounded-2xl flex flex-col pointer-events-auto border border-white/10 shadow-2xl space-y-1.5 bg-gradient-to-b from-cyber-900/95 via-cyber-900/90 to-cyber-950/95">
+        
+        <!-- 纯净速度山脉轨道区 -->
+        <div class="relative w-full">
+          
+          <div id="timeline-track-container" class="relative w-full h-9 sm:h-10 bg-cyber-950 rounded-xl border border-white/10 overflow-visible cursor-crosshair flex items-center shadow-inner touch-none">
+            
+            <canvas id="speed-wave-canvas" class="absolute inset-0 w-full h-full rounded-xl pointer-events-none"></canvas>
+
+            <div class="absolute inset-0 timeline-ticks pointer-events-none rounded-xl opacity-20"></div>
+            <div class="absolute inset-0 timeline-ticks-major pointer-events-none rounded-xl opacity-30"></div>
+
+            <div id="mask-left" class="absolute top-0 bottom-0 left-0 bg-cyber-950/80 backdrop-blur-[1px] rounded-l-xl pointer-events-none z-10 hidden" style="width: 15%;"></div>
+            <div id="mask-right" class="absolute top-0 bottom-0 right-0 bg-cyber-950/80 backdrop-blur-[1px] rounded-r-xl pointer-events-none z-10 hidden" style="width: 25%;"></div>
+
+            <div id="range-capsule" class="absolute top-0 bottom-0 z-10 hidden" style="left: 15%; width: 60%;">
+              <div id="range-body" class="w-full h-full border-t-2 border-b-2 border-cyber-primary shadow-[0_0_16px_rgba(0,240,255,0.3)] flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-cyan-400/[0.04] transition-colors touch-none">
+              </div>
+
+              <div id="handle-left-hitbox" class="handle-hit-zone handle-hit-zone-left">
+                <div class="w-2 h-6 sm:h-7 bg-gradient-to-r from-cyan-400 to-cyan-300 rounded-md flex items-center justify-center shadow-handle-glow border border-white/80 pointer-events-none">
+                  <div class="w-0.5 h-3 rounded-full bg-cyber-950"></div>
+                </div>
+                <div id="drag-bubble-left" class="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-cyber-950/95 border border-cyan-400 rounded text-[9px] font-mono font-bold text-cyan-300 shadow-xl pointer-events-none whitespace-nowrap hidden z-40 backdrop-blur-md">
+                  07-16 18:27
+                </div>
+              </div>
+
+              <div id="handle-right-hitbox" class="handle-hit-zone handle-hit-zone-right">
+                <div class="w-2 h-6 sm:h-7 bg-gradient-to-r from-cyan-300 to-cyan-400 rounded-md flex items-center justify-center shadow-handle-glow border border-white/80 pointer-events-none">
+                  <div class="w-0.5 h-3 rounded-full bg-cyber-950"></div>
+                </div>
+                <div id="drag-bubble-right" class="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-cyber-950/95 border border-cyan-400 rounded text-[9px] font-mono font-bold text-cyan-300 shadow-xl pointer-events-none whitespace-nowrap hidden z-40 backdrop-blur-md">
+                  07-27 17:58
+                </div>
+              </div>
+            </div>
+
+            <div id="playhead-needle" class="absolute top-0 bottom-0 w-0.5 bg-white z-20 pointer-events-none playhead-needle" style="left: 100%;">
+              <div class="w-3.5 h-3.5 bg-white rounded-full absolute -top-1.5 -left-1.5 shadow-glow-cyan flex items-center justify-center border-2 border-cyber-950">
+                <div class="w-1.5 h-1.5 rounded-full bg-cyber-primary transition-colors" id="playhead-inner-dot"></div>
+              </div>
+            </div>
+
+            <div id="hover-needle" class="absolute top-0 bottom-0 w-[2px] hover-needle-dashed z-20 pointer-events-none hidden" style="left: 50%;">
+              <div class="w-3 h-3 bg-cyber-primary rounded-full absolute -top-1.5 -left-[5px] shadow-[0_0_12px_#00f0ff] flex items-center justify-center">
+                <div class="w-1 h-1 bg-white rounded-full"></div>
+              </div>
+              <div id="hover-bubble" class="absolute -top-8 -translate-x-1/2 px-2 py-0.5 bg-cyber-900/95 border border-cyan-400 rounded-lg text-[9px] sm:text-[10px] font-mono font-bold text-white shadow-xl pointer-events-none whitespace-nowrap backdrop-blur-md flex items-center space-x-1 z-40">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                <span id="hover-bubble-time" class="text-cyan-300">12:07:00</span>
+                <span class="text-slate-500">|</span>
+                <span id="hover-bubble-speed" class="text-emerald-400">58.3 km/h</span>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="flex items-center justify-between text-[8px] sm:text-[9px] font-mono text-slate-400 mt-1 px-1">
+            <span id="scale-tick-start">08:00</span>
+            <span id="scale-tick-1">09:30</span>
+            <span id="scale-tick-2" class="hidden sm:inline">11:00</span>
+            <span id="scale-tick-3">12:30</span>
+            <span id="scale-tick-end" class="text-cyber-primary font-bold flex items-center space-x-1">
+              <span>14:00 (最新)</span>
+              <span class="w-1 h-1 rounded-full bg-cyber-primary animate-pulse-cyan"></span>
+            </span>
+          </div>
+
+        </div>
+
+        <!-- 单行一体化流线工具条 -->
+        <div class="flex items-center justify-between flex-wrap gap-1.5 pt-1 border-t border-white/5 text-xs font-mono">
+          
+          <!-- 模式切换器 -->
+          <div class="flex items-center bg-cyber-950/90 rounded-xl border border-white/10 p-0.5 shadow-inner">
+            <button @click="switchMasterMode('live')" id="btn-mode-live" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
+              <span>跟随最新</span>
+            </button>
+            <button @click="switchMasterMode('range')" id="btn-mode-range" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1">
+              <i data-lucide="sliders" class="w-3 h-3"></i>
+              <span>区间回放</span>
+            </button>
+            
+            <div id="macro-date-divider" class="h-3.5 w-px bg-white/10 mx-1 hidden"></div>
+            
+            <button @click="toggleDateRangePopover()" id="btn-date-trigger" class="px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-[11px] text-slate-200 hover:text-cyber-primary transition flex items-center space-x-1 group hidden">
+              <i data-lucide="calendar" class="w-3 h-3 text-cyber-primary"></i>
+              <span id="current-range-label" class="font-bold truncate max-w-[70px] sm:max-w-none">近90天</span>
+              <i data-lucide="chevron-down" class="w-2.5 h-2.5 text-slate-400"></i>
+            </button>
+          </div>
+
+          <!-- 播放控制簇 -->
+          <div id="unified-play-cluster" class="flex items-center space-x-1.5 hidden">
+            <div class="flex items-center bg-cyber-950/90 p-0.5 rounded-xl border border-white/10">
+              <button @click="toggleRangePlay()" id="btn-range-play" class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:brightness-110 transition flex items-center space-x-1 shadow-glow-emerald">
+                <i data-lucide="play" class="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" id="icon-range-play"></i>
+                <span id="txt-range-play">播放</span>
+              </button>
+              <button @click="setPlaySpeed(1, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-cyber-primary/20 text-cyber-primary font-bold">1x</button>
+              <button @click="setPlaySpeed(5, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white">5x</button>
+            </div>
+
+            <button @click="applyTimePreset('sprint')" class="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-cyber-rose font-bold text-[10px] sm:text-[11px] bg-rose-500/15 border border-rose-500/40 hover:bg-rose-500/25 shadow-glow-rose transition">
+              <span>🏎️ 疾驰</span>
+            </button>
+          </div>
+
+          <!-- 状态呈现区 -->
+          <div class="flex items-center space-x-1.5 text-[10px] sm:text-[11px]">
+            
+            <div id="live-status-bar" class="flex items-center space-x-1 sm:space-x-2">
+              <div class="flex items-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
+                <span class="text-cyber-emerald font-bold hidden sm:inline">实时锁定</span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <span id="live-latest-time" class="text-white font-bold">14:00:00</span>
+              </div>
+              <span class="text-slate-500">·</span>
+              <div class="flex items-center space-x-1">
+                <span id="live-latest-speed" class="text-cyber-primary font-bold">18.2 km/h</span>
+              </div>
+            </div>
+
+            <div id="range-status-bar" class="flex items-center space-x-1 sm:space-x-2 hidden">
+              <div class="flex items-center space-x-1">
+                <span id="current-point-time" class="text-white font-bold">07-27 17:58</span>
+                <span id="current-speed-tag" class="px-1 py-0.2 rounded text-[9px] font-bold border transition-all">
+                  31.5 km/h
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
     </div>
 
-    <!-- 7. 官方评测账号管理弹层 -->
-    <AuthModal :is-open="showAuthModal" @close="showAuthModal = false" />
+    <!-- ==================== 7. 官方评测账号弹窗 ==================== -->
+    <div id="official-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="glass-panel max-w-sm w-full p-6 rounded-2xl border border-cyber-primary/40 shadow-glow-cyan relative">
+        <button @click="toggleOfficialModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+        <div class="text-center">
+          <div class="w-10 h-10 rounded-xl bg-cyber-primary/20 border border-cyber-primary text-cyber-primary flex items-center justify-center mx-auto mb-3 shadow-glow-cyan">
+            <i data-lucide="key" class="w-5 h-5"></i>
+          </div>
+          <h3 class="text-sm font-bold text-white">评测账号与会话接入</h3>
+          <p class="text-xs text-slate-400 mt-1">AirCloud Open API v5 凭据管理</p>
+        </div>
+        <div class="mt-5 space-y-3">
+          <div class="bg-cyber-900/80 p-3 rounded-xl border border-cyber-primary/30 text-xs font-mono space-y-1">
+            <div class="text-slate-400">官方在网评测主账号:</div>
+            <div class="text-cyber-primary font-bold">账号: 18101796680</div>
+            <div class="text-slate-300">密码: Hz8202</div>
+            <div class="text-cyber-emerald text-[10px] pt-1">● 5 台真机已全部完成时空对齐</div>
+          </div>
+          <button @click="toggleOfficialModal();" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan">
+            确认保持连接
+          </button>
+        </div>
+      </div>
+    </div>
 
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useDeviceStore } from '../../stores/device';
-import { useTimelineStore } from '../../stores/timeline';
-import MapEngine from '../../components/MapEngine.vue';
-import TimelineHud from '../../components/TimelineHud.vue';
-import InspectorDrawer from '../../components/InspectorDrawer.vue';
-import DeviceBarMobile from '../../components/DeviceBarMobile.vue';
-import DeviceDockDesktop from '../../components/DeviceDockDesktop.vue';
-import HeaderDesktop from '../../components/HeaderDesktop.vue';
-import AuthModal from '../../components/AuthModal.vue';
+import { onMounted, onUnmounted } from 'vue';
 
-const deviceStore = useDeviceStore();
-const timelineStore = useTimelineStore();
+declare const TMap: any;
+declare const lucide: any;
+declare const echarts: any;
 
-const mapRef = ref<any>(null);
-const showAuthModal = ref(false);
-const isDesktopDockOpen = ref(true);
-const isDesktopInspectorOpen = ref(true);
+// 动态生成高保真雷达脉冲车辆图标
+function generateCarMarkerIcon() {
+  const c = document.createElement('canvas');
+  c.width = 48;
+  c.height = 48;
+  const ctx = c.getContext('2d');
+  if (!ctx) return '';
+  
+  ctx.beginPath();
+  ctx.arc(24, 24, 21, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 240, 255, 0.22)';
+  ctx.fill();
+  ctx.strokeStyle = '#00f0ff';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
 
-function handleRecenter() {
-  if (mapRef.value?.recenter) {
-    mapRef.value.recenter();
+  ctx.beginPath();
+  ctx.arc(24, 24, 14, 0, Math.PI * 2);
+  ctx.fillStyle = '#070d1d';
+  ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(24, 14);
+  ctx.lineTo(31, 30);
+  ctx.lineTo(24, 26);
+  ctx.lineTo(17, 30);
+  ctx.closePath();
+  ctx.fillStyle = '#00f0ff';
+  ctx.fill();
+
+  return c.toDataURL();
+}
+
+const DEVICES_DB: Record<string, any> = {
+  '864317087173038': {
+    name: '8202G·上海测试机',
+    shortName: '上海测试机',
+    lat: 31.240713,
+    lng: 121.488828,
+    battMv: '4080 mV (92%)',
+    csq: 'CSQ 31 (满格)',
+    speed: '18.2 km/h',
+    status: '在线'
+  },
+  '864317087172121': {
+    name: '8202G·开封测试机',
+    shortName: '开封测试机',
+    lat: 34.7872,
+    lng: 114.3396,
+    battMv: '3820 mV (65%)',
+    csq: 'CSQ 28 (良好)',
+    speed: '0.0 km/h',
+    status: '待机'
+  },
+  '864317087174592': {
+    name: '8202G·深圳测试机',
+    shortName: '深圳测试机',
+    lat: 22.5431,
+    lng: 114.0579,
+    battMv: '3990 mV (88%)',
+    csq: 'CSQ 31 (满格)',
+    speed: '34.5 km/h',
+    status: '在线'
+  },
+  '864317087175110': {
+    name: '8202G·北京测试机',
+    shortName: '北京测试机',
+    lat: 39.9042,
+    lng: 116.4074,
+    battMv: '3750 mV (45%)',
+    csq: 'CSQ 26 (中等)',
+    speed: '12.0 km/h',
+    status: '在线'
+  },
+  '864317087176233': {
+    name: '8202G·广州测试机',
+    shortName: '广州测试机',
+    lat: 23.1291,
+    lng: 113.2644,
+    battMv: '3910 mV (72%)',
+    csq: 'CSQ 30 (良好)',
+    speed: '28.6 km/h',
+    status: '在线'
+  }
+};
+
+let activeDeviceId = '864317087173038';
+
+function selectDeviceTab(imei: string) {
+  activeDeviceId = imei;
+  const dev = DEVICES_DB[imei];
+  if (!dev) return;
+
+  document.querySelectorAll('.mob-device-tab').forEach(tab => {
+    tab.className = 'mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95';
+  });
+  const activeMobTab = document.getElementById('mob-tab-dev-' + imei);
+  if (activeMobTab) {
+    activeMobTab.className = 'mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-primary/70 bg-cyber-primary/20 text-cyber-primary shadow-glow-cyan flex items-center space-x-1.5 transition-all active:scale-95';
+    activeMobTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+
+  document.querySelectorAll('.desk-dev-card').forEach(card => {
+    card.className = 'desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500';
+  });
+  const activeDeskCard = document.getElementById('card-desk-' + imei);
+  if (activeDeskCard) {
+    activeDeskCard.className = 'desk-dev-card p-3 rounded-xl border border-cyber-primary/60 bg-cyber-primary/10 cursor-pointer transition-all hover:border-cyber-primary';
+  }
+
+  const deskTopName = document.getElementById('desktop-top-device-name');
+  if (deskTopName) {
+    deskTopName.innerText = `${dev.name} (${dev.status})`;
+  }
+
+  const elName = document.getElementById('drawer-vehicle-name');
+  if (elName) elName.innerText = dev.name;
+  const elCoord = document.getElementById('drawer-coord-text');
+  if (elCoord) elCoord.innerText = `${dev.lat.toFixed(4)}°N, ${dev.lng.toFixed(4)}°E`;
+  const elTagCoord = document.getElementById('tel-tag-coords');
+  if (elTagCoord) elTagCoord.innerText = `${dev.lat.toFixed(4)}°N, ${dev.lng.toFixed(4)}°E`;
+  const elBatt = document.getElementById('tel-tag-batt');
+  if (elBatt) elBatt.innerText = dev.battMv;
+  const elCsq = document.getElementById('tel-tag-csq');
+  if (elCsq) elCsq.innerText = dev.csq;
+
+  if ((window as any).__map) {
+    const center = new TMap.LatLng(dev.lat, dev.lng);
+    (window as any).__map.panTo(center);
+    if ((window as any).__vehicleMarker) {
+      (window as any).__vehicleMarker.setGeometries([{
+        id: 'v1',
+        styleId: 'car_icon',
+        position: center,
+        properties: { title: dev.name }
+      }]);
+    }
   }
 }
 
-onMounted(async () => {
-  // 初始化拉取设备列表与初始轨迹
-  await deviceStore.fetchDevices();
-  if (deviceStore.activeDevice) {
-    await timelineStore.loadTrackData(deviceStore.activeDevice.imei, 'recent_window');
+function recenterVehicle() {
+  selectDeviceTab(activeDeviceId);
+}
+
+const TOTAL_POINTS = 100;
+let TRACK_POINTS: any[] = [];
+const baseLat = 31.2307, baseLng = 121.4700;
+let currentMacroScope = '90d';
+
+function generateTrackDataForScope(scope: string, startDate: string | null = null, endDate: string | null = null) {
+  TRACK_POINTS = [];
+  let startTimeMs = 0, endTimeMs = 0;
+  const now = new Date('2026-09-10T14:00:00');
+
+  if (scope === 'today' || scope === 'recent_window') {
+    startTimeMs = new Date('2026-09-10T12:00:00').getTime();
+    endTimeMs = now.getTime();
+  } else if (scope === 'yesterday') {
+    startTimeMs = new Date('2026-09-09T00:00:00').getTime();
+    endTimeMs = new Date('2026-09-09T23:59:59').getTime();
+  } else if (scope === '3d') {
+    startTimeMs = new Date('2026-09-07T00:00:00').getTime();
+    endTimeMs = now.getTime();
+  } else if (scope === '7d') {
+    startTimeMs = new Date('2026-09-03T00:00:00').getTime();
+    endTimeMs = now.getTime();
+  } else if (scope === '30d') {
+    startTimeMs = new Date('2026-08-11T00:00:00').getTime();
+    endTimeMs = now.getTime();
+  } else if (scope === '90d') {
+    startTimeMs = new Date('2026-06-12T00:00:00').getTime();
+    endTimeMs = now.getTime();
+  } else if (scope === 'custom' && startDate && endDate) {
+    startTimeMs = new Date(startDate + 'T00:00:00').getTime();
+    endTimeMs = new Date(endDate + 'T23:59:59').getTime();
+  } else {
+    startTimeMs = new Date('2026-09-10T12:00:00').getTime();
+    endTimeMs = now.getTime();
+  }
+
+  const isMultiDay = (endTimeMs - startTimeMs) > 86400000;
+
+  for (let i = 0; i < TOTAL_POINTS; i++) {
+    const ratio = i / (TOTAL_POINTS - 1);
+    const curMs = startTimeMs + ratio * (endTimeMs - startTimeMs);
+    const curDate = new Date(curMs);
+
+    const lat = baseLat + ratio * 0.024 + Math.sin(i * 0.25) * 0.003;
+    const lng = baseLng + ratio * 0.036 + Math.cos(i * 0.25) * 0.003;
+    
+    let speed = 0;
+    if (i < 8) speed = 0;
+    else if (i < 25) speed = 12 + Math.sin(i * 0.5) * 8;
+    else if (i >= 25 && i < 32) speed = 0;
+    else if (i >= 32 && i < 55) speed = 25 + Math.sin(i * 0.3) * 10;
+    else if (i >= 55 && i < 78) speed = 48 + Math.sin(i * 0.4) * 14;
+    else speed = 18 + Math.sin(i * 0.5) * 6;
+    speed = Math.max(0, parseFloat(speed.toFixed(1)));
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const Y = curDate.getFullYear();
+    const M = pad(curDate.getMonth() + 1);
+    const D = pad(curDate.getDate());
+    const h = pad(curDate.getHours());
+    const m = pad(curDate.getMinutes());
+    const s = pad(curDate.getSeconds());
+
+    const timeStr = `${Y}-${M}-${D} ${h}:${m}:${s}`;
+    TRACK_POINTS.push({ lat, lng, speed, timeStr, curDate, isMultiDay, index: i });
+  }
+
+  updateTimelineScaleTicks(isMultiDay);
+  drawSpeedWaveCanvas();
+}
+
+function updateTimelineScaleTicks(isMultiDay: boolean) {
+  const pStart = TRACK_POINTS[0];
+  const pMid1 = TRACK_POINTS[Math.floor(TOTAL_POINTS * 0.25)];
+  const pMid2 = TRACK_POINTS[Math.floor(TOTAL_POINTS * 0.5)];
+  const pMid3 = TRACK_POINTS[Math.floor(TOTAL_POINTS * 0.75)];
+  const pEnd = TRACK_POINTS[TOTAL_POINTS - 1];
+
+  const fmt = (p: any, label = '') => {
+    if (!p) return '';
+    if (isMultiDay) {
+      const M = String(p.curDate.getMonth() + 1).padStart(2, '0');
+      const D = String(p.curDate.getDate()).padStart(2, '0');
+      return `${M}-${D}${label}`;
+    } else {
+      return `${p.timeStr.slice(11, 16)}${label}`;
+    }
+  };
+
+  const tStart = document.getElementById('scale-tick-start');
+  if (tStart) tStart.innerText = fmt(pStart);
+  const t1 = document.getElementById('scale-tick-1');
+  if (t1) t1.innerText = fmt(pMid1);
+  const t2 = document.getElementById('scale-tick-2');
+  if (t2) t2.innerText = fmt(pMid2);
+  const t3 = document.getElementById('scale-tick-3');
+  if (t3) t3.innerText = fmt(pMid3);
+  const tEnd = document.getElementById('scale-tick-end');
+  if (tEnd) tEnd.innerHTML = `<span>${fmt(pEnd)}</span><span class="w-1 h-1 rounded-full bg-cyber-primary animate-pulse-cyan"></span>`;
+}
+
+const CHROMA_STOPS = [
+  { v: 0,  r: 59,  g: 130, b: 246, hex: '#3b82f6', name: '静止' },
+  { v: 12, r: 0,   g: 240, b: 255, hex: '#00f0ff', name: '起步' },
+  { v: 24, r: 16,  g: 185, b: 129, hex: '#10b981', name: '巡航' },
+  { v: 38, r: 234, g: 179, b: 8,   hex: '#eab308', name: '畅行' },
+  { v: 50, r: 249, g: 115, b: 22,  hex: '#f97316', name: '飞驰' },
+  { v: 65, r: 244, g: 63,  b: 94,  hex: '#f43f5e', name: '极速' }
+];
+
+function getContinuousSpeedColor(speed: number) {
+  if (speed <= CHROMA_STOPS[0].v) {
+    const s = CHROMA_STOPS[0];
+    return { rgb: `rgb(${s.r},${s.g},${s.b})`, hex: s.hex, name: s.name, rgba: (a: number) => `rgba(${s.r},${s.g},${s.b},${a})` };
+  }
+  const last = CHROMA_STOPS[CHROMA_STOPS.length - 1];
+  if (speed >= last.v) {
+    return { rgb: `rgb(${last.r},${last.g},${last.b})`, hex: last.hex, name: last.name, rgba: (a: number) => `rgba(${last.r},${last.g},${last.b},${a})` };
+  }
+
+  for (let i = 0; i < CHROMA_STOPS.length - 1; i++) {
+    const s1 = CHROMA_STOPS[i];
+    const s2 = CHROMA_STOPS[i + 1];
+    if (speed >= s1.v && speed <= s2.v) {
+      const t = (speed - s1.v) / (s2.v - s1.v);
+      const r = Math.round(s1.r + (s2.r - s1.r) * t);
+      const g = Math.round(s1.g + (s2.g - s1.g) * t);
+      const b = Math.round(s1.b + (s2.b - s1.b) * t);
+      const hex = '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      const name = t > 0.5 ? s2.name : s1.name;
+      return { rgb: `rgb(${r},${g},${b})`, hex: hex, name: name, rgba: (a: number) => `rgba(${r},${g},${b},${a})` };
+    }
+  }
+  return { rgb: 'rgb(0,240,255)', hex: '#00f0ff', name: '巡航', rgba: (a: number) => `rgba(0,240,255,${a})` };
+}
+
+function drawSpeedWaveCanvas() {
+  const canvas = document.getElementById('speed-wave-canvas') as HTMLCanvasElement;
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width;
+  const h = rect.height;
+
+  ctx.fillStyle = '#060a17';
+  ctx.fillRect(0, 0, w, h);
+
+  if (!TRACK_POINTS.length) return;
+
+  const pts: any[] = [];
+  const BASELINE_H = 3;
+  const MAX_WAVE_H = h - 5;
+  for (let i = 0; i < TOTAL_POINTS; i++) {
+    const x = (i / (TOTAL_POINTS - 1)) * w;
+    const sp = TRACK_POINTS[i].speed;
+    const waveH = BASELINE_H + (sp / 65) * (MAX_WAVE_H - BASELINE_H);
+    const y = h - waveH;
+    pts.push({ x, y, speed: sp });
+  }
+
+  const speedGradient = ctx.createLinearGradient(0, 0, w, 0);
+  for (let i = 0; i < TOTAL_POINTS; i++) {
+    const stop = i / (TOTAL_POINTS - 1);
+    speedGradient.addColorStop(stop, getContinuousSpeedColor(TRACK_POINTS[i].speed).rgb);
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, h);
+  ctx.lineTo(pts[0].x, pts[0].y);
+  for (let i = 0; i < pts.length - 1; i++) {
+    const xc = (pts[i].x + pts[i + 1].x) / 2;
+    const yc = (pts[i].y + pts[i + 1].y) / 2;
+    ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+  }
+  ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+  ctx.lineTo(w, h);
+  ctx.closePath();
+
+  ctx.fillStyle = speedGradient;
+  ctx.globalAlpha = 0.88;
+  ctx.fill();
+
+  const verticalLight = ctx.createLinearGradient(0, 0, 0, h);
+  verticalLight.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+  verticalLight.addColorStop(0.4, 'rgba(255, 255, 255, 0.1)');
+  verticalLight.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+  ctx.fillStyle = verticalLight;
+  ctx.globalCompositeOperation = 'overlay';
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 0; i < pts.length - 1; i++) {
+    const xc = (pts[i].x + pts[i + 1].x) / 2;
+    const yc = (pts[i].y + pts[i + 1].y) / 2;
+    ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+  }
+  ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+  ctx.strokeStyle = '#ffffff';
+  ctx.shadowColor = '#00f0ff';
+  ctx.shadowBlur = 4;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle = speedGradient;
+  ctx.fillRect(0, h - 2, w, 2);
+}
+
+let masterMode = 'live';
+let isPlaying = false;
+let playTimer: any = null;
+let playSpeed = 1;
+
+let rangeStart = 37.0;
+let rangeEnd = 50.5;
+
+let committedPlayhead = 100;
+let isHovering = false;
+let isDragging = false;
+
+function toggleDateRangePopover() {
+  if (masterMode === 'live') return;
+  const popover = document.getElementById('date-range-popover');
+  if (popover) popover.classList.toggle('hidden');
+}
+
+function selectMacroPreset(preset: string) {
+  currentMacroScope = preset;
+  document.querySelectorAll('.macro-chip').forEach(b => {
+    b.className = 'macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition';
+  });
+  const activeBtn = document.getElementById('macro-btn-' + preset);
+  if (activeBtn) {
+    activeBtn.className = 'macro-chip py-1 rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition';
+  }
+
+  const label = document.getElementById('current-range-label');
+  if (label) {
+    if (preset === 'today') label.innerText = '今日';
+    else if (preset === 'yesterday') label.innerText = '昨日';
+    else if (preset === '3d') label.innerText = '近3天';
+    else if (preset === '7d') label.innerText = '近7天';
+    else if (preset === '30d') label.innerText = '近1月';
+    else if (preset === '90d') label.innerText = '近1季';
+  }
+
+  generateTrackDataForScope(preset);
+  toggleDateRangePopover();
+
+  if (masterMode === 'range') {
+    renderRangeTrackOnMap();
+  } else {
+    renderFullColoredTrackOnMap();
+  }
+  renderStateAtPosition(committedPlayhead, false);
+  updateRangeDOM();
+}
+
+function applyCustomDateRange() {
+  const dStart = (document.getElementById('input-date-start') as HTMLInputElement)?.value;
+  const dEnd = (document.getElementById('input-date-end') as HTMLInputElement)?.value;
+  if (!dStart || !dEnd) return;
+
+  currentMacroScope = 'custom';
+  const label = document.getElementById('current-range-label');
+  if (label) label.innerText = `${dStart.slice(5)}~${dEnd.slice(5)}`;
+  generateTrackDataForScope('custom', dStart, dEnd);
+  toggleDateRangePopover();
+
+  if (masterMode === 'range') {
+    renderRangeTrackOnMap();
+  } else {
+    renderFullColoredTrackOnMap();
+  }
+  renderStateAtPosition(committedPlayhead, false);
+  updateRangeDOM();
+}
+
+function switchMasterMode(mode: string) {
+  masterMode = mode;
+  
+  const btnLive = document.getElementById('btn-mode-live');
+  const btnRange = document.getElementById('btn-mode-range');
+  
+  const dateDivider = document.getElementById('macro-date-divider');
+  const dateTrigger = document.getElementById('btn-date-trigger');
+  const popover = document.getElementById('date-range-popover');
+  
+  const playCluster = document.getElementById('unified-play-cluster');
+  const rangeCapsule = document.getElementById('range-capsule');
+  const maskLeft = document.getElementById('mask-left');
+  const maskRight = document.getElementById('mask-right');
+  
+  const liveStatusBar = document.getElementById('live-status-bar');
+  const rangeStatusBar = document.getElementById('range-status-bar');
+
+  stopRangePlayback();
+  if (popover) popover.classList.add('hidden');
+
+  if (mode === 'live') {
+    if (btnLive) btnLive.className = 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan';
+    if (btnRange) btnRange.className = 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1';
+    
+    if (dateDivider) dateDivider.classList.add('hidden');
+    if (dateTrigger) dateTrigger.classList.add('hidden');
+
+    if (playCluster) playCluster.classList.add('hidden');
+    if (rangeCapsule) rangeCapsule.classList.add('hidden');
+    if (maskLeft) maskLeft.classList.add('hidden');
+    if (maskRight) maskRight.classList.add('hidden');
+
+    if (liveStatusBar) liveStatusBar.classList.remove('hidden');
+    if (rangeStatusBar) rangeStatusBar.classList.add('hidden');
+
+    generateTrackDataForScope('recent_window');
+
+    committedPlayhead = 100;
+    renderStateAtPosition(committedPlayhead, false);
+    renderFullColoredTrackOnMap();
+    recenterVehicle();
+  } else {
+    if (btnLive) btnLive.className = 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1';
+    if (btnRange) btnRange.className = 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan';
+    
+    if (dateDivider) dateDivider.classList.remove('hidden');
+    if (dateTrigger) dateTrigger.classList.remove('hidden');
+
+    if (playCluster) playCluster.classList.remove('hidden');
+    if (rangeCapsule) rangeCapsule.classList.remove('hidden');
+    if (maskLeft) maskLeft.classList.remove('hidden');
+    if (maskRight) maskRight.classList.remove('hidden');
+
+    if (liveStatusBar) liveStatusBar.classList.add('hidden');
+    if (rangeStatusBar) rangeStatusBar.classList.remove('hidden');
+
+    generateTrackDataForScope(currentMacroScope);
+
+    committedPlayhead = rangeEnd;
+    updateRangeDOM();
+    renderStateAtPosition(committedPlayhead, false);
+    renderRangeTrackOnMap();
+  }
+}
+
+function renderStateAtPosition(percent: number, isPreview = false) {
+  if (!TRACK_POINTS.length) return;
+  const idx = Math.min(Math.floor((percent / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+  const pt = TRACK_POINTS[idx];
+  const sColor = getContinuousSpeedColor(pt.speed);
+
+  if (!isPreview) {
+    const playheadNeedle = document.getElementById('playhead-needle');
+    if (playheadNeedle) playheadNeedle.style.left = percent + '%';
+    const dot = document.getElementById('playhead-inner-dot');
+    if (dot) dot.style.backgroundColor = sColor.hex;
+
+    const liveTime = document.getElementById('live-latest-time');
+    if (liveTime) liveTime.innerText = pt.timeStr.slice(11, 19);
+    const liveSpeed = document.getElementById('live-latest-speed');
+    if (liveSpeed) {
+      liveSpeed.innerText = `${pt.speed} km/h`;
+      liveSpeed.style.color = sColor.hex;
+    }
+
+    const timeBox = document.getElementById('current-point-time');
+    if (timeBox) timeBox.innerText = pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 16);
+
+    const speedTag = document.getElementById('current-speed-tag');
+    if (speedTag) {
+      speedTag.style.backgroundColor = sColor.rgba(0.2);
+      speedTag.style.borderColor = sColor.rgba(0.5);
+      speedTag.style.color = sColor.hex;
+      speedTag.innerText = `${pt.speed} km/h`;
+    }
+  }
+
+  const elCoord = document.getElementById('drawer-coord-text');
+  if (elCoord) elCoord.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
+  const elTagCoord = document.getElementById('tel-tag-coords');
+  if (elTagCoord) elTagCoord.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
+  
+  const drawerSpeed = document.getElementById('drawer-speed-badge');
+  if (drawerSpeed) {
+    drawerSpeed.style.backgroundColor = sColor.rgba(0.2);
+    drawerSpeed.style.color = sColor.hex;
+    drawerSpeed.innerText = `${pt.speed} km/h`;
+  }
+  const telSpeed = document.getElementById('tel-tag-speed');
+  if (telSpeed) {
+    telSpeed.style.color = sColor.hex;
+    telSpeed.innerText = `${pt.speed} km/h`;
+  }
+
+  if ((window as any).__vehicleMarker) {
+    (window as any).__vehicleMarker.setGeometries([{
+      id: 'v1',
+      styleId: 'car_icon',
+      position: new TMap.LatLng(pt.lat, pt.lng),
+      properties: { title: DEVICES_DB[activeDeviceId]?.name || '上海测试机' }
+    }]);
+  }
+}
+
+function onTimelineMouseMove(e: MouseEvent) {
+  if (isDragging || !TRACK_POINTS.length) return;
+
+  const container = document.getElementById('timeline-track-container');
+  if (!container) return;
+  const rect = container.getBoundingClientRect();
+  const p = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+
+  isHovering = true;
+
+  const hoverNeedle = document.getElementById('hover-needle');
+  if (hoverNeedle) {
+    hoverNeedle.classList.remove('hidden');
+    hoverNeedle.style.left = p + '%';
+  }
+
+  const idx = Math.min(Math.floor((p / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+  const pt = TRACK_POINTS[idx];
+  const sColor = getContinuousSpeedColor(pt.speed);
+
+  const bubbleTime = pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 19);
+  const elBTime = document.getElementById('hover-bubble-time');
+  if (elBTime) elBTime.innerText = bubbleTime;
+  const speedBubble = document.getElementById('hover-bubble-speed');
+  if (speedBubble) {
+    speedBubble.innerText = `${pt.speed} km/h`;
+    speedBubble.style.color = sColor.hex;
+  }
+
+  renderStateAtPosition(p, true);
+}
+
+function onTimelineUserClick(e: MouseEvent) {
+  if (isDragging || !TRACK_POINTS.length) return;
+
+  const container = document.getElementById('timeline-track-container');
+  if (!container) return;
+  const rect = container.getBoundingClientRect();
+  const p = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+
+  committedPlayhead = p;
+  isHovering = false;
+
+  const hoverNeedle = document.getElementById('hover-needle');
+  if (hoverNeedle) hoverNeedle.classList.add('hidden');
+  renderStateAtPosition(committedPlayhead, false);
+}
+
+function onTimelineMouseLeave() {
+  if (isDragging || !isHovering) return;
+  isHovering = false;
+
+  const hoverNeedle = document.getElementById('hover-needle');
+  if (hoverNeedle) hoverNeedle.classList.add('hidden');
+  renderStateAtPosition(committedPlayhead, false);
+}
+
+function applyTimePreset(type: string) {
+  if (type === 'sprint') {
+    rangeStart = 55;
+    rangeEnd = 78;
+  }
+  committedPlayhead = rangeStart;
+  updateRangeDOM();
+  renderStateAtPosition(committedPlayhead, false);
+  renderRangeTrackOnMap();
+}
+
+function updateRangeDOM() {
+  if (rangeStart < 0) rangeStart = 0;
+  if (rangeEnd > 100) rangeEnd = 100;
+  if (rangeStart > rangeEnd - 3) rangeStart = rangeEnd - 3;
+
+  const capsule = document.getElementById('range-capsule');
+  if (capsule) {
+    capsule.style.left = rangeStart + '%';
+    capsule.style.width = (rangeEnd - rangeStart) + '%';
+  }
+
+  const maskL = document.getElementById('mask-left');
+  const maskR = document.getElementById('mask-right');
+  if (masterMode === 'range') {
+    if (maskL) maskL.style.width = rangeStart + '%';
+    if (maskR) maskR.style.width = (100 - rangeEnd) + '%';
+  }
+
+  if (!TRACK_POINTS.length) return;
+  const idxStart = Math.min(Math.floor((rangeStart / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+  const idxEnd = Math.min(Math.floor((rangeEnd / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+  
+  const pS = TRACK_POINTS[idxStart];
+  const pE = TRACK_POINTS[idxEnd];
+
+  const tStart = pS.isMultiDay ? pS.timeStr.slice(5, 16) : pS.timeStr.slice(11, 16);
+  const tEnd = pE.isMultiDay ? pE.timeStr.slice(5, 16) : pE.timeStr.slice(11, 16);
+
+  const bL = document.getElementById('drag-bubble-left');
+  if (bL) bL.innerText = tStart;
+  const bR = document.getElementById('drag-bubble-right');
+  if (bR) bR.innerText = tEnd;
+}
+
+function toggleRangePlay() {
+  if (isPlaying) stopRangePlayback();
+  else startRangePlayback();
+}
+
+function startRangePlayback() {
+  isPlaying = true;
+  const txt = document.getElementById('txt-range-play');
+  if (txt) txt.innerText = '暂停';
+  const icon = document.getElementById('icon-range-play');
+  if (icon) icon.setAttribute('data-lucide', 'pause');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  if (committedPlayhead >= rangeEnd || committedPlayhead < rangeStart) {
+    committedPlayhead = rangeStart;
+  }
+
+  playTimer = setInterval(() => {
+    committedPlayhead += 0.5 * playSpeed;
+    if (committedPlayhead >= rangeEnd) {
+      committedPlayhead = rangeEnd;
+      renderStateAtPosition(committedPlayhead, false);
+      stopRangePlayback();
+      return;
+    }
+    renderStateAtPosition(committedPlayhead, false);
+  }, 100);
+}
+
+function stopRangePlayback() {
+  isPlaying = false;
+  if (playTimer) clearInterval(playTimer);
+  const txt = document.getElementById('txt-range-play');
+  const icon = document.getElementById('icon-range-play');
+  if (txt) txt.innerText = '播放';
+  if (icon) icon.setAttribute('data-lucide', 'play');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function setPlaySpeed(s: number, e: MouseEvent) {
+  playSpeed = s;
+  document.querySelectorAll('.speed-btn').forEach(btn => {
+    btn.className = 'speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white';
+  });
+  if (e.currentTarget) {
+    (e.currentTarget as HTMLElement).className = 'speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-cyber-primary/20 text-cyber-primary font-bold';
+  }
+}
+
+function setupSilkyTimelineInteractions() {
+  const container = document.getElementById('timeline-track-container');
+  const handleL = document.getElementById('handle-left-hitbox');
+  const handleR = document.getElementById('handle-right-hitbox');
+  const rangeBody = document.getElementById('range-body');
+  const bubbleL = document.getElementById('drag-bubble-left');
+  const bubbleR = document.getElementById('drag-bubble-right');
+
+  if (!container || !handleL || !handleR || !rangeBody || !bubbleL || !bubbleR) return;
+
+  let activeDrag: string | null = null;
+  let activePointerId: number | null = null;
+  let startClientX = 0;
+  let initStartVal = 0;
+  let initEndVal = 0;
+  let containerRect: DOMRect | null = null;
+  let rAFPending = false;
+
+  function scheduleDOMUpdate() {
+    if (!rAFPending) {
+      rAFPending = true;
+      requestAnimationFrame(() => {
+        updateRangeDOM();
+        rAFPending = false;
+      });
+    }
+  }
+
+  function onPointerDown(type: string, e: PointerEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+
+    activeDrag = type;
+    activePointerId = e.pointerId;
+    startClientX = e.clientX;
+    initStartVal = rangeStart;
+    initEndVal = rangeEnd;
+    isDragging = true;
+
+    containerRect = container!.getBoundingClientRect();
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (err) {}
+
+    if (type === 'left') {
+      bubbleL!.classList.remove('hidden');
+      document.body.classList.add('is-dragging-handle');
+    } else if (type === 'right') {
+      bubbleR!.classList.remove('hidden');
+      document.body.classList.add('is-dragging-handle');
+    } else if (type === 'body') {
+      bubbleL!.classList.remove('hidden');
+      bubbleR!.classList.remove('hidden');
+      document.body.classList.add('is-dragging-body');
+    }
+
+    const hoverNeedle = document.getElementById('hover-needle');
+    if (hoverNeedle) hoverNeedle.classList.add('hidden');
+  }
+
+  function onPointerMove(e: PointerEvent) {
+    if (!activeDrag || e.pointerId !== activePointerId || !containerRect) return;
+
+    const deltaX = e.clientX - startClientX;
+    const deltaPercent = (deltaX / containerRect.width) * 100;
+
+    if (activeDrag === 'left') {
+      let newS = initStartVal + deltaPercent;
+      if (newS < 0) newS = 0;
+      if (newS > rangeEnd - 3) newS = rangeEnd - 3;
+      rangeStart = newS;
+      scheduleDOMUpdate();
+    } else if (activeDrag === 'right') {
+      let newE = initEndVal + deltaPercent;
+      if (newE > 100) newE = 100;
+      if (newE < rangeStart + 3) newE = rangeStart + 3;
+      rangeEnd = newE;
+      scheduleDOMUpdate();
+    } else if (activeDrag === 'body') {
+      const span = initEndVal - initStartVal;
+      let newS = initStartVal + deltaPercent;
+      let newE = initEndVal + deltaPercent;
+
+      if (newS < 0) {
+        newS = 0;
+        newE = span;
+      }
+      if (newE > 100) {
+        newE = 100;
+        newS = 100 - span;
+      }
+
+      rangeStart = newS;
+      rangeEnd = newE;
+      scheduleDOMUpdate();
+    }
+  }
+
+  function onPointerUp(e: PointerEvent) {
+    if (!activeDrag) return;
+
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (err) {}
+
+    activeDrag = null;
+    activePointerId = null;
+    isDragging = false;
+
+    document.body.classList.remove('is-dragging-handle');
+    document.body.classList.remove('is-dragging-body');
+
+    bubbleL!.classList.add('hidden');
+    bubbleR!.classList.add('hidden');
+
+    renderRangeTrackOnMap();
+  }
+
+  handleL.addEventListener('pointerdown', (e) => onPointerDown('left', e));
+  handleL.addEventListener('pointermove', onPointerMove);
+  handleL.addEventListener('pointerup', onPointerUp);
+  handleL.addEventListener('pointercancel', onPointerUp);
+
+  handleR.addEventListener('pointerdown', (e) => onPointerDown('right', e));
+  handleR.addEventListener('pointermove', onPointerMove);
+  handleR.addEventListener('pointerup', onPointerUp);
+  handleR.addEventListener('pointercancel', onPointerUp);
+
+  rangeBody.addEventListener('pointerdown', (e) => onPointerDown('body', e));
+  rangeBody.addEventListener('pointermove', onPointerMove);
+  rangeBody.addEventListener('pointerup', onPointerUp);
+  rangeBody.addEventListener('pointercancel', onPointerUp);
+
+  container.addEventListener('mousemove', onTimelineMouseMove);
+  container.addEventListener('click', onTimelineUserClick);
+  container.addEventListener('mouseleave', onTimelineMouseLeave);
+}
+
+function renderFullColoredTrackOnMap() {
+  if (!(window as any).__map || !(window as any).__trackLines || !TRACK_POINTS.length) return;
+  const rainbowPaths = [];
+  for (let i = 0; i < TOTAL_POINTS - 1; i++) {
+    const p1 = TRACK_POINTS[i];
+    const p2 = TRACK_POINTS[i + 1];
+    const avgSpeed = (p1.speed + p2.speed) / 2;
+    const c = getContinuousSpeedColor(avgSpeed);
+    rainbowPaths.push({
+      path: [new TMap.LatLng(p1.lat, p1.lng), new TMap.LatLng(p2.lat, p2.lng)],
+      color: c.rgb,
+      borderColor: 'rgba(7, 13, 29, 0.45)'
+    });
+  }
+
+  (window as any).__trackLines.setGeometries([{
+    id: 'track_rainbow',
+    styleId: 'rainbow_style',
+    rainbowPaths: rainbowPaths
+  }]);
+}
+
+function renderRangeTrackOnMap() {
+  if (!(window as any).__map || !(window as any).__trackLines || !TRACK_POINTS.length) return;
+  const idxStart = Math.min(Math.floor((rangeStart / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+  const idxEnd = Math.min(Math.floor((rangeEnd / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+
+  const rainbowPaths = [];
+  for (let i = idxStart; i < idxEnd; i++) {
+    const p1 = TRACK_POINTS[i];
+    const p2 = TRACK_POINTS[i + 1];
+    const avgSpeed = (p1.speed + p2.speed) / 2;
+    const c = getContinuousSpeedColor(avgSpeed);
+    rainbowPaths.push({
+      path: [new TMap.LatLng(p1.lat, p1.lng), new TMap.LatLng(p2.lat, p2.lng)],
+      color: c.rgb,
+      borderColor: 'rgba(7, 13, 29, 0.45)'
+    });
+  }
+
+  (window as any).__trackLines.setGeometries([{
+    id: 'track_rainbow',
+    styleId: 'rainbow_style',
+    rainbowPaths: rainbowPaths
+  }]);
+}
+
+let mobileSheetState = 'peek';
+
+function setMobileSheetState(state: string) {
+  mobileSheetState = state;
+  const drawer = document.getElementById('inspector-drawer');
+  const chevron = document.getElementById('icon-sheet-chevron');
+  if (!drawer) return;
+
+  drawer.classList.remove('sheet-peek', 'sheet-half', 'sheet-full');
+  drawer.classList.add('sheet-' + state);
+
+  if (chevron) {
+    if (state === 'peek') {
+      chevron.setAttribute('data-lucide', 'chevron-up');
+    } else if (state === 'half') {
+      chevron.setAttribute('data-lucide', 'chevron-up');
+    } else if (state === 'full') {
+      chevron.setAttribute('data-lucide', 'chevron-down');
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  if ((window as any).__accelChart) {
+    setTimeout(() => (window as any).__accelChart.resize(), 200);
+  }
+}
+
+function cycleMobileSheet() {
+  if (window.innerWidth >= 768) return;
+  if (mobileSheetState === 'peek') setMobileSheetState('half');
+  else if (mobileSheetState === 'half') setMobileSheetState('full');
+  else setMobileSheetState('peek');
+}
+
+function setupMobileSheetTouchGestures() {
+  const handle = document.getElementById('sheet-drag-handle');
+  const header = document.getElementById('sheet-header-bar');
+  let touchStartY = 0;
+
+  function onTouchStart(e: TouchEvent) {
+    if (window.innerWidth >= 768) return;
+    touchStartY = e.touches[0].clientY;
+  }
+
+  function onTouchEnd(e: TouchEvent) {
+    if (window.innerWidth >= 768) return;
+    const deltaY = e.changedTouches[0].clientY - touchStartY;
+
+    if (Math.abs(deltaY) > 30) {
+      if (deltaY < -30) {
+        if (mobileSheetState === 'peek') setMobileSheetState('half');
+        else if (mobileSheetState === 'half') setMobileSheetState('full');
+      } else if (deltaY > 30) {
+        if (mobileSheetState === 'full') setMobileSheetState('half');
+        else if (mobileSheetState === 'half') setMobileSheetState('peek');
+      }
+    }
+  }
+
+  if (handle) {
+    handle.addEventListener('touchstart', onTouchStart, { passive: true });
+    handle.addEventListener('touchend', onTouchEnd, { passive: true });
+    handle.addEventListener('click', cycleMobileSheet);
+  }
+  if (header) {
+    header.addEventListener('touchstart', onTouchStart, { passive: true });
+    header.addEventListener('touchend', onTouchEnd, { passive: true });
+    header.addEventListener('click', (e) => {
+      if (window.innerWidth < 768) cycleMobileSheet();
+    });
+  }
+}
+
+let isArmed = true;
+function toggleQuickArm() {
+  isArmed = !isArmed;
+  const btn = document.getElementById('btn-quick-arm');
+  const text = document.getElementById('quick-arm-text');
+  if (!btn || !text) return;
+  if (isArmed) {
+    btn.className = 'px-2.5 py-1 rounded-xl text-[10px] font-bold bg-cyber-emerald text-white hover:bg-emerald-600 transition flex items-center space-x-1 shadow-glow-emerald';
+    text.innerText = '已设防';
+  } else {
+    btn.className = 'px-2.5 py-1 rounded-xl text-[10px] font-bold bg-cyber-800 text-slate-400 hover:text-white transition flex items-center space-x-1';
+    text.innerText = '已撤防';
+  }
+}
+
+let isDockOpen = true;
+function toggleDeviceDock() {
+  if (window.innerWidth < 768) return;
+  isDockOpen = !isDockOpen;
+  const dock = document.getElementById('device-dock');
+  if (!dock) return;
+  if (isDockOpen) {
+    dock.style.transform = 'translateX(0)';
+    dock.style.opacity = '1';
+    dock.style.pointerEvents = 'auto';
+  } else {
+    dock.style.transform = 'translateX(-115%)';
+    dock.style.opacity = '0';
+    dock.style.pointerEvents = 'none';
+  }
+}
+
+let isInspectorOpen = true;
+function toggleInspectorDrawer() {
+  if (window.innerWidth < 768) {
+    cycleMobileSheet();
+    return;
+  }
+  isInspectorOpen = !isInspectorOpen;
+  const drawer = document.getElementById('inspector-drawer');
+  if (!drawer) return;
+  if (isInspectorOpen) {
+    drawer.style.transform = 'translateX(0)';
+    drawer.style.opacity = '1';
+    drawer.style.pointerEvents = 'auto';
+  } else {
+    drawer.style.transform = 'translateX(115%)';
+    drawer.style.opacity = '0';
+    drawer.style.pointerEvents = 'none';
+  }
+}
+
+function toggleOfficialModal() {
+  const modal = document.getElementById('official-modal');
+  if (modal) modal.classList.toggle('hidden');
+}
+
+let compassTimer: any = null;
+
+function initAccelChart() {
+  const el = document.getElementById('chart-accel');
+  if (!el || typeof echarts === 'undefined') return;
+  const chart = echarts.init(el);
+  (window as any).__accelChart = chart;
+
+  const times: string[] = [];
+  const dataX: number[] = [], dataY: number[] = [], dataZ: number[] = [];
+  const now = Date.now();
+  for (let i = 30; i >= 0; i--) {
+    times.push(new Date(now - i * 100).toLocaleTimeString().slice(3));
+    dataX.push(140 + Math.sin(i * 0.4) * 20);
+    dataY.push(-80 + Math.cos(i * 0.4) * 15);
+    dataZ.push(980 + Math.sin(i * 0.2) * 10);
+  }
+
+  chart.setOption({
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['X轴', 'Y轴', 'Z轴'], textStyle: { color: '#94a3b8', fontSize: 10 } },
+    grid: { left: 30, right: 10, top: 25, bottom: 20 },
+    xAxis: { type: 'category', data: times, axisLine: { lineStyle: { color: '#334155' } }, axisLabel: { color: '#64748b', fontSize: 9 } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#1e293b' } }, axisLabel: { color: '#64748b', fontSize: 9 } },
+    series: [
+      { name: 'X轴', type: 'line', smooth: true, showSymbol: false, data: dataX, itemStyle: { color: '#f43f5e' } },
+      { name: 'Y轴', type: 'line', smooth: true, showSymbol: false, data: dataY, itemStyle: { color: '#10b981' } },
+      { name: 'Z轴', type: 'line', smooth: true, showSymbol: false, data: dataZ, itemStyle: { color: '#00f0ff' } }
+    ]
+  });
+}
+
+function startCompassSimulator() {
+  let t = 0;
+  compassTimer = setInterval(() => {
+    t += 0.05;
+    const pitch = 4.2 + Math.sin(t) * 1.5;
+    const roll = -1.5 + Math.cos(t) * 1.2;
+    const yaw = (68.0 + Math.sin(t * 0.5) * 5).toFixed(1);
+    
+    const elP = document.getElementById('val-pitch');
+    const elR = document.getElementById('val-roll');
+    const elY = document.getElementById('val-yaw');
+    if (elP) elP.innerText = (pitch > 0 ? '+' : '') + pitch.toFixed(1) + '°';
+    if (elR) elR.innerText = (roll > 0 ? '+' : '') + roll.toFixed(1) + '°';
+    if (elY) elY.innerText = yaw + '°';
+
+    const p = document.getElementById('yaw-pointer');
+    if (p) p.style.transform = `rotate(${yaw}deg)`;
+    const h = document.getElementById('horizon-disc');
+    if (h) h.style.transform = `rotate(${-roll}deg) translateY(${pitch * 1.2}px)`;
+  }, 100);
+}
+
+onMounted(() => {
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+
+  window.addEventListener('resize', () => {
+    drawSpeedWaveCanvas();
+    if ((window as any).__accelChart) (window as any).__accelChart.resize();
+  });
+
+  try {
+    if (typeof TMap !== 'undefined') {
+      const center = new TMap.LatLng(31.240713, 121.488828);
+      const mapEl = document.getElementById('main-map');
+      if (mapEl) {
+        const map = new TMap.Map(mapEl, {
+          center: center,
+          zoom: 14,
+          viewMode: '2D',
+          mapStyleId: 'style1', // 强制暗黑主题
+          control: {
+            zoom: false,
+            rotation: false,
+            scale: false
+          }
+        });
+        (window as any).__map = map;
+
+        (window as any).__trackLines = new TMap.MultiPolyline({
+          map: map,
+          styles: {
+            rainbow_style: new TMap.PolylineStyle({
+              width: 6,
+              borderWidth: 1,
+              lineCap: 'round'
+            })
+          }
+        });
+
+        (window as any).__vehicleMarker = new TMap.MultiMarker({
+          map: map,
+          styles: {
+            car_icon: new TMap.MarkerStyle({
+              width: 48,
+              height: 48,
+              anchor: { x: 24, y: 24 },
+              src: generateCarMarkerIcon()
+            })
+          },
+          geometries: [{ id: 'v1', styleId: 'car_icon', position: center, properties: { title: '8202G·上海测试机' } }]
+        });
+
+        new TMap.MultiCircle({
+          map: map,
+          geometries: [{ center: center, radius: 1000, styleId: 'fence' }],
+          styles: {
+            fence: new TMap.CircleStyle({ color: 'rgba(0, 240, 255, 0.12)', showBorder: true, borderColor: '#00f0ff', borderWidth: 1.5 })
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('Map error:', e);
+  }
+
+  initAccelChart();
+  startCompassSimulator();
+  setupSilkyTimelineInteractions();
+  setupMobileSheetTouchGestures();
+  switchMasterMode('live');
+  
+  // 确保 DOM 稳定后初次绘制波形并创建图标
+  setTimeout(() => {
+    drawSpeedWaveCanvas();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }, 200);
+});
+
+onUnmounted(() => {
+  if (compassTimer) clearInterval(compassTimer);
+  if (playTimer) clearInterval(playTimer);
+  if ((window as any).__map) {
+    (window as any).__map.destroy();
+    (window as any).__map = null;
   }
 });
 </script>
 
 <style>
-/* 全局暗黑背景与滚动条精简 */
-html, body {
+/* 全局暗黑背景覆盖 */
+html, body, #app {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  background-color: #030712;
+  background-color: #030712 !important;
   overflow: hidden;
 }
-
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: rgba(7, 13, 29, 0.4); }
-::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.25); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
 </style>
