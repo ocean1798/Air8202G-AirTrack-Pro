@@ -236,7 +236,7 @@
           </div>
           <div class="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center space-x-1.5 leading-tight">
             <span id="drawer-coord-text" class="truncate max-w-[150px] sm:max-w-none">34.7944°N, 114.3350°E</span>
-            <span class="font-bold px-1.5 py-0.2 rounded text-[10px] transition-colors" id="drawer-speed-badge">21.4 km/h</span>
+            <span class="font-bold px-1.5 py-0.2 rounded text-[10px] text-cyber-primary bg-cyber-primary/10 border border-cyber-primary/30 transition-colors" id="drawer-speed-badge">0 km/h</span>
           </div>
         </div>
 
@@ -784,6 +784,12 @@ function selectDeviceTab(imei: string) {
   const elCsq = document.getElementById('tel-tag-csq');
   if (elCsq) elCsq.innerText = dev.csq;
 
+  // 同步更新顶部机头设备状态
+  const mobHeaderName = document.getElementById('mob-drawer-vehicle-name');
+  if (mobHeaderName) mobHeaderName.innerText = dev.name;
+  const mobHeaderCoord = document.getElementById('mob-drawer-coord-text');
+  if (mobHeaderCoord) mobHeaderCoord.innerText = `${dev.lat.toFixed(4)}°N, ${dev.lng.toFixed(4)}°E`;
+
   if ((window as any).__map) {
     const center = new TMap.LatLng(dev.lat, dev.lng);
     (window as any).__map.panTo(center);
@@ -831,31 +837,31 @@ let currentMacroScope = '90d';
 function generateTrackDataForScope(scope: string, startDate: string | null = null, endDate: string | null = null) {
   TRACK_POINTS = [];
   let startTimeMs = 0, endTimeMs = 0;
-  const now = new Date('2026-09-10T14:00:00');
+  const now = new Date('2026-09-15T16:00:00');
 
   if (scope === 'today' || scope === 'recent_window') {
-    startTimeMs = new Date('2026-09-10T12:00:00').getTime();
+    startTimeMs = new Date('2026-09-15T12:00:00').getTime();
     endTimeMs = now.getTime();
   } else if (scope === 'yesterday') {
-    startTimeMs = new Date('2026-09-09T00:00:00').getTime();
-    endTimeMs = new Date('2026-09-09T23:59:59').getTime();
+    startTimeMs = new Date('2026-09-14T00:00:00').getTime();
+    endTimeMs = new Date('2026-09-14T23:59:59').getTime();
   } else if (scope === '3d') {
-    startTimeMs = new Date('2026-09-07T00:00:00').getTime();
+    startTimeMs = new Date('2026-09-12T00:00:00').getTime();
     endTimeMs = now.getTime();
   } else if (scope === '7d') {
-    startTimeMs = new Date('2026-09-03T00:00:00').getTime();
+    startTimeMs = new Date('2026-09-08T00:00:00').getTime();
     endTimeMs = now.getTime();
   } else if (scope === '30d') {
-    startTimeMs = new Date('2026-08-11T00:00:00').getTime();
+    startTimeMs = new Date('2026-08-16T00:00:00').getTime();
     endTimeMs = now.getTime();
   } else if (scope === '90d') {
-    startTimeMs = new Date('2026-06-12T00:00:00').getTime();
+    startTimeMs = new Date('2026-06-15T00:00:00').getTime();
     endTimeMs = now.getTime();
   } else if (scope === 'custom' && startDate && endDate) {
     startTimeMs = new Date(startDate + 'T00:00:00').getTime();
     endTimeMs = new Date(endDate + 'T23:59:59').getTime();
   } else {
-    startTimeMs = new Date('2026-09-10T12:00:00').getTime();
+    startTimeMs = new Date('2026-09-15T12:00:00').getTime();
     endTimeMs = now.getTime();
   }
 
@@ -1275,6 +1281,11 @@ function renderStateAtPosition(percent: number, isPreview = false) {
     if (liveSpeed) {
       liveSpeed.innerText = `${pt.speed} km/h`;
       liveSpeed.style.color = sColor.hex;
+    }
+
+    const drawerSpeed = document.getElementById('drawer-speed-badge');
+    if (drawerSpeed) {
+      drawerSpeed.innerText = `${pt.speed} km/h`;
     }
 
     const timeBox = document.getElementById('current-point-time');
