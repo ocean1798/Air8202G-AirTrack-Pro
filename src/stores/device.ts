@@ -7,7 +7,7 @@ import type { BatteryStatus } from '../utils/battery-model';
 export const useDeviceStore = defineStore('device', {
   state: () => ({
     devices: [] as DeviceInfo[],
-    activeImei: '864317087173038',
+    activeImei: '864317087172311',
     isArmed: true, // 创新功能 P1: 一键智能布防
     loading: false,
     lastRefreshed: 0

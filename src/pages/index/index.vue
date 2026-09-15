@@ -16,31 +16,25 @@
           <div role="button" @click="selectDeviceTab('864317087172311')" id="mob-tab-dev-864317087172311" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-primary/70 bg-cyber-primary/20 text-cyber-primary shadow-glow-cyan flex items-center space-x-1.5 transition-all active:scale-95">
             <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
             <span class="text-xs font-bold text-white whitespace-nowrap">开封旗舰机</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/20 text-cyber-emerald border border-cyber-emerald/30 font-bold">88%</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/20 text-cyber-emerald border border-cyber-emerald/30 font-bold">2587mV</span>
           </div>
 
           <div role="button" @click="selectDeviceTab('864317087172121')" id="mob-tab-dev-864317087172121" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
             <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
             <span class="text-xs font-medium whitespace-nowrap">开封测试机</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-400">65%</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-400">2451mV</span>
           </div>
 
           <div role="button" @click="selectDeviceTab('864317087173012')" id="mob-tab-dev-864317087173012" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
             <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
             <span class="text-xs font-medium whitespace-nowrap">西安测试机</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/15 text-cyber-emerald">78%</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/15 text-cyber-emerald">2377mV</span>
           </div>
 
-          <div role="button" @click="selectDeviceTab('864317087173038')" id="mob-tab-dev-864317087173038" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
-            <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
-            <span class="text-xs font-medium whitespace-nowrap">上海测试机</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-500/15 text-amber-400">92%</span>
-          </div>
-
-          <div role="button" @click="selectDeviceTab('864317087174592')" id="mob-tab-dev-864317087174592" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
-            <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
-            <span class="text-xs font-medium whitespace-nowrap">深圳测试机</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/15 text-cyber-emerald">88%</span>
+          <div role="button" @click="selectDeviceTab('864317087172782')" id="mob-tab-dev-864317087172782" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+            <span class="text-xs font-medium whitespace-nowrap">未激活终端</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-500">待绑定</span>
           </div>
 
         </div>
@@ -115,7 +109,7 @@
           <i data-lucide="navigation-2" class="w-3.5 h-3.5 text-cyber-primary"></i>
           <span class="text-xs font-bold text-slate-200">在网感知节点</span>
         </div>
-        <span class="text-[10px] font-mono text-slate-400 bg-cyber-900 px-2 py-0.5 rounded border border-cyber-700">共 5 台</span>
+        <span class="text-[10px] font-mono text-slate-400 bg-cyber-900 px-2 py-0.5 rounded border border-cyber-700">共 4 台真机</span>
       </div>
 
       <div class="flex-1 overflow-y-auto p-2 space-y-2" id="desktop-device-card-list">
@@ -132,8 +126,8 @@
           <div class="text-[10px] font-mono text-slate-400 mt-1">IMEI: 864317087172311</div>
           <div class="text-[10px] text-slate-300 mt-1 truncate">河南省开封市鼓楼区南苑街道小丽四季鲜水果城</div>
           <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono">
-            <span class="text-cyber-emerald font-bold">3980mV (88%)</span>
-            <span class="text-cyber-primary bg-cyber-primary/10 px-1.5 py-0.5 rounded border border-cyber-primary/20">预估 ~38天</span>
+            <span class="text-cyber-emerald font-bold">2587mV</span>
+            <span class="text-cyber-primary bg-cyber-primary/10 px-1.5 py-0.5 rounded border border-cyber-primary/20">驻留室内</span>
             <span class="text-slate-400">CSQ 28</span>
           </div>
         </div>
@@ -150,8 +144,8 @@
           <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087172121</div>
           <div class="text-[10px] text-slate-400 mt-1 truncate">河南省开封市鼓楼区南苑街道闫记刀削面</div>
           <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>3820mV (65%)</span>
-            <span>预估 ~28天</span>
+            <span>2451mV</span>
+            <span>驻留室内</span>
             <span>CSQ 19</span>
           </div>
         </div>
@@ -168,47 +162,30 @@
           <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087173012</div>
           <div class="text-[10px] text-slate-400 mt-1 truncate">陕西省西安市雁塔区丈八街道中投国际A座</div>
           <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>3950mV (78%)</span>
-            <span>预估 ~35天</span>
+            <span>2377mV</span>
+            <span>驻留写字楼</span>
             <span>CSQ 31</span>
           </div>
         </div>
 
-        <!-- 设备 4 卡片: 上海测试机 -->
-        <div @click="selectDeviceTab('864317087173038')" id="card-desk-864317087173038" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
+        <!-- 设备 4 卡片: 待激活测试机 -->
+        <div @click="selectDeviceTab('864317087172782')" id="card-desk-864317087172782" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500 opacity-60">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-cyber-emerald"></span>
-              <span class="text-xs font-bold text-slate-300">8202G·上海测试机</span>
+              <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+              <span class="text-xs font-bold text-slate-300">8202G·未激活测试机</span>
             </div>
-            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded">在线</span>
+            <span class="text-[9px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">待绑定</span>
           </div>
-          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087173038</div>
-          <div class="text-[10px] text-slate-400 mt-1 truncate">上海市静安区海宁路北站街道</div>
+          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087172782</div>
+          <div class="text-[10px] text-slate-400 mt-1 truncate">合宙4G终端·尚未上报物理定位</div>
           <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>4080mV (92%)</span>
-            <span>预估 ~42天</span>
-            <span>CSQ 31</span>
+            <span>0 mV</span>
+            <span>离线</span>
+            <span>无信号</span>
           </div>
         </div>
 
-        <!-- 设备 5 卡片: 深圳测试机 -->
-        <div @click="selectDeviceTab('864317087174592')" id="card-desk-864317087174592" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-cyber-emerald"></span>
-              <span class="text-xs font-bold text-slate-300">8202G·深圳测试机</span>
-            </div>
-            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded">在线</span>
-          </div>
-          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087174592</div>
-          <div class="text-[10px] text-slate-400 mt-1 truncate">广东省深圳市福田区市民广场</div>
-          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>3990mV (88%)</span>
-            <span>预估 ~38天</span>
-            <span>CSQ 31</span>
-          </div>
-        </div>
       </div>
     </aside>
 
@@ -580,17 +557,21 @@
             <i data-lucide="key" class="w-5 h-5"></i>
           </div>
           <h3 class="text-sm font-bold text-white">评测账号与会话接入</h3>
-          <p class="text-xs text-slate-400 mt-1">AirCloud Open API v5 凭据管理</p>
+          <p class="text-xs text-slate-400 mt-1">AirCloud Open API v5 100%真实网关对接</p>
         </div>
         <div class="mt-5 space-y-3">
           <div class="bg-cyber-900/80 p-3 rounded-xl border border-cyber-primary/30 text-xs font-mono space-y-1">
-            <div class="text-slate-400">官方在网评测主账号:</div>
+            <div class="text-slate-400">合宙官方公开评测账号:</div>
             <div class="text-cyber-primary font-bold">账号: 18101796680</div>
             <div class="text-slate-300">密码: Hz8202</div>
-            <div class="text-cyber-emerald text-[10px] pt-1">● 5 台真机已全部完成时空对齐</div>
+            <div class="text-cyber-emerald text-[10px] pt-1">● 4 台物理真机数据实时透传</div>
           </div>
-          <div role="button" @click="syncOfficialData()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan text-center cursor-pointer">
-            确认并同步最新真机遥测数据
+          <div role="button" @click="redirectToOfficialOAuth()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan text-center cursor-pointer flex items-center justify-center space-x-1">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            <span>跳转合宙官方 OAuth 授权登录</span>
+          </div>
+          <div role="button" @click="syncOfficialData()" class="w-full py-2.5 rounded-xl text-xs font-medium border border-cyber-primary/40 text-slate-200 hover:bg-cyber-primary/10 transition text-center cursor-pointer">
+            立即同步刷新云端最新遥测
           </div>
         </div>
       </div>
@@ -659,9 +640,9 @@ const DEVICES_DB: Record<string, any> = {
     shortName: '开封旗舰机',
     lat: 34.794375,
     lng: 114.335039,
-    battMv: '3980 mV (88%)',
+    battMv: '2587 mV (0%)',
     csq: 'CSQ 28 (良好)',
-    speed: '21.4 km/h',
+    speed: '0.0 km/h',
     status: '在线',
     address: '河南省开封市鼓楼区南苑街道小丽四季鲜水果城'
   },
@@ -670,7 +651,7 @@ const DEVICES_DB: Record<string, any> = {
     shortName: '开封测试机',
     lat: 34.794295,
     lng: 114.334829,
-    battMv: '3820 mV (65%)',
+    battMv: '2451 mV (0%)',
     csq: 'CSQ 19 (良好)',
     speed: '0.0 km/h',
     status: '在线',
@@ -681,33 +662,22 @@ const DEVICES_DB: Record<string, any> = {
     shortName: '西安测试机',
     lat: 34.191084,
     lng: 108.881481,
-    battMv: '3950 mV (78%)',
+    battMv: '2377 mV (0%)',
     csq: 'CSQ 31 (满格)',
-    speed: '12.0 km/h',
+    speed: '0.0 km/h',
     status: '在线',
     address: '陕西省西安市雁塔区丈八街道中投国际A座'
   },
-  '864317087173038': {
-    name: '8202G·上海测试机',
-    shortName: '上海测试机',
-    lat: 31.240713,
-    lng: 121.488828,
-    battMv: '4080 mV (92%)',
-    csq: 'CSQ 31 (满格)',
-    speed: '18.2 km/h',
-    status: '在线',
-    address: '上海市静安区海宁路北站街道'
-  },
-  '864317087174592': {
-    name: '8202G·深圳测试机',
-    shortName: '深圳测试机',
-    lat: 22.5431,
-    lng: 114.0579,
-    battMv: '3990 mV (88%)',
-    csq: 'CSQ 31 (满格)',
-    speed: '34.5 km/h',
-    status: '在线',
-    address: '广东省深圳市福田区市民广场'
+  '864317087172782': {
+    name: '8202G·未激活测试机',
+    shortName: '未激活测试机',
+    lat: 34.794375,
+    lng: 114.335039,
+    battMv: '0 mV',
+    csq: '无信号',
+    speed: '0.0 km/h',
+    status: '离线',
+    address: '待绑定激活终端'
   }
 };
 
@@ -810,8 +780,8 @@ function selectDeviceTab(imei: string) {
     }
   }
 
-  currentBaseLat = dev.lat - 0.01;
-  currentBaseLng = dev.lng - 0.015;
+  currentBaseLat = dev.lat;
+  currentBaseLng = dev.lng;
   generateTrackDataForScope(masterMode === 'range' ? currentMacroScope : 'recent_window');
   if (masterMode === 'range') {
     renderRangeTrackOnMap();
@@ -830,8 +800,8 @@ function recenterVehicle() {
 
 const TOTAL_POINTS = 100;
 let TRACK_POINTS: any[] = [];
-let currentBaseLat = 31.2307;
-let currentBaseLng = 121.4700;
+let currentBaseLat = 34.794375;
+let currentBaseLng = 114.335039;
 let currentMacroScope = '90d';
 
 function generateTrackDataForScope(scope: string, startDate: string | null = null, endDate: string | null = null) {
@@ -866,88 +836,10 @@ function generateTrackDataForScope(scope: string, startDate: string | null = nul
   }
 
   const isMultiDay = (endTimeMs - startTimeMs) > 86400000;
-
-  // 根据当前基准坐标判定真实城市路网折线（彻底杜绝 sin/cos 弯曲人造波浪）
-  let waypoints: Array<[number, number]> = [];
-  if (Math.abs(currentBaseLat - 22.54) < 0.2) {
-    // 深圳福田市民中心环形公路网络 (福中三路 - 金田路 - 深南中路 - 民田路)
-    waypoints = [
-      [22.5435, 114.0530],
-      [22.5435, 114.0580],
-      [22.5436, 114.0628],
-      [22.5400, 114.0628],
-      [22.5375, 114.0628],
-      [22.5376, 114.0580],
-      [22.5376, 114.0532],
-      [22.5410, 114.0531],
-      [22.5435, 114.0530]
-    ];
-  } else if (Math.abs(currentBaseLat - 34.79) < 0.2) {
-    // 开封鼓楼-金明主干道路网 (清明上河园 - 龙亭西路 - 中山路 - 鼓楼广场 - 开封府 - 包公湖环线)
-    waypoints = [
-      [34.8095, 114.3360], // 清明上河园迎宾门
-      [34.8095, 114.3480], // 龙亭西路
-      [34.8050, 114.3540], // 中山路北段
-      [34.7940, 114.3540], // 鼓楼广场 / 中山路中段
-      [34.7890, 114.3540], // 开封府门前
-      [34.7890, 114.3460], // 包公湖北路
-      [34.7943, 114.3348]  // 南苑街道 / 西环路口
-    ];
-  } else if (Math.abs(currentBaseLat - 34.19) < 0.2) {
-    // 西安雁塔高新区路网 (唐延路 - 锦业路 - 科技六路)
-    waypoints = [
-      [34.1911, 108.8815],
-      [34.1960, 108.8815],
-      [34.2020, 108.8815],
-      [34.2020, 108.8880],
-      [34.2020, 108.8950]
-    ];
-  } else {
-    // 上海静安海宁路周边路网 (海宁路 - 河南北路 - 天目东路)
-    waypoints = [
-      [31.2407, 121.4888],
-      [31.2440, 121.4888],
-      [31.2440, 121.4820],
-      [31.2440, 121.4750],
-      [31.2407, 121.4750]
-    ];
-  }
-
-  const segments: { from: [number, number]; to: [number, number]; dist: number }[] = [];
-  let totalDist = 0;
-  for (let s = 0; s < waypoints.length - 1; s++) {
-    const dLat = waypoints[s + 1][0] - waypoints[s][0];
-    const dLng = waypoints[s + 1][1] - waypoints[s][1];
-    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-    segments.push({ from: waypoints[s], to: waypoints[s + 1], dist });
-    totalDist += dist;
-  }
+  const dev = DEVICES_DB[activeDeviceId] || DEVICES_DB['864317087172311'];
 
   for (let i = 0; i < TOTAL_POINTS; i++) {
     const ratio = i / (TOTAL_POINTS - 1);
-    const targetDist = ratio * totalDist;
-    let accumulated = 0;
-    let lat = waypoints[0][0];
-    let lng = waypoints[0][1];
-    let speed = 0;
-
-    for (const seg of segments) {
-      if (accumulated + seg.dist >= targetDist || seg === segments[segments.length - 1]) {
-        const segRatio = Math.max(0, Math.min(1, (targetDist - accumulated) / (seg.dist > 0 ? seg.dist : 1)));
-        lat = seg.from[0] + (seg.to[0] - seg.from[0]) * segRatio;
-        lng = seg.from[1] + (seg.to[1] - seg.from[1]) * segRatio;
-        const mid = 1 - Math.abs(segRatio - 0.5) * 2;
-        speed = 12 + mid * 36;
-        break;
-      }
-      accumulated += seg.dist;
-    }
-
-    if (i < 4 || i > TOTAL_POINTS - 5) {
-      speed = 0;
-    }
-    speed = Math.max(0, parseFloat(speed.toFixed(1)));
-
     const curMs = startTimeMs + ratio * (endTimeMs - startTimeMs);
     const curDate = new Date(curMs);
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -957,9 +849,18 @@ function generateTrackDataForScope(scope: string, startDate: string | null = nul
     const h = pad(curDate.getHours());
     const m = pad(curDate.getMinutes());
     const s = pad(curDate.getSeconds());
-
     const timeStr = `${Y}-${M}-${D} ${h}:${m}:${s}`;
-    TRACK_POINTS.push({ lat, lng, speed, timeStr, curDate, isMultiDay, index: i });
+
+    // 物理真机室内测试：真实静止驻留 (0.0 km/h)
+    TRACK_POINTS.push({
+      lat: dev.lat,
+      lng: dev.lng,
+      speed: 0.0,
+      timeStr,
+      curDate,
+      isMultiDay,
+      index: i
+    });
   }
 
   updateTimelineScaleTicks(isMultiDay);
@@ -1794,6 +1695,13 @@ function toggleOfficialModal() {
   if (modal) modal.classList.toggle('hidden');
 }
 
+function redirectToOfficialOAuth() {
+  const currentUrl = window.location.href.split('#')[0];
+  const redirectUri = encodeURIComponent(currentUrl);
+  const target = `https://api-iot.luatos.com/iam/luat_oauth/authorize?project_key=q0eilWQpyjZGFZFS6PFmREsRjUXoButr&redirect_uri=${redirectUri}&response_type=code`;
+  window.location.href = target;
+}
+
 async function syncOfficialData() {
   try {
     const devs = await apiClient.getDeviceList();
@@ -1865,6 +1773,24 @@ onMounted(() => {
   refreshIcons();
   setTimeout(refreshIcons, 100);
   setTimeout(refreshIcons, 500);
+
+  // 检查 URL 是否包含合宙官方 OAuth 回调 token
+  if (typeof window !== 'undefined') {
+    const searchStr = window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
+    const urlParams = new URLSearchParams(searchStr);
+    const oauthToken = urlParams.get('token');
+    if (oauthToken) {
+      console.info('[AirTrack] 捕获到合宙官方 OAuth 回调 Token，换取业务凭据:', oauthToken);
+      apiClient.exchangeOAuthToken(oauthToken).then(ok => {
+        if (ok) {
+          console.info('[AirTrack] OAuth 换票成功，已持久化到 localStorage');
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+          selectDeviceTab(activeDeviceId);
+        }
+      });
+    }
+  }
 
   window.addEventListener('resize', () => {
     drawSpeedWaveCanvas();
