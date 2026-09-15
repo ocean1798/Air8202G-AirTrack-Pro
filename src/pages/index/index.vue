@@ -523,9 +523,9 @@
           </div>
 
           <!-- 播放控制簇 -->
-          <div id="unified-play-cluster" class="flex items-center space-x-1.5 hidden">
-            <div class="flex items-center bg-cyber-950/90 p-0.5 rounded-xl border border-white/10">
-              <button @click="toggleRangePlay()" id="btn-range-play" class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:brightness-110 transition flex items-center space-x-1 shadow-glow-emerald">
+          <div id="unified-play-cluster" class="flex items-center gap-1.5 hidden">
+            <div class="flex items-center bg-cyber-950/90 p-0.5 rounded-xl border border-white/10 gap-1">
+              <button @click="toggleRangePlay()" id="btn-range-play" class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:brightness-110 transition flex items-center gap-1 shadow-glow-emerald">
                 <i data-lucide="play" class="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" id="icon-range-play"></i>
                 <span id="txt-range-play">播放</span>
               </button>
@@ -533,7 +533,7 @@
               <button @click="setPlaySpeed(5, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white">5x</button>
             </div>
 
-            <button @click="applyTimePreset('sprint')" class="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-cyber-rose font-bold text-[10px] sm:text-[11px] bg-rose-500/15 border border-rose-500/40 hover:bg-rose-500/25 shadow-glow-rose transition">
+            <button @click="applyTimePreset('sprint')" class="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-cyber-rose font-bold text-[10px] sm:text-[11px] bg-rose-500/15 border border-rose-500/40 hover:bg-rose-500/25 shadow-glow-rose transition flex items-center gap-1">
               <span>🏎️ 疾驰</span>
             </button>
           </div>
@@ -890,10 +890,20 @@ function getContinuousSpeedColor(speed: number) {
   return { rgb: 'rgb(0,240,255)', hex: '#00f0ff', name: '巡航', rgba: (a: number) => `rgba(0,240,255,${a})` };
 }
 
+function getRealCanvas(): HTMLCanvasElement | null {
+  const el = document.getElementById('speed-wave-canvas');
+  if (!el) return null;
+  if (el.tagName === 'CANVAS') return el as HTMLCanvasElement;
+  const inner = el.querySelector('canvas');
+  if (inner) return inner as HTMLCanvasElement;
+  return null;
+}
+
 function drawSpeedWaveCanvas() {
-  const canvas = document.getElementById('speed-wave-canvas') as HTMLCanvasElement;
+  const canvas = getRealCanvas();
   if (!canvas) return;
-  const rect = canvas.getBoundingClientRect();
+  const container = document.getElementById('timeline-track-container');
+  const rect = container ? container.getBoundingClientRect() : canvas.getBoundingClientRect();
   if (rect.width === 0 || rect.height === 0) return;
 
   const dpr = window.devicePixelRatio || 1;
