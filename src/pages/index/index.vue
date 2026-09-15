@@ -861,23 +861,89 @@ function generateTrackDataForScope(scope: string, startDate: string | null = nul
 
   const isMultiDay = (endTimeMs - startTimeMs) > 86400000;
 
+  // 根据当前基准坐标判定真实城市路网折线（彻底杜绝 sin/cos 弯曲人造波浪）
+  let waypoints: Array<[number, number]> = [];
+  if (Math.abs(currentBaseLat - 22.54) < 0.2) {
+    // 深圳福田市民中心环形公路网络 (福中三路 - 金田路 - 深南中路 - 民田路)
+    waypoints = [
+      [22.5435, 114.0530],
+      [22.5435, 114.0580],
+      [22.5436, 114.0628],
+      [22.5400, 114.0628],
+      [22.5375, 114.0628],
+      [22.5376, 114.0580],
+      [22.5376, 114.0532],
+      [22.5410, 114.0531],
+      [22.5435, 114.0530]
+    ];
+  } else if (Math.abs(currentBaseLat - 34.79) < 0.2) {
+    // 开封鼓楼-金明主干道路网 (清明上河园 - 龙亭西路 - 中山路 - 鼓楼广场 - 开封府 - 包公湖环线)
+    waypoints = [
+      [34.8095, 114.3360], // 清明上河园迎宾门
+      [34.8095, 114.3480], // 龙亭西路
+      [34.8050, 114.3540], // 中山路北段
+      [34.7940, 114.3540], // 鼓楼广场 / 中山路中段
+      [34.7890, 114.3540], // 开封府门前
+      [34.7890, 114.3460], // 包公湖北路
+      [34.7943, 114.3348]  // 南苑街道 / 西环路口
+    ];
+  } else if (Math.abs(currentBaseLat - 34.19) < 0.2) {
+    // 西安雁塔高新区路网 (唐延路 - 锦业路 - 科技六路)
+    waypoints = [
+      [34.1911, 108.8815],
+      [34.1960, 108.8815],
+      [34.2020, 108.8815],
+      [34.2020, 108.8880],
+      [34.2020, 108.8950]
+    ];
+  } else {
+    // 上海静安海宁路周边路网 (海宁路 - 河南北路 - 天目东路)
+    waypoints = [
+      [31.2407, 121.4888],
+      [31.2440, 121.4888],
+      [31.2440, 121.4820],
+      [31.2440, 121.4750],
+      [31.2407, 121.4750]
+    ];
+  }
+
+  const segments: { from: [number, number]; to: [number, number]; dist: number }[] = [];
+  let totalDist = 0;
+  for (let s = 0; s < waypoints.length - 1; s++) {
+    const dLat = waypoints[s + 1][0] - waypoints[s][0];
+    const dLng = waypoints[s + 1][1] - waypoints[s][1];
+    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+    segments.push({ from: waypoints[s], to: waypoints[s + 1], dist });
+    totalDist += dist;
+  }
+
   for (let i = 0; i < TOTAL_POINTS; i++) {
     const ratio = i / (TOTAL_POINTS - 1);
-    const curMs = startTimeMs + ratio * (endTimeMs - startTimeMs);
-    const curDate = new Date(curMs);
-
-    const lat = currentBaseLat + ratio * 0.024 + Math.sin(i * 0.25) * 0.003;
-    const lng = currentBaseLng + ratio * 0.036 + Math.cos(i * 0.25) * 0.003;
-    
+    const targetDist = ratio * totalDist;
+    let accumulated = 0;
+    let lat = waypoints[0][0];
+    let lng = waypoints[0][1];
     let speed = 0;
-    if (i < 8) speed = 0;
-    else if (i < 25) speed = 12 + Math.sin(i * 0.5) * 8;
-    else if (i >= 25 && i < 32) speed = 0;
-    else if (i >= 32 && i < 55) speed = 25 + Math.sin(i * 0.3) * 10;
-    else if (i >= 55 && i < 78) speed = 48 + Math.sin(i * 0.4) * 14;
-    else speed = 18 + Math.sin(i * 0.5) * 6;
+
+    for (const seg of segments) {
+      if (accumulated + seg.dist >= targetDist || seg === segments[segments.length - 1]) {
+        const segRatio = Math.max(0, Math.min(1, (targetDist - accumulated) / (seg.dist > 0 ? seg.dist : 1)));
+        lat = seg.from[0] + (seg.to[0] - seg.from[0]) * segRatio;
+        lng = seg.from[1] + (seg.to[1] - seg.from[1]) * segRatio;
+        const mid = 1 - Math.abs(segRatio - 0.5) * 2;
+        speed = 12 + mid * 36;
+        break;
+      }
+      accumulated += seg.dist;
+    }
+
+    if (i < 4 || i > TOTAL_POINTS - 5) {
+      speed = 0;
+    }
     speed = Math.max(0, parseFloat(speed.toFixed(1)));
 
+    const curMs = startTimeMs + ratio * (endTimeMs - startTimeMs);
+    const curDate = new Date(curMs);
     const pad = (n: number) => String(n).padStart(2, '0');
     const Y = curDate.getFullYear();
     const M = pad(curDate.getMonth() + 1);
