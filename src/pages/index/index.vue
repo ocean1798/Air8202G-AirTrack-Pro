@@ -601,11 +601,17 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, nextTick } from 'vue';
 
 declare const TMap: any;
 declare const lucide: any;
 declare const echarts: any;
+
+function refreshIcons() {
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
 
 // 动态生成高保真雷达脉冲车辆图标
 function generateCarMarkerIcon() {
@@ -1118,6 +1124,8 @@ function switchMasterMode(mode: string) {
     renderStateAtPosition(committedPlayhead, false);
     renderRangeTrackOnMap();
   }
+  refreshIcons();
+  setTimeout(refreshIcons, 50);
 }
 
 function renderStateAtPosition(percent: number, isPreview = false) {
@@ -1702,9 +1710,9 @@ function startCompassSimulator() {
 }
 
 onMounted(() => {
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
+  refreshIcons();
+  setTimeout(refreshIcons, 100);
+  setTimeout(refreshIcons, 500);
 
   window.addEventListener('resize', () => {
     drawSpeedWaveCanvas();

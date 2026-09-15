@@ -150,6 +150,24 @@
         }
       }
 
+      /* 强制 .hidden 具有绝对最高优先级，防止被 .flex 样式覆盖 */
+      .hidden:not(.md\:flex) {
+        display: none !important;
+      }
+      @media (min-width: 768px) {
+        .md\:hidden {
+          display: none !important;
+        }
+        .md\:flex {
+          display: flex !important;
+        }
+      }
+      @media (max-width: 767px) {
+        .md\:flex {
+          display: none !important;
+        }
+      }
+
       /* 彻底清除 uni-app 原生标签的默认干扰样式，对齐标准 HTML 原型 */
       uni-button {
         background: transparent !important;
