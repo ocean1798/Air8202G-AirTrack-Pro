@@ -10,31 +10,21 @@
       <!-- 2.1 移动端独占顶部 Bar (< md 严格呈现，>= md 彻底隐藏) -->
       <div class="md:hidden glass-panel w-full p-1.5 rounded-2xl flex items-center shadow-xl border border-white/10 pointer-events-auto backdrop-blur-2xl bg-cyber-900/90">
         
-        <!-- 移动端专享：头条/抖音式多设备横向滑动频道栏 -->
+        <!-- 移动端专享：头条/抖音式多设备横向滑动频道栏（真实设备动态渲染） -->
         <div class="flex-1 overflow-x-auto no-scrollbar flex items-center space-x-1.5 pr-3 [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)]" id="mobile-device-channel-bar">
-          
-          <div role="button" @click="selectDeviceTab('864317087172311')" id="mob-tab-dev-864317087172311" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-primary/70 bg-cyber-primary/20 text-cyber-primary shadow-glow-cyan flex items-center space-x-1.5 transition-all active:scale-95">
-            <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
-            <span class="text-xs font-bold text-white whitespace-nowrap">开封旗舰机</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/20 text-cyber-emerald border border-cyber-emerald/30 font-bold">2587mV</span>
+
+          <div v-for="d in deviceList" :key="d.imei"
+               role="button"
+               @click="selectDeviceTab(d.imei)"
+               :id="'mob-tab-dev-' + d.imei"
+               :class="mobileTabClass(d)">
+            <span :class="activeDeviceId === d.imei ? 'w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan' : (d.online ? 'w-1.5 h-1.5 rounded-full bg-cyber-emerald' : 'w-1.5 h-1.5 rounded-full bg-slate-500')"></span>
+            <span :class="activeDeviceId === d.imei ? 'text-xs font-bold text-white whitespace-nowrap' : 'text-xs font-medium whitespace-nowrap'">{{ d.shortName }}</span>
+            <span :class="signalBadgeClass(d)">{{ signalBadgeText(d) }}</span>
           </div>
 
-          <div role="button" @click="selectDeviceTab('864317087172121')" id="mob-tab-dev-864317087172121" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
-            <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
-            <span class="text-xs font-medium whitespace-nowrap">开封测试机</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-400">2451mV</span>
-          </div>
-
-          <div role="button" @click="selectDeviceTab('864317087173012')" id="mob-tab-dev-864317087173012" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
-            <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
-            <span class="text-xs font-medium whitespace-nowrap">西安测试机</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/15 text-cyber-emerald">2377mV</span>
-          </div>
-
-          <div role="button" @click="selectDeviceTab('864317087172782')" id="mob-tab-dev-864317087172782" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
-            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
-            <span class="text-xs font-medium whitespace-nowrap">未激活终端</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-500">待绑定</span>
+          <div v-if="!deviceList.length" class="shrink-0 px-3 py-1 text-xs text-slate-400">
+            {{ deviceLoading ? '正在同步云端真机…' : '当前账号无设备' }}
           </div>
 
         </div>
@@ -66,7 +56,7 @@
               <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold">Web 控制台</span>
             </div>
             <div class="text-[10px] text-slate-400 font-mono flex items-center space-x-2">
-              <span id="desktop-top-device-name" class="text-slate-200">8202G·开封旗舰机 (在线)</span>
+              <span id="desktop-top-device-name" class="text-slate-200">{{ activeDeviceId && deviceList.length ? (deviceList[0].name + ' 等 ' + deviceList.length + ' 台') : '等待云端同步' }}</span>
               <span class="text-cyber-emerald">● 4G蜂窝畅通</span>
             </div>
           </div>
@@ -75,11 +65,12 @@
         <!-- 桌面端右侧控制簇：完整评测账号电话号码 + 顶部定位回正 + 左右侧边栏控制键 -->
         <div class="flex items-center space-x-2 pointer-events-auto">
           
-          <!-- 桌面端完整保留：评测账号明文胶囊 -->
-          <div role="button" @click="toggleOfficialModal()" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
-            <span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan"></span>
-            <span class="text-slate-400">评测账号:</span>
-            <span class="font-bold text-white tracking-wider">18101796680</span>
+          <!-- 桌面端：评测账号多账号切换胶囊 -->
+          <div role="button" @click="toggleOfficialModal()" title="切换合宙评测账号" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
+            <span :class="activeAccountHasAuth ? 'w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-1.5 h-1.5 rounded-full bg-amber-400'"></span>
+            <span class="text-slate-400">{{ activeAccountLabel }}:</span>
+            <span class="font-bold text-white tracking-wider">{{ activeAccountPhone }}</span>
+            <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
           </div>
 
           <!-- 桌面端顶部回中键 -->
@@ -109,81 +100,42 @@
           <i data-lucide="navigation-2" class="w-3.5 h-3.5 text-cyber-primary"></i>
           <span class="text-xs font-bold text-slate-200">在网感知节点</span>
         </div>
-        <span class="text-[10px] font-mono text-slate-400 bg-cyber-900 px-2 py-0.5 rounded border border-cyber-700">共 4 台真机</span>
+        <span class="text-[10px] font-mono text-slate-400 bg-cyber-900 px-2 py-0.5 rounded border border-cyber-700">共 {{ deviceList.length }} 台真机</span>
       </div>
 
       <div class="flex-1 overflow-y-auto p-2 space-y-2" id="desktop-device-card-list">
-        
-        <!-- 设备 1 卡片: 开封旗舰机 (物理真机，最近活跃) -->
-        <div @click="selectDeviceTab('864317087172311')" id="card-desk-864317087172311" class="desk-dev-card p-3 rounded-xl border border-cyber-primary/60 bg-cyber-primary/10 cursor-pointer transition-all hover:border-cyber-primary">
+
+        <div v-for="d in deviceList" :key="d.imei"
+             @click="selectDeviceTab(d.imei)"
+             :id="'card-desk-' + d.imei"
+             :class="desktopCardClass(d)">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
-              <span class="text-xs font-bold text-white">8202G·开封旗舰机</span>
+              <span :class="activeDeviceId === d.imei ? 'w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan' : (d.online ? 'w-2 h-2 rounded-full bg-cyber-emerald' : 'w-2 h-2 rounded-full bg-slate-500')"></span>
+              <span :class="activeDeviceId === d.imei ? 'text-xs font-bold text-white' : 'text-xs font-bold text-slate-300'">{{ d.name }}</span>
             </div>
-            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30">在线</span>
+            <span :class="d.online ? 'text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30' : 'text-[9px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded'">
+              {{ d.online ? '在线' : '无定位' }}
+            </span>
           </div>
-          <div class="text-[10px] font-mono text-slate-400 mt-1">IMEI: 864317087172311</div>
-          <div class="text-[10px] text-slate-300 mt-1 truncate">河南省开封市鼓楼区南苑街道小丽四季鲜水果城</div>
-          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono">
-            <span class="text-cyber-emerald font-bold">2587mV</span>
-            <span class="text-cyber-primary bg-cyber-primary/10 px-1.5 py-0.5 rounded border border-cyber-primary/20">驻留室内</span>
-            <span class="text-slate-400">CSQ 28</span>
+          <div :class="activeDeviceId === d.imei ? 'text-[10px] font-mono text-slate-400 mt-1' : 'text-[10px] font-mono text-slate-500 mt-1'">IMEI: {{ d.imei }}</div>
+          <div :class="activeDeviceId === d.imei ? 'text-[10px] text-slate-300 mt-1 truncate' : 'text-[10px] text-slate-400 mt-1 truncate'" :title="d.address">{{ d.address }}</div>
+          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
+            <span :class="activeDeviceId === d.imei ? 'text-cyber-emerald font-bold' : ''">{{ d.lastActiveTime }}</span>
+            <span class="text-slate-400">CSQ {{ d.csq }}</span>
           </div>
         </div>
 
-        <!-- 设备 2 卡片: 开封测试机 (物理真机) -->
-        <div @click="selectDeviceTab('864317087172121')" id="card-desk-864317087172121" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-cyber-emerald"></span>
-              <span class="text-xs font-bold text-slate-300">8202G·开封测试机</span>
-            </div>
-            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded">在线</span>
-          </div>
-          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087172121</div>
-          <div class="text-[10px] text-slate-400 mt-1 truncate">河南省开封市鼓楼区南苑街道闫记刀削面</div>
-          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>2451mV</span>
-            <span>驻留室内</span>
-            <span>CSQ 19</span>
-          </div>
-        </div>
-
-        <!-- 设备 3 卡片: 西安测试机 (物理真机) -->
-        <div @click="selectDeviceTab('864317087173012')" id="card-desk-864317087173012" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-cyber-emerald"></span>
-              <span class="text-xs font-bold text-slate-300">8202G·西安测试机</span>
-            </div>
-            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded">在线</span>
-          </div>
-          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087173012</div>
-          <div class="text-[10px] text-slate-400 mt-1 truncate">陕西省西安市雁塔区丈八街道中投国际A座</div>
-          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>2377mV</span>
-            <span>驻留写字楼</span>
-            <span>CSQ 31</span>
-          </div>
-        </div>
-
-        <!-- 设备 4 卡片: 待激活测试机 -->
-        <div @click="selectDeviceTab('864317087172782')" id="card-desk-864317087172782" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500 opacity-60">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-slate-500"></span>
-              <span class="text-xs font-bold text-slate-300">8202G·未激活测试机</span>
-            </div>
-            <span class="text-[9px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">待绑定</span>
-          </div>
-          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087172782</div>
-          <div class="text-[10px] text-slate-400 mt-1 truncate">合宙4G终端·尚未上报物理定位</div>
-          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>0 mV</span>
-            <span>离线</span>
-            <span>无信号</span>
-          </div>
+        <div v-if="!deviceList.length" class="px-2 py-4 text-[11px] text-slate-400 leading-relaxed">
+          <template v-if="deviceLoading">正在从合宙云端同步该账号真机…</template>
+          <template v-else-if="!activeAccountHasAuth">
+            当前账号未授权登录。<br />
+            <span class="text-cyber-primary cursor-pointer underline" @click="redirectToOfficialOAuth()">点击前往合宙官方 OAuth 授权</span>
+          </template>
+          <template v-else-if="authError" class="text-amber-400">
+            <span class="text-amber-400">{{ authError }}</span>
+          </template>
+          <template v-else>该账号名下暂无已绑定真机。</template>
         </div>
 
       </div>
@@ -546,32 +498,55 @@
       </div>
     </div>
 
-    <!-- ==================== 7. 官方评测账号弹窗 ==================== -->
-    <div id="official-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-      <div class="glass-panel max-w-sm w-full p-6 rounded-2xl border border-cyber-primary/40 shadow-glow-cyan relative">
+    <!-- ==================== 7. 官方评测账号多账号切换弹窗 ==================== -->
+    <div id="official-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" @click.self="toggleOfficialModal()">
+      <div class="glass-panel max-w-md w-full p-5 rounded-2xl border border-cyber-primary/40 shadow-glow-cyan relative max-h-[86vh] overflow-y-auto">
         <div role="button" @click="toggleOfficialModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
           <i data-lucide="x" class="w-4 h-4"></i>
         </div>
         <div class="text-center">
           <div class="w-10 h-10 rounded-xl bg-cyber-primary/20 border border-cyber-primary text-cyber-primary flex items-center justify-center mx-auto mb-3 shadow-glow-cyan">
-            <i data-lucide="key" class="w-5 h-5"></i>
+            <i data-lucide="users" class="w-5 h-5"></i>
           </div>
-          <h3 class="text-sm font-bold text-white">评测账号与会话接入</h3>
-          <p class="text-xs text-slate-400 mt-1">AirCloud Open API v5 100%真实网关对接</p>
+          <h3 class="text-sm font-bold text-white">合宙官方评测账号切换</h3>
+          <p class="text-xs text-slate-400 mt-1">4 个账号共用密码 Hz8202 · 100% 真实网关对接</p>
         </div>
-        <div class="mt-5 space-y-3">
-          <div class="bg-cyber-900/80 p-3 rounded-xl border border-cyber-primary/30 text-xs font-mono space-y-1">
-            <div class="text-slate-400">合宙官方公开评测账号:</div>
-            <div class="text-cyber-primary font-bold">账号: 18101796680</div>
-            <div class="text-slate-300">密码: Hz8202</div>
-            <div class="text-cyber-emerald text-[10px] pt-1">● 4 台物理真机数据实时透传</div>
+
+        <div class="mt-4 space-y-2">
+          <div v-for="s in accountStates" :key="s.account.phone"
+               role="button"
+               @click="switchAccount(s.account.phone)"
+               :class="s.active ? 'p-3 rounded-xl border border-cyber-primary/70 bg-cyber-primary/10 cursor-pointer transition-all shadow-glow-cyan' : 'p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/50 cursor-pointer transition-all hover:border-slate-500'">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span :class="s.active ? 'w-2 h-2 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-2 h-2 rounded-full bg-slate-600'"></span>
+                <span :class="s.active ? 'text-xs font-bold text-white' : 'text-xs font-bold text-slate-300'">{{ s.account.label }}</span>
+                <span class="text-xs font-mono text-slate-400">{{ s.account.phone }}</span>
+              </div>
+              <span :class="s.hasAuth ? 'text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30' : 'text-[9px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30'">
+                {{ s.hasAuth ? '已登录' : '未登录' }}
+              </span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-1.5 flex items-center justify-between">
+              <span>{{ s.account.role }}</span>
+              <span class="font-mono text-slate-500">{{ s.active && deviceList.length ? deviceList.length + ' 台真机' : (s.hasAuth ? '点击切换查看' : '需先授权') }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-white/10 space-y-2">
+          <div class="text-[10px] text-slate-500 font-mono break-all">
+            当前激活：{{ activeAccountPhone }} · 项目 Key {{ activeProjectKeyShort }}
           </div>
           <div role="button" @click="redirectToOfficialOAuth()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan text-center cursor-pointer flex items-center justify-center space-x-1">
             <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-            <span>跳转合宙官方 OAuth 授权登录</span>
+            <span>授权 / 重登当前账号（{{ activeAccountPhone }}）</span>
           </div>
           <div role="button" @click="syncOfficialData()" class="w-full py-2.5 rounded-xl text-xs font-medium border border-cyber-primary/40 text-slate-200 hover:bg-cyber-primary/10 transition text-center cursor-pointer">
             立即同步刷新云端最新遥测
+          </div>
+          <div v-if="authError" class="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-2">
+            {{ authError }}
           </div>
         </div>
       </div>
@@ -581,8 +556,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, nextTick } from 'vue';
-import { AirCloudClient, DEFAULT_DEVICES } from '../../api/client';
+import { onMounted, onUnmounted, nextTick, ref, computed } from 'vue';
+import { AirCloudClient } from '../../api/client';
 import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-model';
 import { wgs84ToGcj02 } from '../../utils/coord-transform';
 
@@ -634,54 +609,129 @@ function generateCarMarkerIcon() {
   return c.toDataURL();
 }
 
-const DEVICES_DB: Record<string, any> = {
-  '864317087172311': {
-    name: '8202G·开封旗舰机',
-    shortName: '开封旗舰机',
-    lat: 34.794375,
-    lng: 114.335039,
-    battMv: '2587 mV (0%)',
-    csq: 'CSQ 28 (良好)',
-    speed: '0.0 km/h',
-    status: '在线',
-    address: '河南省开封市鼓楼区南苑街道小丽四季鲜水果城'
-  },
-  '864317087172121': {
-    name: '8202G·开封测试机',
-    shortName: '开封测试机',
-    lat: 34.794295,
-    lng: 114.334829,
-    battMv: '2451 mV (0%)',
-    csq: 'CSQ 19 (良好)',
-    speed: '0.0 km/h',
-    status: '在线',
-    address: '河南省开封市鼓楼区南苑街道闫记刀削面'
-  },
-  '864317087173012': {
-    name: '8202G·西安测试机',
-    shortName: '西安测试机',
-    lat: 34.191084,
-    lng: 108.881481,
-    battMv: '2377 mV (0%)',
-    csq: 'CSQ 31 (满格)',
-    speed: '0.0 km/h',
-    status: '在线',
-    address: '陕西省西安市雁塔区丈八街道中投国际A座'
-  },
-  '864317087172782': {
-    name: '8202G·未激活测试机',
-    shortName: '未激活测试机',
-    lat: 34.794375,
-    lng: 114.335039,
-    battMv: '0 mV',
-    csq: '无信号',
-    speed: '0.0 km/h',
-    status: '离线',
-    address: '待绑定激活终端'
-  }
-};
+// ==================== 多账号 / 真实设备响应式状态 ====================
+const deviceList = ref<any[]>([]);
+const deviceLoading = ref(true);
+const authError = ref('');
+const accountStates = ref<any[]>([]);
+const activeAccountPhone = ref(apiClient.getActivePhone());
+const activeAccountLabel = ref(apiClient.getActiveAccount().label);
+const activeAccountHasAuth = ref(apiClient.hasAuth());
+const activeProjectKey = ref('');
+const activeDeviceId = ref('');
 
-let activeDeviceId = '864317087172311';
+const activeProjectKeyShort = computed(() =>
+  activeProjectKey.value ? activeProjectKey.value.slice(0, 8) + '…' : '自动发现中'
+);
+
+/** 运行时设备索引（由真实云端数据构建，仅供取值，不含任何本地捏造数值） */
+const DEVICES_DB: Record<string, any> = {};
+
+function rebuildDeviceDb(list: any[]) {
+  Object.keys(DEVICES_DB).forEach(k => delete DEVICES_DB[k]);
+  list.forEach(d => {
+    DEVICES_DB[d.imei] = {
+      name: d.name,
+      shortName: d.shortName,
+      lat: d.lat,
+      lng: d.lng,
+      battMv: d.voltageMv ? `${d.voltageMv} mV` : '未上报',
+      csq: d.csq ? `CSQ ${d.csq}` : '无信号',
+      speed: `${d.speed ?? 0} km/h`,
+      status: d.online ? '在线' : '无定位',
+      address: d.address || '未上报物理定位',
+      lastActiveTime: d.lastActiveTime,
+      online: d.online
+    };
+  });
+}
+
+function refreshAccountStates() {
+  accountStates.value = apiClient.getAccountStates();
+  activeAccountPhone.value = apiClient.getActivePhone();
+  activeAccountLabel.value = apiClient.getActiveAccount().label;
+  activeAccountHasAuth.value = apiClient.hasAuth();
+  activeProjectKey.value = (apiClient as any).projectKey || '';
+}
+
+function mobileTabClass(d: any) {
+  const base = 'mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel flex items-center space-x-1.5 transition-all active:scale-95';
+  return d.imei === activeDeviceId.value
+    ? `${base} border border-cyber-primary/70 bg-cyber-primary/20 text-cyber-primary shadow-glow-cyan`
+    : `${base} border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500`;
+}
+
+function desktopCardClass(d: any) {
+  const base = 'desk-dev-card p-3 rounded-xl cursor-pointer transition-all';
+  return d.imei === activeDeviceId.value
+    ? `${base} border border-cyber-primary/60 bg-cyber-primary/10 hover:border-cyber-primary`
+    : `${base} border border-cyber-700/50 bg-cyber-900/40 hover:border-slate-500`;
+}
+
+function signalBadgeClass(d: any) {
+  const base = 'text-[9px] font-mono px-1 py-0.2 rounded';
+  if (!d.online) return `${base} bg-slate-800 text-slate-500`;
+  return d.imei === activeDeviceId.value
+    ? `${base} bg-cyber-emerald/20 text-cyber-emerald border border-cyber-emerald/30 font-bold`
+    : `${base} bg-slate-800 text-slate-400`;
+}
+
+function signalBadgeText(d: any) {
+  return d.online && d.csq ? `CSQ ${d.csq}` : '无定位';
+}
+
+/** 从合宙云端同步当前账号的真实设备清单 */
+async function loadRealDevices() {
+  deviceLoading.value = true;
+  authError.value = '';
+  try {
+    const list = await apiClient.getDeviceList();
+    deviceList.value = list;
+    rebuildDeviceDb(list);
+
+    if (list.length > 0) {
+      const keep = list.some(d => d.imei === activeDeviceId.value);
+      selectDeviceTab(keep ? activeDeviceId.value : list[0].imei);
+    } else {
+      activeDeviceId.value = '';
+      TRACK_POINTS = [];
+      drawSpeedWaveCanvas();
+    }
+  } catch (e: any) {
+    deviceList.value = [];
+    rebuildDeviceDb([]);
+    activeDeviceId.value = '';
+    TRACK_POINTS = [];
+    if (e && e.name === 'AuthExpiredError') {
+      authError.value = '合宙云端登录态已失效（可能在其他设备重复登录），请重新授权当前账号。';
+    } else {
+      authError.value = e?.message || '云端真机清单同步失败';
+    }
+    console.warn('[AirTrack] loadRealDevices failed', e);
+  } finally {
+    deviceLoading.value = false;
+    refreshAccountStates();
+    nextTick(() => {
+      drawSpeedWaveCanvas();
+      refreshIcons();
+    });
+  }
+}
+
+/** 切换合宙评测账号 */
+async function switchAccount(phone: string) {
+  if (phone === apiClient.getActivePhone()) {
+    syncOfficialData();
+    return;
+  }
+  apiClient.setActiveAccount(phone);
+  activeDeviceId.value = '';
+  deviceList.value = [];
+  rebuildDeviceDb([]);
+  TRACK_POINTS = [];
+  refreshAccountStates();
+  await loadRealDevices();
+}
 
 async function fetchDeviceLiveTrackAndTags(imei: string) {
   try {
@@ -717,26 +767,17 @@ async function fetchDeviceLiveTrackAndTags(imei: string) {
 }
 
 function selectDeviceTab(imei: string) {
-  activeDeviceId = imei;
   const dev = DEVICES_DB[imei];
   if (!dev) return;
+  activeDeviceId.value = imei;
 
-  document.querySelectorAll('.mob-device-tab').forEach(tab => {
-    tab.className = 'mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95';
+  // 设备列表头自动滚动到当前频道（样式由 Vue 响应式类绑定管理）
+  nextTick(() => {
+    const activeMobTab = document.getElementById('mob-tab-dev-' + imei);
+    if (activeMobTab && (activeMobTab as any).scrollIntoView) {
+      (activeMobTab as any).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
   });
-  const activeMobTab = document.getElementById('mob-tab-dev-' + imei);
-  if (activeMobTab) {
-    activeMobTab.className = 'mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-primary/70 bg-cyber-primary/20 text-cyber-primary shadow-glow-cyan flex items-center space-x-1.5 transition-all active:scale-95';
-    activeMobTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  }
-
-  document.querySelectorAll('.desk-dev-card').forEach(card => {
-    card.className = 'desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500';
-  });
-  const activeDeskCard = document.getElementById('card-desk-' + imei);
-  if (activeDeskCard) {
-    activeDeskCard.className = 'desk-dev-card p-3 rounded-xl border border-cyber-primary/60 bg-cyber-primary/10 cursor-pointer transition-all hover:border-cyber-primary';
-  }
 
   const deskTopName = document.getElementById('desktop-top-device-name');
   if (deskTopName) {
@@ -745,10 +786,6 @@ function selectDeviceTab(imei: string) {
 
   const elName = document.getElementById('drawer-vehicle-name');
   if (elName) elName.innerText = dev.name;
-  const elCoord = document.getElementById('drawer-coord-text');
-  if (elCoord) elCoord.innerText = `${dev.lat.toFixed(4)}°N, ${dev.lng.toFixed(4)}°E`;
-  const elTagCoord = document.getElementById('tel-tag-coords');
-  if (elTagCoord) elTagCoord.innerText = `${dev.lat.toFixed(4)}°N, ${dev.lng.toFixed(4)}°E`;
   const elBatt = document.getElementById('tel-tag-batt');
   if (elBatt) elBatt.innerText = dev.battMv;
   const elCsq = document.getElementById('tel-tag-csq');
@@ -757,31 +794,45 @@ function selectDeviceTab(imei: string) {
   // 同步更新顶部机头设备状态
   const mobHeaderName = document.getElementById('mob-drawer-vehicle-name');
   if (mobHeaderName) mobHeaderName.innerText = dev.name;
-  const mobHeaderCoord = document.getElementById('mob-drawer-coord-text');
-  if (mobHeaderCoord) mobHeaderCoord.innerText = `${dev.lat.toFixed(4)}°N, ${dev.lng.toFixed(4)}°E`;
 
-  if ((window as any).__map) {
-    const center = new TMap.LatLng(dev.lat, dev.lng);
-    (window as any).__map.panTo(center);
-    if ((window as any).__vehicleMarker) {
-      (window as any).__vehicleMarker.setGeometries([{
-        id: 'v1',
-        styleId: 'car_icon',
-        position: center,
-        properties: { title: dev.name }
-      }]);
+  const located = typeof dev.lat === 'number' && typeof dev.lng === 'number' && !isNaN(dev.lat) && !isNaN(dev.lng);
+  const coordText = located ? `${dev.lat.toFixed(4)}°N, ${dev.lng.toFixed(4)}°E` : '未上报经纬度';
+
+  const elCoord = document.getElementById('drawer-coord-text');
+  if (elCoord) elCoord.innerText = coordText;
+  const elTagCoord = document.getElementById('tel-tag-coords');
+  if (elTagCoord) elTagCoord.innerText = coordText;
+  const mobHeaderCoord = document.getElementById('mob-drawer-coord-text');
+  if (mobHeaderCoord) mobHeaderCoord.innerText = coordText;
+
+  // 仅对真实上报过定位的真机做地图定位；未上报设备不做任何坐标推测
+  if (located) {
+    if ((window as any).__map) {
+      const center = new TMap.LatLng(dev.lat, dev.lng);
+      (window as any).__map.panTo(center);
+      if ((window as any).__vehicleMarker) {
+        (window as any).__vehicleMarker.setGeometries([{
+          id: 'v1',
+          styleId: 'car_icon',
+          position: center,
+          properties: { title: dev.name }
+        }]);
+      }
+      if ((window as any).__fenceCircle) {
+        (window as any).__fenceCircle.setGeometries([{
+          center: center,
+          radius: 1000,
+          styleId: 'fence'
+        }]);
+      }
     }
-    if ((window as any).__fenceCircle) {
-      (window as any).__fenceCircle.setGeometries([{
-        center: center,
-        radius: 1000,
-        styleId: 'fence'
-      }]);
-    }
+    currentBaseLat = dev.lat;
+    currentBaseLng = dev.lng;
+  } else if ((window as any).__vehicleMarker) {
+    // 未上报定位：移除车辆标记，避免在错误位置显示设备
+    (window as any).__vehicleMarker.setGeometries([]);
   }
 
-  currentBaseLat = dev.lat;
-  currentBaseLng = dev.lng;
   generateTrackDataForScope(masterMode === 'range' ? currentMacroScope : 'recent_window');
   if (masterMode === 'range') {
     renderRangeTrackOnMap();
@@ -795,7 +846,7 @@ function selectDeviceTab(imei: string) {
 }
 
 function recenterVehicle() {
-  selectDeviceTab(activeDeviceId);
+  if (activeDeviceId.value) selectDeviceTab(activeDeviceId.value);
 }
 
 const TOTAL_POINTS = 100;
@@ -836,7 +887,12 @@ function generateTrackDataForScope(scope: string, startDate: string | null = nul
   }
 
   const isMultiDay = (endTimeMs - startTimeMs) > 86400000;
-  const dev = DEVICES_DB[activeDeviceId] || DEVICES_DB['864317087172311'];
+  const dev = DEVICES_DB[activeDeviceId.value];
+  if (!dev || typeof dev.lat !== 'number' || typeof dev.lng !== 'number') {
+    updateTimelineScaleTicks(isMultiDay);
+    drawSpeedWaveCanvas();
+    return;
+  }
 
   for (let i = 0; i < TOTAL_POINTS; i++) {
     const ratio = i / (TOTAL_POINTS - 1);
@@ -1223,7 +1279,7 @@ function renderStateAtPosition(percent: number, isPreview = false) {
       id: 'v1',
       styleId: 'car_icon',
       position: new TMap.LatLng(pt.lat, pt.lng),
-      properties: { title: DEVICES_DB[activeDeviceId]?.name || '上海测试机' }
+      properties: { title: DEVICES_DB[activeDeviceId.value]?.name || '合宙真机' }
     }]);
   }
 }
@@ -1696,21 +1752,13 @@ function toggleOfficialModal() {
 }
 
 function redirectToOfficialOAuth() {
-  const currentUrl = window.location.href.split('#')[0];
-  const redirectUri = encodeURIComponent(currentUrl);
-  const target = `https://api-iot.luatos.com/iam/luat_oauth/authorize?project_key=q0eilWQpyjZGFZFS6PFmREsRjUXoButr&redirect_uri=${redirectUri}&response_type=code`;
-  window.location.href = target;
+  const url = apiClient.buildOAuthUrl(apiClient.getActivePhone(), window.location.href);
+  console.info('[AirTrack] 跳转合宙官方 OAuth 授权:', url);
+  window.location.href = url;
 }
 
 async function syncOfficialData() {
-  try {
-    const devs = await apiClient.getDeviceList();
-    if (devs && devs.length > 0) {
-      selectDeviceTab(activeDeviceId);
-    }
-  } catch (err) {
-    console.warn('API sync fallback to cached data', err);
-  }
+  await loadRealDevices();
   toggleOfficialModal();
 }
 
@@ -1774,20 +1822,19 @@ onMounted(() => {
   setTimeout(refreshIcons, 100);
   setTimeout(refreshIcons, 500);
 
-  // 检查 URL 是否包含合宙官方 OAuth 回调 token
+  // 捕获合宙官方 OAuth 回调 token，并写入「发起登录的那个账号」
   if (typeof window !== 'undefined') {
     const searchStr = window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
     const urlParams = new URLSearchParams(searchStr);
     const oauthToken = urlParams.get('token');
     if (oauthToken) {
-      console.info('[AirTrack] 捕获到合宙官方 OAuth 回调 Token，换取业务凭据:', oauthToken);
-      apiClient.exchangeOAuthToken(oauthToken).then(ok => {
-        if (ok) {
-          console.info('[AirTrack] OAuth 换票成功，已持久化到 localStorage');
-          const cleanUrl = window.location.origin + window.location.pathname;
-          window.history.replaceState({}, document.title, cleanUrl);
-          selectDeviceTab(activeDeviceId);
-        }
+      const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      apiClient.exchangeOAuthToken(oauthToken, pending).then(ok => {
+        console.info(ok ? `[AirTrack] 账号 ${pending} OAuth 换票成功` : `[AirTrack] 账号 ${pending} 换票失败`);
+        refreshAccountStates();
+        loadRealDevices();
       });
     }
   }
@@ -1852,29 +1899,17 @@ onMounted(() => {
     console.warn('Map error:', e);
   }
 
-  // 异步尝试从合宙官方网关拉取最新设备列表与实时经纬度
-  apiClient.getDeviceList().then(devs => {
-    if (devs && devs.length > 0) {
-      console.info('[AirCloud-Live] 成功从官方云端同步到在网设备:', devs.length, '台');
-      devs.forEach(d => {
-        if (DEVICES_DB[d.imei]) {
-          DEVICES_DB[d.imei].lat = d.lat;
-          DEVICES_DB[d.imei].lng = d.lng;
-          DEVICES_DB[d.imei].address = d.address;
-        }
-      });
-    }
-  }).catch(e => console.warn('[AirCloud-Live] 离线保活机制生效:', e));
+  // 从合宙官方网关拉取当前账号的真实设备清单
+  refreshAccountStates();
+  loadRealDevices();
 
   initAccelChart();
   startCompassSimulator();
   setupSilkyTimelineInteractions();
   setupMobileSheetTouchGestures();
   switchMasterMode('live');
-  
-  // 确保初始选中开封旗舰机真机并触发真实数据上图
+
   setTimeout(() => {
-    selectDeviceTab('864317087172311');
     drawSpeedWaveCanvas();
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }, 200);

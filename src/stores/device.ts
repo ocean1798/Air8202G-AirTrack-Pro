@@ -1,25 +1,26 @@
 import { defineStore } from 'pinia';
 import type { DeviceInfo } from '../api/types';
-import { AirCloudClient, DEFAULT_DEVICES } from '../api/client';
+import { AirCloudClient } from '../api/client';
 import { analyzeBattery } from '../utils/battery-model';
 import type { BatteryStatus } from '../utils/battery-model';
 
 export const useDeviceStore = defineStore('device', {
   state: () => ({
     devices: [] as DeviceInfo[],
-    activeImei: '864317087172311',
+    activeImei: '',
     isArmed: true, // 创新功能 P1: 一键智能布防
     loading: false,
     lastRefreshed: 0
   }),
 
   getters: {
-    activeDevice(state): DeviceInfo {
-      return state.devices.find(d => d.imei === state.activeImei) || state.devices[0] || DEFAULT_DEVICES[0];
+    activeDevice(state): DeviceInfo | null {
+      return state.devices.find(d => d.imei === state.activeImei) || state.devices[0] || null;
     },
-    batteryAnalysis(): BatteryStatus {
+    batteryAnalysis(): BatteryStatus | null {
       const dev = this.activeDevice;
-      return analyzeBattery(dev.voltageMv || 4080);
+      if (!dev) return null;
+      return analyzeBattery(dev.voltageMv || 0);
     }
   },
 

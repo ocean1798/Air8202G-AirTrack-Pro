@@ -32,10 +32,12 @@ export interface DeviceInfo {
   shortName: string;
   online: boolean;
   lastActiveTime: string;
-  lat: number;
-  lng: number;
-  gcjLat: number;
-  gcjLng: number;
+  /** 未上报定位的真机为 null（不伪造坐标） */
+  lat: number | null;
+  lng: number | null;
+  gcjLat: number | null;
+  gcjLng: number | null;
+  /** 事件标签的真实值（显示用） */
   speed: number;
   voltageMv: number;
   csq: number;
