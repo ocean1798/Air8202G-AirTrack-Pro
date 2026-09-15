@@ -13,34 +13,34 @@
         <!-- 移动端专享：头条/抖音式多设备横向滑动频道栏 -->
         <div class="flex-1 overflow-x-auto no-scrollbar flex items-center space-x-1.5 pr-3 [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)]" id="mobile-device-channel-bar">
           
-          <div role="button" @click="selectDeviceTab('864317087173038')" id="mob-tab-dev-864317087173038" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-primary/70 bg-cyber-primary/20 text-cyber-primary shadow-glow-cyan flex items-center space-x-1.5 transition-all active:scale-95">
+          <div role="button" @click="selectDeviceTab('864317087172311')" id="mob-tab-dev-864317087172311" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-primary/70 bg-cyber-primary/20 text-cyber-primary shadow-glow-cyan flex items-center space-x-1.5 transition-all active:scale-95">
             <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
-            <span class="text-xs font-bold text-white whitespace-nowrap">上海测试机</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/20 text-cyber-emerald border border-cyber-emerald/30 font-bold">92%</span>
+            <span class="text-xs font-bold text-white whitespace-nowrap">开封旗舰机</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/20 text-cyber-emerald border border-cyber-emerald/30 font-bold">88%</span>
           </div>
 
           <div role="button" @click="selectDeviceTab('864317087172121')" id="mob-tab-dev-864317087172121" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
-            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
             <span class="text-xs font-medium whitespace-nowrap">开封测试机</span>
             <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-400">65%</span>
+          </div>
+
+          <div role="button" @click="selectDeviceTab('864317087173012')" id="mob-tab-dev-864317087173012" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
+            <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
+            <span class="text-xs font-medium whitespace-nowrap">西安测试机</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/15 text-cyber-emerald">78%</span>
+          </div>
+
+          <div role="button" @click="selectDeviceTab('864317087173038')" id="mob-tab-dev-864317087173038" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
+            <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
+            <span class="text-xs font-medium whitespace-nowrap">上海测试机</span>
+            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-500/15 text-amber-400">92%</span>
           </div>
 
           <div role="button" @click="selectDeviceTab('864317087174592')" id="mob-tab-dev-864317087174592" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
             <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
             <span class="text-xs font-medium whitespace-nowrap">深圳测试机</span>
             <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/15 text-cyber-emerald">88%</span>
-          </div>
-
-          <div role="button" @click="selectDeviceTab('864317087175110')" id="mob-tab-dev-864317087175110" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-            <span class="text-xs font-medium whitespace-nowrap">北京测试机</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-500/15 text-amber-400">45%</span>
-          </div>
-
-          <div role="button" @click="selectDeviceTab('864317087176233')" id="mob-tab-dev-864317087176233" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
-            <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
-            <span class="text-xs font-medium whitespace-nowrap">广州测试机</span>
-            <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/15 text-cyber-emerald">72%</span>
           </div>
 
         </div>
@@ -72,7 +72,7 @@
               <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold">Web 控制台</span>
             </div>
             <div class="text-[10px] text-slate-400 font-mono flex items-center space-x-2">
-              <span id="desktop-top-device-name" class="text-slate-200">8202G·上海测试机 (在线)</span>
+              <span id="desktop-top-device-name" class="text-slate-200">8202G·开封旗舰机 (在线)</span>
               <span class="text-cyber-emerald">● 4G蜂窝畅通</span>
             </div>
           </div>
@@ -120,43 +120,79 @@
 
       <div class="flex-1 overflow-y-auto p-2 space-y-2" id="desktop-device-card-list">
         
-        <!-- 设备 1 卡片: 上海测试机 -->
-        <div @click="selectDeviceTab('864317087173038')" id="card-desk-864317087173038" class="desk-dev-card p-3 rounded-xl border border-cyber-primary/60 bg-cyber-primary/10 cursor-pointer transition-all hover:border-cyber-primary">
+        <!-- 设备 1 卡片: 开封旗舰机 (物理真机，最近活跃) -->
+        <div @click="selectDeviceTab('864317087172311')" id="card-desk-864317087172311" class="desk-dev-card p-3 rounded-xl border border-cyber-primary/60 bg-cyber-primary/10 cursor-pointer transition-all hover:border-cyber-primary">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-1.5">
               <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
-              <span class="text-xs font-bold text-white">8202G·上海测试机</span>
+              <span class="text-xs font-bold text-white">8202G·开封旗舰机</span>
             </div>
             <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30">在线</span>
           </div>
-          <div class="text-[10px] font-mono text-slate-400 mt-1">IMEI: 864317087173038</div>
-          <div class="text-[10px] text-slate-300 mt-1 truncate">上海市静安区海宁路北站街道</div>
+          <div class="text-[10px] font-mono text-slate-400 mt-1">IMEI: 864317087172311</div>
+          <div class="text-[10px] text-slate-300 mt-1 truncate">河南省开封市鼓楼区南苑街道小丽四季鲜水果城</div>
           <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono">
-            <span class="text-cyber-emerald font-bold">4080mV (92%)</span>
-            <span class="text-cyber-primary bg-cyber-primary/10 px-1.5 py-0.5 rounded border border-cyber-primary/20">预估 ~42天</span>
-            <span class="text-slate-400">CSQ 31</span>
+            <span class="text-cyber-emerald font-bold">3980mV (88%)</span>
+            <span class="text-cyber-primary bg-cyber-primary/10 px-1.5 py-0.5 rounded border border-cyber-primary/20">预估 ~38天</span>
+            <span class="text-slate-400">CSQ 28</span>
           </div>
         </div>
 
-        <!-- 设备 2 卡片: 开封测试机 -->
+        <!-- 设备 2 卡片: 开封测试机 (物理真机) -->
         <div @click="selectDeviceTab('864317087172121')" id="card-desk-864317087172121" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+              <span class="w-2 h-2 rounded-full bg-cyber-emerald"></span>
               <span class="text-xs font-bold text-slate-300">8202G·开封测试机</span>
             </div>
-            <span class="text-[9px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">待机</span>
+            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded">在线</span>
           </div>
           <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087172121</div>
-          <div class="text-[10px] text-slate-400 mt-1 truncate">河南省开封市鼓楼区南苑街道</div>
+          <div class="text-[10px] text-slate-400 mt-1 truncate">河南省开封市鼓楼区南苑街道闫记刀削面</div>
           <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
             <span>3820mV (65%)</span>
             <span>预估 ~28天</span>
-            <span>CSQ 28</span>
+            <span>CSQ 19</span>
           </div>
         </div>
 
-        <!-- 设备 3 卡片: 深圳测试机 -->
+        <!-- 设备 3 卡片: 西安测试机 (物理真机) -->
+        <div @click="selectDeviceTab('864317087173012')" id="card-desk-864317087173012" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-cyber-emerald"></span>
+              <span class="text-xs font-bold text-slate-300">8202G·西安测试机</span>
+            </div>
+            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded">在线</span>
+          </div>
+          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087173012</div>
+          <div class="text-[10px] text-slate-400 mt-1 truncate">陕西省西安市雁塔区丈八街道中投国际A座</div>
+          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
+            <span>3950mV (78%)</span>
+            <span>预估 ~35天</span>
+            <span>CSQ 31</span>
+          </div>
+        </div>
+
+        <!-- 设备 4 卡片: 上海测试机 -->
+        <div @click="selectDeviceTab('864317087173038')" id="card-desk-864317087173038" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-cyber-emerald"></span>
+              <span class="text-xs font-bold text-slate-300">8202G·上海测试机</span>
+            </div>
+            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded">在线</span>
+          </div>
+          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087173038</div>
+          <div class="text-[10px] text-slate-400 mt-1 truncate">上海市静安区海宁路北站街道</div>
+          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
+            <span>4080mV (92%)</span>
+            <span>预估 ~42天</span>
+            <span>CSQ 31</span>
+          </div>
+        </div>
+
+        <!-- 设备 5 卡片: 深圳测试机 -->
         <div @click="selectDeviceTab('864317087174592')" id="card-desk-864317087174592" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-1.5">
@@ -173,43 +209,6 @@
             <span>CSQ 31</span>
           </div>
         </div>
-
-        <!-- 设备 4 卡片: 北京测试机 -->
-        <div @click="selectDeviceTab('864317087175110')" id="card-desk-864317087175110" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-              <span class="text-xs font-bold text-slate-300">8202G·北京测试机</span>
-            </div>
-            <span class="text-[9px] font-mono text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded">在线</span>
-          </div>
-          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087175110</div>
-          <div class="text-[10px] text-slate-400 mt-1 truncate">北京市东城区东长安街</div>
-          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>3750mV (45%)</span>
-            <span>预估 ~16天</span>
-            <span>CSQ 26</span>
-          </div>
-        </div>
-
-        <!-- 设备 5 卡片: 广州测试机 -->
-        <div @click="selectDeviceTab('864317087176233')" id="card-desk-864317087176233" class="desk-dev-card p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/40 cursor-pointer transition-all hover:border-slate-500">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-cyber-emerald"></span>
-              <span class="text-xs font-bold text-slate-300">8202G·广州测试机</span>
-            </div>
-            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded">在线</span>
-          </div>
-          <div class="text-[10px] font-mono text-slate-500 mt-1">IMEI: 864317087176233</div>
-          <div class="text-[10px] text-slate-400 mt-1 truncate">广东省广州市越秀区人民公园</div>
-          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>3910mV (72%)</span>
-            <span>预估 ~32天</span>
-            <span>CSQ 30</span>
-          </div>
-        </div>
-
       </div>
     </aside>
 
@@ -232,12 +231,12 @@
       <div id="sheet-header-bar" class="px-3.5 py-2 border-b border-cyber-700/60 bg-cyber-900/95 flex items-center justify-between shrink-0 cursor-pointer md:cursor-default select-none">
         <div class="flex-1">
           <div class="flex items-center space-x-2">
-            <span class="text-xs font-bold text-white tracking-wide truncate max-w-[140px] sm:max-w-none" id="drawer-vehicle-name">8202G·上海测试机</span>
+            <span class="text-xs font-bold text-white tracking-wide truncate max-w-[140px] sm:max-w-none" id="drawer-vehicle-name">8202G·开封旗舰机</span>
             <span class="text-[9px] font-mono text-cyber-primary bg-cyber-primary/10 border border-cyber-primary/30 px-1.5 py-0.2 rounded" id="drawer-gnss-badge">GNSS 3D</span>
           </div>
           <div class="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center space-x-1.5 leading-tight">
-            <span id="drawer-coord-text" class="truncate max-w-[150px] sm:max-w-none">31.2407°N, 121.4888°E</span>
-            <span class="font-bold px-1.5 py-0.2 rounded text-[10px] transition-colors" id="drawer-speed-badge">18.2 km/h</span>
+            <span id="drawer-coord-text" class="truncate max-w-[150px] sm:max-w-none">34.7944°N, 114.3350°E</span>
+            <span class="font-bold px-1.5 py-0.2 rounded text-[10px] transition-colors" id="drawer-speed-badge">21.4 km/h</span>
           </div>
         </div>
 
@@ -655,6 +654,39 @@ function generateCarMarkerIcon() {
 }
 
 const DEVICES_DB: Record<string, any> = {
+  '864317087172311': {
+    name: '8202G·开封旗舰机',
+    shortName: '开封旗舰机',
+    lat: 34.794375,
+    lng: 114.335039,
+    battMv: '3980 mV (88%)',
+    csq: 'CSQ 28 (良好)',
+    speed: '21.4 km/h',
+    status: '在线',
+    address: '河南省开封市鼓楼区南苑街道小丽四季鲜水果城'
+  },
+  '864317087172121': {
+    name: '8202G·开封测试机',
+    shortName: '开封测试机',
+    lat: 34.794295,
+    lng: 114.334829,
+    battMv: '3820 mV (65%)',
+    csq: 'CSQ 19 (良好)',
+    speed: '0.0 km/h',
+    status: '在线',
+    address: '河南省开封市鼓楼区南苑街道闫记刀削面'
+  },
+  '864317087173012': {
+    name: '8202G·西安测试机',
+    shortName: '西安测试机',
+    lat: 34.191084,
+    lng: 108.881481,
+    battMv: '3950 mV (78%)',
+    csq: 'CSQ 31 (满格)',
+    speed: '12.0 km/h',
+    status: '在线',
+    address: '陕西省西安市雁塔区丈八街道中投国际A座'
+  },
   '864317087173038': {
     name: '8202G·上海测试机',
     shortName: '上海测试机',
@@ -663,17 +695,8 @@ const DEVICES_DB: Record<string, any> = {
     battMv: '4080 mV (92%)',
     csq: 'CSQ 31 (满格)',
     speed: '18.2 km/h',
-    status: '在线'
-  },
-  '864317087172121': {
-    name: '8202G·开封测试机',
-    shortName: '开封测试机',
-    lat: 34.7872,
-    lng: 114.3396,
-    battMv: '3820 mV (65%)',
-    csq: 'CSQ 28 (良好)',
-    speed: '0.0 km/h',
-    status: '待机'
+    status: '在线',
+    address: '上海市静安区海宁路北站街道'
   },
   '864317087174592': {
     name: '8202G·深圳测试机',
@@ -683,31 +706,45 @@ const DEVICES_DB: Record<string, any> = {
     battMv: '3990 mV (88%)',
     csq: 'CSQ 31 (满格)',
     speed: '34.5 km/h',
-    status: '在线'
-  },
-  '864317087175110': {
-    name: '8202G·北京测试机',
-    shortName: '北京测试机',
-    lat: 39.9042,
-    lng: 116.4074,
-    battMv: '3750 mV (45%)',
-    csq: 'CSQ 26 (中等)',
-    speed: '12.0 km/h',
-    status: '在线'
-  },
-  '864317087176233': {
-    name: '8202G·广州测试机',
-    shortName: '广州测试机',
-    lat: 23.1291,
-    lng: 113.2644,
-    battMv: '3910 mV (72%)',
-    csq: 'CSQ 30 (良好)',
-    speed: '28.6 km/h',
-    status: '在线'
+    status: '在线',
+    address: '广东省深圳市福田区市民广场'
   }
 };
 
-let activeDeviceId = '864317087173038';
+let activeDeviceId = '864317087172311';
+
+async function fetchDeviceLiveTrackAndTags(imei: string) {
+  try {
+    const realPoints = await apiClient.getHistoricalTrack(imei, masterMode === 'range' ? currentMacroScope : 'recent_window');
+    if (realPoints && realPoints.length > 5) {
+      TRACK_POINTS = realPoints;
+      if (masterMode === 'range') {
+        renderRangeTrackOnMap();
+      } else {
+        renderFullColoredTrackOnMap();
+      }
+      renderStateAtPosition(committedPlayhead, false);
+      drawSpeedWaveCanvas();
+    }
+
+    const tagData = await apiClient.getRealTagTelemetry(imei);
+    if (tagData) {
+      if (tagData.val_799) {
+        const mv = parseInt(tagData.val_799, 10);
+        const pct = voltageToPercentage(mv);
+        const battEl = document.getElementById('tel-tag-batt');
+        if (battEl) battEl.innerText = `${mv} mV (${pct}%)`;
+      }
+      if (tagData.val_782) {
+        const csq = parseInt(tagData.val_782, 10);
+        const csqEl = document.getElementById('tel-tag-csq');
+        if (csqEl) csqEl.innerText = `CSQ ${csq} (${csq >= 25 ? '满格' : '良好'})`;
+      }
+    }
+  } catch (err) {
+    console.warn('[AirCloud] Live telemetry sync fallback', err);
+  }
+}
 
 function selectDeviceTab(imei: string) {
   activeDeviceId = imei;
@@ -776,6 +813,9 @@ function selectDeviceTab(imei: string) {
     renderFullColoredTrackOnMap();
   }
   renderStateAtPosition(committedPlayhead, false);
+
+  // 触发真实云端接口同步
+  fetchDeviceLiveTrackAndTags(imei);
 }
 
 function recenterVehicle() {
@@ -1756,7 +1796,7 @@ onMounted(() => {
 
   try {
     if (typeof TMap !== 'undefined') {
-      const center = new TMap.LatLng(31.240713, 121.488828);
+      const center = new TMap.LatLng(34.794375, 114.335039);
       const mapEl = document.getElementById('main-map');
       if (mapEl) {
         const map = new TMap.Map(mapEl, {
@@ -1793,7 +1833,7 @@ onMounted(() => {
               src: generateCarMarkerIcon()
             })
           },
-          geometries: [{ id: 'v1', styleId: 'car_icon', position: center, properties: { title: '8202G·上海测试机' } }]
+          geometries: [{ id: 'v1', styleId: 'car_icon', position: center, properties: { title: '8202G·开封旗舰机' } }]
         });
 
         (window as any).__fenceCircle = new TMap.MultiCircle({
@@ -1809,14 +1849,29 @@ onMounted(() => {
     console.warn('Map error:', e);
   }
 
+  // 异步尝试从合宙官方网关拉取最新设备列表与实时经纬度
+  apiClient.getDeviceList().then(devs => {
+    if (devs && devs.length > 0) {
+      console.info('[AirCloud-Live] 成功从官方云端同步到在网设备:', devs.length, '台');
+      devs.forEach(d => {
+        if (DEVICES_DB[d.imei]) {
+          DEVICES_DB[d.imei].lat = d.lat;
+          DEVICES_DB[d.imei].lng = d.lng;
+          DEVICES_DB[d.imei].address = d.address;
+        }
+      });
+    }
+  }).catch(e => console.warn('[AirCloud-Live] 离线保活机制生效:', e));
+
   initAccelChart();
   startCompassSimulator();
   setupSilkyTimelineInteractions();
   setupMobileSheetTouchGestures();
   switchMasterMode('live');
   
-  // 确保 DOM 稳定后初次绘制波形并创建图标
+  // 确保初始选中开封旗舰机真机并触发真实数据上图
   setTimeout(() => {
+    selectDeviceTab('864317087172311');
     drawSpeedWaveCanvas();
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }, 200);
