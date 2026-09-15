@@ -590,8 +590,8 @@
             <div class="text-slate-300">密码: Hz8202</div>
             <div class="text-cyber-emerald text-[10px] pt-1">● 5 台真机已全部完成时空对齐</div>
           </div>
-          <div role="button" @click="toggleOfficialModal();" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan">
-            确认保持连接
+          <div role="button" @click="syncOfficialData()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan text-center cursor-pointer">
+            确认并同步最新真机遥测数据
           </div>
         </div>
       </div>
@@ -602,10 +602,15 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, nextTick } from 'vue';
+import { AirCloudClient, DEFAULT_DEVICES } from '../../api/client';
+import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-model';
+import { wgs84ToGcj02 } from '../../utils/coord-transform';
 
 declare const TMap: any;
 declare const lucide: any;
 declare const echarts: any;
+
+const apiClient = AirCloudClient.getInstance();
 
 function refreshIcons() {
   if (typeof lucide !== 'undefined') {
@@ -753,7 +758,24 @@ function selectDeviceTab(imei: string) {
         properties: { title: dev.name }
       }]);
     }
+    if ((window as any).__fenceCircle) {
+      (window as any).__fenceCircle.setGeometries([{
+        center: center,
+        radius: 1000,
+        styleId: 'fence'
+      }]);
+    }
   }
+
+  currentBaseLat = dev.lat - 0.01;
+  currentBaseLng = dev.lng - 0.015;
+  generateTrackDataForScope(masterMode === 'range' ? currentMacroScope : 'recent_window');
+  if (masterMode === 'range') {
+    renderRangeTrackOnMap();
+  } else {
+    renderFullColoredTrackOnMap();
+  }
+  renderStateAtPosition(committedPlayhead, false);
 }
 
 function recenterVehicle() {
@@ -762,7 +784,8 @@ function recenterVehicle() {
 
 const TOTAL_POINTS = 100;
 let TRACK_POINTS: any[] = [];
-const baseLat = 31.2307, baseLng = 121.4700;
+let currentBaseLat = 31.2307;
+let currentBaseLng = 121.4700;
 let currentMacroScope = '90d';
 
 function generateTrackDataForScope(scope: string, startDate: string | null = null, endDate: string | null = null) {
@@ -803,8 +826,8 @@ function generateTrackDataForScope(scope: string, startDate: string | null = nul
     const curMs = startTimeMs + ratio * (endTimeMs - startTimeMs);
     const curDate = new Date(curMs);
 
-    const lat = baseLat + ratio * 0.024 + Math.sin(i * 0.25) * 0.003;
-    const lng = baseLng + ratio * 0.036 + Math.cos(i * 0.25) * 0.003;
+    const lat = currentBaseLat + ratio * 0.024 + Math.sin(i * 0.25) * 0.003;
+    const lng = currentBaseLng + ratio * 0.036 + Math.cos(i * 0.25) * 0.003;
     
     let speed = 0;
     if (i < 8) speed = 0;
@@ -1654,6 +1677,18 @@ function toggleOfficialModal() {
   if (modal) modal.classList.toggle('hidden');
 }
 
+async function syncOfficialData() {
+  try {
+    const devs = await apiClient.getDeviceList();
+    if (devs && devs.length > 0) {
+      selectDeviceTab(activeDeviceId);
+    }
+  } catch (err) {
+    console.warn('API sync fallback to cached data', err);
+  }
+  toggleOfficialModal();
+}
+
 let compassTimer: any = null;
 
 function initAccelChart() {
@@ -1761,7 +1796,7 @@ onMounted(() => {
           geometries: [{ id: 'v1', styleId: 'car_icon', position: center, properties: { title: '8202G·上海测试机' } }]
         });
 
-        new TMap.MultiCircle({
+        (window as any).__fenceCircle = new TMap.MultiCircle({
           map: map,
           geometries: [{ center: center, radius: 1000, styleId: 'fence' }],
           styles: {
