@@ -13,35 +13,35 @@
         <!-- 移动端专享：头条/抖音式多设备横向滑动频道栏 -->
         <div class="flex-1 overflow-x-auto no-scrollbar flex items-center space-x-1.5 pr-3 [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)]" id="mobile-device-channel-bar">
           
-          <button @click="selectDeviceTab('864317087173038')" id="mob-tab-dev-864317087173038" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-primary/70 bg-cyber-primary/20 text-cyber-primary shadow-glow-cyan flex items-center space-x-1.5 transition-all active:scale-95">
+          <div role="button" @click="selectDeviceTab('864317087173038')" id="mob-tab-dev-864317087173038" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-primary/70 bg-cyber-primary/20 text-cyber-primary shadow-glow-cyan flex items-center space-x-1.5 transition-all active:scale-95">
             <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
             <span class="text-xs font-bold text-white whitespace-nowrap">上海测试机</span>
             <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/20 text-cyber-emerald border border-cyber-emerald/30 font-bold">92%</span>
-          </button>
+          </div>
 
-          <button @click="selectDeviceTab('864317087172121')" id="mob-tab-dev-864317087172121" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
+          <div role="button" @click="selectDeviceTab('864317087172121')" id="mob-tab-dev-864317087172121" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
             <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
             <span class="text-xs font-medium whitespace-nowrap">开封测试机</span>
             <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-400">65%</span>
-          </button>
+          </div>
 
-          <button @click="selectDeviceTab('864317087174592')" id="mob-tab-dev-864317087174592" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
+          <div role="button" @click="selectDeviceTab('864317087174592')" id="mob-tab-dev-864317087174592" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
             <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
             <span class="text-xs font-medium whitespace-nowrap">深圳测试机</span>
             <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/15 text-cyber-emerald">88%</span>
-          </button>
+          </div>
 
-          <button @click="selectDeviceTab('864317087175110')" id="mob-tab-dev-864317087175110" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
+          <div role="button" @click="selectDeviceTab('864317087175110')" id="mob-tab-dev-864317087175110" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
             <span class="text-xs font-medium whitespace-nowrap">北京测试机</span>
             <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-500/15 text-amber-400">45%</span>
-          </button>
+          </div>
 
-          <button @click="selectDeviceTab('864317087176233')" id="mob-tab-dev-864317087176233" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
+          <div role="button" @click="selectDeviceTab('864317087176233')" id="mob-tab-dev-864317087176233" class="mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel border border-cyber-700/60 bg-cyber-900/70 text-slate-300 hover:border-slate-500 flex items-center space-x-1.5 transition-all active:scale-95">
             <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
             <span class="text-xs font-medium whitespace-nowrap">广州测试机</span>
             <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyber-emerald/15 text-cyber-emerald">72%</span>
-          </button>
+          </div>
 
         </div>
 
@@ -49,12 +49,12 @@
         <div class="w-px h-5 bg-white/10 mx-1.5 shrink-0"></div>
 
         <!-- 移动端专享：纯用户头像 (不带电话号码) -->
-        <button @click="toggleOfficialModal()" title="官方评测账号管理" class="shrink-0 relative group p-0.5 rounded-full border border-cyber-primary/50 shadow-glow-cyan hover:border-cyber-primary active:scale-95 transition-all bg-cyber-950/80">
+        <div role="button" @click="toggleOfficialModal()" title="官方评测账号管理" class="shrink-0 relative group p-0.5 rounded-full border border-cyber-primary/50 shadow-glow-cyan hover:border-cyber-primary active:scale-95 transition-all bg-cyber-950/80">
           <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-600/40 via-cyber-800 to-blue-600/50 flex items-center justify-center overflow-hidden border border-white/20">
             <i data-lucide="user" class="w-3.5 h-3.5 text-cyber-primary"></i>
           </div>
           <span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-cyber-emerald border-2 border-cyber-950"></span>
-        </button>
+        </div>
 
       </div>
 
@@ -82,26 +82,26 @@
         <div class="flex items-center space-x-2 pointer-events-auto">
           
           <!-- 桌面端完整保留：评测账号明文胶囊 -->
-          <button @click="toggleOfficialModal()" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
+          <div role="button" @click="toggleOfficialModal()" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
             <span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan"></span>
             <span class="text-slate-400">评测账号:</span>
             <span class="font-bold text-white tracking-wider">18101796680</span>
-          </button>
+          </div>
 
           <!-- 桌面端顶部回中键 -->
-          <button @click="recenterVehicle()" title="镜头平滑聚焦回当前车辆" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg active:scale-90">
+          <div role="button" @click="recenterVehicle()" title="镜头平滑聚焦回当前车辆" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg active:scale-90">
             <i data-lucide="crosshair" class="w-4 h-4"></i>
-          </button>
+          </div>
 
           <!-- 桌面端左侧设备坞折叠键 -->
-          <button @click="toggleDeviceDock()" id="btn-dock" title="展开/收起左侧在网设备坞" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
+          <div role="button" @click="toggleDeviceDock()" id="btn-dock" title="展开/收起左侧在网设备坞" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
             <i data-lucide="layers" class="w-4 h-4"></i>
-          </button>
+          </div>
 
           <!-- 桌面端右侧感知面板折叠键 -->
-          <button @click="toggleInspectorDrawer()" id="btn-inspector" title="展开/收起右侧感知面板" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
+          <div role="button" @click="toggleInspectorDrawer()" id="btn-inspector" title="展开/收起右侧感知面板" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
             <i data-lucide="panel-right" class="w-4 h-4"></i>
-          </button>
+          </div>
 
         </div>
 
@@ -215,9 +215,9 @@
 
     <!-- ==================== 4. 移动端独占：右下角悬浮回正 FAB (< md) ==================== -->
     <div class="md:hidden fixed right-3 z-30 transition-all duration-300 bottom-[172px] pointer-events-auto">
-      <button @click="recenterVehicle()" title="镜头平滑聚焦回当前车辆位置" class="w-10 h-10 rounded-2xl glass-panel border border-cyber-primary/60 text-cyber-primary flex items-center justify-center shadow-fab-shadow hover:bg-cyber-primary/20 hover:scale-105 active:scale-90 transition-all backdrop-blur-xl group bg-cyber-900/90">
+      <div role="button" @click="recenterVehicle()" title="镜头平滑聚焦回当前车辆位置" class="w-10 h-10 rounded-2xl glass-panel border border-cyber-primary/60 text-cyber-primary flex items-center justify-center shadow-fab-shadow hover:bg-cyber-primary/20 hover:scale-105 active:scale-90 transition-all backdrop-blur-xl group bg-cyber-900/90">
         <i data-lucide="crosshair" class="w-5 h-5 text-cyber-primary group-hover:rotate-45 transition-transform"></i>
-      </button>
+      </div>
     </div>
 
     <!-- ==================== 5. 核心：【双端双模感知面板】 ==================== -->
@@ -242,14 +242,14 @@
         </div>
 
         <div class="flex items-center space-x-2">
-          <button @click.stop="toggleQuickArm()" id="btn-quick-arm" class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-cyber-emerald text-white hover:bg-emerald-600 transition flex items-center space-x-1 shadow-glow-emerald">
+          <div role="button" @click.stop="toggleQuickArm()" id="btn-quick-arm" class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-cyber-emerald text-white hover:bg-emerald-600 transition flex items-center space-x-1 shadow-glow-emerald">
             <i data-lucide="shield-check" class="w-3 h-3"></i>
             <span id="quick-arm-text">已设防</span>
-          </button>
+          </div>
 
-          <button id="btn-sheet-chevron" class="md:hidden p-1 text-slate-400 hover:text-white transition-transform">
+          <div role="button" id="btn-sheet-chevron" class="md:hidden p-1 text-slate-400 hover:text-white transition-transform">
             <i data-lucide="chevron-up" class="w-4 h-4" id="icon-sheet-chevron"></i>
-          </button>
+          </div>
         </div>
       </div>
 
@@ -397,20 +397,20 @@
             <i data-lucide="calendar-range" class="w-3.5 h-3.5 text-cyber-primary"></i>
             <span>历史轨迹时空跨度 (AirCloud)</span>
           </div>
-          <button @click="toggleDateRangePopover()" class="text-slate-400 hover:text-white p-1">
+          <div role="button" @click="toggleDateRangePopover()" class="text-slate-400 hover:text-white p-1">
             <i data-lucide="x" class="w-4 h-4"></i>
-          </button>
+          </div>
         </div>
 
         <div class="mt-2.5">
           <div class="text-[10px] font-mono text-slate-400 mb-1">快速跨度:</div>
           <div class="grid grid-cols-3 sm:grid-cols-6 gap-1 text-[11px] font-mono">
-            <button @click="selectMacroPreset('today')" id="macro-btn-today" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">今日</button>
-            <button @click="selectMacroPreset('yesterday')" id="macro-btn-yesterday" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">昨日</button>
-            <button @click="selectMacroPreset('3d')" id="macro-btn-3d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近3天</button>
-            <button @click="selectMacroPreset('7d')" id="macro-btn-7d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近7天</button>
-            <button @click="selectMacroPreset('30d')" id="macro-btn-30d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近1月</button>
-            <button @click="selectMacroPreset('90d')" id="macro-btn-90d" class="macro-chip py-1 rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition">近1季</button>
+            <div role="button" @click="selectMacroPreset('today')" id="macro-btn-today" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">今日</div>
+            <div role="button" @click="selectMacroPreset('yesterday')" id="macro-btn-yesterday" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">昨日</div>
+            <div role="button" @click="selectMacroPreset('3d')" id="macro-btn-3d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近3天</div>
+            <div role="button" @click="selectMacroPreset('7d')" id="macro-btn-7d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近7天</div>
+            <div role="button" @click="selectMacroPreset('30d')" id="macro-btn-30d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近1月</div>
+            <div role="button" @click="selectMacroPreset('90d')" id="macro-btn-90d" class="macro-chip py-1 rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition">近1季</div>
           </div>
         </div>
 
@@ -420,10 +420,10 @@
             <span class="text-slate-500">-</span>
             <input type="date" id="input-date-end" value="2026-09-10" class="bg-cyber-950 border border-cyber-700/80 rounded px-1.5 py-0.5 text-slate-200 text-[10px] focus:border-cyber-primary focus:outline-none">
           </div>
-          <button @click="applyCustomDateRange()" class="px-3 py-1 rounded-xl bg-cyber-primary text-cyber-950 font-bold text-xs hover:bg-cyan-300 transition shadow-glow-cyan flex items-center space-x-1">
+          <div role="button" @click="applyCustomDateRange()" class="px-3 py-1 rounded-xl bg-cyber-primary text-cyber-950 font-bold text-xs hover:bg-cyan-300 transition shadow-glow-cyan flex items-center space-x-1">
             <i data-lucide="search" class="w-3 h-3"></i>
             <span>加载</span>
-          </button>
+          </div>
         </div>
       </div>
 
@@ -504,38 +504,38 @@
           
           <!-- 模式切换器 -->
           <div class="flex items-center bg-cyber-950/90 rounded-xl border border-white/10 p-0.5 shadow-inner">
-            <button @click="switchMasterMode('live')" id="btn-mode-live" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan">
+            <div role="button" @click="switchMasterMode('live')" id="btn-mode-live" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan">
               <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
               <span>跟随最新</span>
-            </button>
-            <button @click="switchMasterMode('range')" id="btn-mode-range" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1">
+            </div>
+            <div role="button" @click="switchMasterMode('range')" id="btn-mode-range" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1">
               <i data-lucide="sliders" class="w-3 h-3"></i>
               <span>区间回放</span>
-            </button>
+            </div>
             
             <div id="macro-date-divider" class="h-3.5 w-px bg-white/10 mx-1 hidden"></div>
             
-            <button @click="toggleDateRangePopover()" id="btn-date-trigger" class="px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-[11px] text-slate-200 hover:text-cyber-primary transition flex items-center space-x-1 group hidden">
+            <div role="button" @click="toggleDateRangePopover()" id="btn-date-trigger" class="px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-[11px] text-slate-200 hover:text-cyber-primary transition flex items-center space-x-1 group hidden">
               <i data-lucide="calendar" class="w-3 h-3 text-cyber-primary"></i>
               <span id="current-range-label" class="font-bold truncate max-w-[70px] sm:max-w-none">近90天</span>
               <i data-lucide="chevron-down" class="w-2.5 h-2.5 text-slate-400"></i>
-            </button>
+            </div>
           </div>
 
           <!-- 播放控制簇 -->
           <div id="unified-play-cluster" class="flex items-center gap-1.5 hidden">
             <div class="flex items-center bg-cyber-950/90 p-0.5 rounded-xl border border-white/10 gap-1">
-              <button @click="toggleRangePlay()" id="btn-range-play" class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:brightness-110 transition flex items-center gap-1 shadow-glow-emerald">
+              <div role="button" @click="toggleRangePlay()" id="btn-range-play" class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:brightness-110 transition flex items-center gap-1 shadow-glow-emerald">
                 <i data-lucide="play" class="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" id="icon-range-play"></i>
                 <span id="txt-range-play">播放</span>
-              </button>
-              <button @click="setPlaySpeed(1, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-cyber-primary/20 text-cyber-primary font-bold">1x</button>
-              <button @click="setPlaySpeed(5, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white">5x</button>
+              </div>
+              <div role="button" @click="setPlaySpeed(1, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-cyber-primary/20 text-cyber-primary font-bold">1x</div>
+              <div role="button" @click="setPlaySpeed(5, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white">5x</div>
             </div>
 
-            <button @click="applyTimePreset('sprint')" class="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-cyber-rose font-bold text-[10px] sm:text-[11px] bg-rose-500/15 border border-rose-500/40 hover:bg-rose-500/25 shadow-glow-rose transition flex items-center gap-1">
+            <div role="button" @click="applyTimePreset('sprint')" class="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-cyber-rose font-bold text-[10px] sm:text-[11px] bg-rose-500/15 border border-rose-500/40 hover:bg-rose-500/25 shadow-glow-rose transition flex items-center gap-1">
               <span>🏎️ 疾驰</span>
-            </button>
+            </div>
           </div>
 
           <!-- 状态呈现区 -->
@@ -573,9 +573,9 @@
     <!-- ==================== 7. 官方评测账号弹窗 ==================== -->
     <div id="official-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
       <div class="glass-panel max-w-sm w-full p-6 rounded-2xl border border-cyber-primary/40 shadow-glow-cyan relative">
-        <button @click="toggleOfficialModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+        <div role="button" @click="toggleOfficialModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
           <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+        </div>
         <div class="text-center">
           <div class="w-10 h-10 rounded-xl bg-cyber-primary/20 border border-cyber-primary text-cyber-primary flex items-center justify-center mx-auto mb-3 shadow-glow-cyan">
             <i data-lucide="key" class="w-5 h-5"></i>
@@ -590,9 +590,9 @@
             <div class="text-slate-300">密码: Hz8202</div>
             <div class="text-cyber-emerald text-[10px] pt-1">● 5 台真机已全部完成时空对齐</div>
           </div>
-          <button @click="toggleOfficialModal();" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan">
+          <div role="button" @click="toggleOfficialModal();" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan">
             确认保持连接
-          </button>
+          </div>
         </div>
       </div>
     </div>
