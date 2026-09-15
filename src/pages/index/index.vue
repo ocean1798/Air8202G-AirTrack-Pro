@@ -704,6 +704,9 @@ async function loadRealDevices() {
     TRACK_POINTS = [];
     if (e && e.name === 'AuthExpiredError') {
       authError.value = '合宙云端登录态已失效（可能在其他设备重复登录），请重新授权当前账号。';
+      // 会话被顶号时立即弹出账号面板，给出可见的重登入口
+      const modal = document.getElementById('official-modal');
+      if (modal) modal.classList.remove('hidden');
     } else {
       authError.value = e?.message || '云端真机清单同步失败';
     }
@@ -1902,6 +1905,16 @@ onMounted(() => {
   // 从合宙官方网关拉取当前账号的真实设备清单
   refreshAccountStates();
   loadRealDevices();
+
+  // 首次进入且所有账号都未授权时，主动弹出账号面板，让评审直接看到授权入口
+  setTimeout(() => {
+    const anyAuth = apiClient.getAccountStates().some((s: any) => s.hasAuth);
+    if (!anyAuth) {
+      const modal = document.getElementById('official-modal');
+      if (modal) modal.classList.remove('hidden');
+    }
+    refreshIcons();
+  }, 1500);
 
   initAccelChart();
   startCompassSimulator();
