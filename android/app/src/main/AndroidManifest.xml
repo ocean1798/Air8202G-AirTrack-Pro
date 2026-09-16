@@ -23,6 +23,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- 注册 Deep Link 自定义协议，接收 OAuth 登录回调唤醒 airtrack://oauth -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="airtrack" android:host="oauth" />
+            </intent-filter>
+
         </activity>
 
         <provider

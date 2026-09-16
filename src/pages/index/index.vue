@@ -611,6 +611,19 @@
               <p class="text-[9px] text-slate-400 mt-1">点击将前往合宙官方页面完成密码与验证码校验，成功后自动回跳接入</p>
             </div>
 
+            <!-- 手机端/外部浏览器便捷换票通道 -->
+            <div class="pt-2 border-t border-white/5 space-y-1.5">
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                <span>在手机/PC浏览器完成授权后，粘贴 Token 换票:</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <input v-model="pastedOAuthTokenOrUrl" placeholder="粘贴 Token 字符串或完整回调链接" class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 focus:border-cyber-primary focus:outline-none font-mono">
+                <div role="button" @click="submitPastedOAuthToken()" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-800 transition shrink-0 cursor-pointer">
+                  {{ isExchangingPastedToken ? '换票中...' : '提取换票' }}
+                </div>
+              </div>
+            </div>
+
             <!-- 开发者凭据直接录入 -->
             <div class="pt-2 border-t border-white/5">
               <div role="button" @click="showManualCreds = !showManualCreds" class="text-[10px] font-mono text-slate-400 hover:text-slate-200 flex items-center space-x-1 cursor-pointer">
@@ -650,6 +663,9 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, nextTick, ref, computed } from 'vue';
+import { App as CapApp } from '@capacitor/app';
+import { Browser as CapBrowser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 import { AirCloudClient } from '../../api/client';
 import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-model';
 import { wgs84ToGcj02 } from '../../utils/coord-transform';
@@ -755,10 +771,62 @@ const manualSalt = ref('');
 const manualSid = ref('336677');
 const manualProjectKey = ref('');
 
-function startOAuthForPhone(phone?: string) {
+const pastedOAuthTokenOrUrl = ref('');
+const isExchangingPastedToken = ref(false);
+
+async function submitPastedOAuthToken() {
+  const raw = pastedOAuthTokenOrUrl.value.trim();
+  if (!raw) return;
+  const token = apiClient.extractToken(raw);
+  if (!token) {
+    alert('未在输入内容中识别到有效的 token 参数');
+    return;
+  }
+  const target = (newAccountInputPhone.value || activeAccountPhone.value).trim();
+  isExchangingPastedToken.value = true;
+  try {
+    const ok = await apiClient.exchangeOAuthToken(token, target);
+    if (ok) {
+      pastedOAuthTokenOrUrl.value = '';
+      isAddingAccount.value = false;
+      refreshAccountStates();
+      await loadRealDevices();
+      alert(`账号 ${target} 授权换票成功！设备列表已更新。`);
+      const modal = document.getElementById('official-modal');
+      if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+      }
+    } else {
+      alert('Token 换票失败，请检查凭据是否有效或已过期。');
+    }
+  } catch (e) {
+    alert('换票网络异常，请重试');
+  } finally {
+    isExchangingPastedToken.value = false;
+  }
+}
+
+async function openOAuthAuthorization(phone?: string) {
   const target = (phone || newAccountInputPhone.value || activeAccountPhone.value).trim();
   if (!target) return;
-  window.location.href = apiClient.buildOAuthUrl(target, window.location.href);
+  const url = apiClient.buildOAuthUrl(target, window.location.href);
+  console.info('[AirTrack] 打开合宙官方 OAuth 授权:', url);
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await CapBrowser.open({
+        url: url,
+        windowName: '_blank'
+      });
+      return;
+    } catch (e) {
+      console.warn('[AirTrack] CapBrowser.open 异常，回退至系统跳转', e);
+    }
+  }
+  window.location.href = url;
+}
+
+function startOAuthForPhone(phone?: string) {
+  openOAuthAuthorization(phone);
 }
 
 function submitManualCreds() {
@@ -1956,9 +2024,7 @@ function toggleOfficialModal() {
 }
 
 function redirectToOfficialOAuth() {
-  const url = apiClient.buildOAuthUrl(apiClient.getActivePhone(), window.location.href);
-  console.info('[AirTrack] 跳转合宙官方 OAuth 授权:', url);
-  window.location.href = url;
+  openOAuthAuthorization();
 }
 
 async function syncOfficialData() {
@@ -2040,6 +2106,41 @@ onMounted(() => {
         refreshAccountStates();
         loadRealDevices();
       });
+    }
+  }
+
+  // 注册 Capacitor 原生深度链接 (Deep Link) 监听器，响应 airtrack://oauth?token=xxx
+  if (Capacitor.isNativePlatform()) {
+    try {
+      CapApp.addListener('appUrlOpen', async (data) => {
+        console.info('[AirTrack] 收到原生 Deep Link 唤醒:', data.url);
+        try {
+          await CapBrowser.close(); // 自动关闭应用内授权悬浮窗
+        } catch (e) {}
+
+        if (data.url && (data.url.includes('token=') || data.url.startsWith('airtrack://'))) {
+          try {
+            const raw = data.url.replace('airtrack://', 'https://dummy.local/');
+            const parsed = new URL(raw);
+            const oauthToken = parsed.searchParams.get('token');
+            if (oauthToken) {
+              const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
+              const ok = await apiClient.exchangeOAuthToken(oauthToken, pending);
+              console.info(ok ? `[AirTrack] DeepLink 账号 ${pending} OAuth 换票成功` : `[AirTrack] DeepLink 换票失败`);
+              refreshAccountStates();
+              await loadRealDevices();
+              const modal = document.getElementById('official-modal');
+              if (modal && !modal.classList.contains('hidden')) {
+                modal.classList.add('hidden');
+              }
+            }
+          } catch (err) {
+            console.error('[AirTrack] 解析 Deep Link 失败:', err);
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('[AirTrack] 注册 appUrlOpen 监听器失败', e);
     }
   }
 

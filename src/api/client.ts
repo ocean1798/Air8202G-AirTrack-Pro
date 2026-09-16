@@ -251,8 +251,46 @@ export class AirCloudClient {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem(LS_PENDING_ACCOUNT, phone);
     }
-    const clean = currentHref.split('#')[0].split('?')[0];
-    return `${OFFICIAL_API_CONFIG.oauthAuthorizeUrl}?return_to=${encodeURIComponent(clean)}`;
+
+    // 判断是否处于 Android 原生容器、本地 localhost 或私有协议下
+    const isLocalOrNative = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.protocol === 'capacitor:' ||
+      window.location.protocol === 'file:' ||
+      !window.location.protocol.startsWith('http')
+    );
+
+    // 确定回调地址：原生/本地环境下使用部署好的公网中转页；线上 Web 环境使用相对路径下的 oauth-callback.html
+    let callbackUrl = 'https://ocean1798.github.io/Air8202G-AirTrack-Pro/oauth-callback.html';
+    if (!isLocalOrNative && typeof window !== 'undefined') {
+      try {
+        const origin = window.location.origin;
+        const pathname = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        callbackUrl = `${origin}${pathname}oauth-callback.html`;
+      } catch (e) {
+        callbackUrl = 'https://ocean1798.github.io/Air8202G-AirTrack-Pro/oauth-callback.html';
+      }
+    }
+
+    return `${OFFICIAL_API_CONFIG.oauthAuthorizeUrl}?return_to=${encodeURIComponent(callbackUrl)}`;
+  }
+
+  /**
+   * 从用户输入（可能为纯 Token，也可能是完整回调链接如 ...?token=xxx&...）中提取干净的 Token
+   */
+  public extractToken(input: string): string {
+    const raw = (input || '').trim();
+    if (!raw) return '';
+    if (raw.includes('token=')) {
+      try {
+        const match = raw.match(/[?&#]token=([^&#]+)/);
+        if (match && match[1]) {
+          return decodeURIComponent(match[1]);
+        }
+      } catch (e) {}
+    }
+    return raw;
   }
 
   public consumePendingAccount(): string | null {

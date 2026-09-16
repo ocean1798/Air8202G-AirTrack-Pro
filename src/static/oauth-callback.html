@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>AirTrack Pro - 授权中转与唤醒</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #030712;
+      color: #f3f4f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .neon-border {
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      box-shadow: 0 0 25px rgba(6, 182, 212, 0.15);
+    }
+    .pulse-glow {
+      animation: pulseGlow 2s infinite;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.6); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md bg-gray-900/90 backdrop-blur-xl rounded-2xl p-6 sm:p-8 neon-border text-center space-y-6">
+    
+    <!-- 品牌标志与状态图标 -->
+    <div class="flex flex-col items-center space-y-3">
+      <div id="status-icon-box" class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-3xl pulse-glow">
+        ✓
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-wide text-gray-100">AirTrack Pro</h1>
+        <p class="text-xs text-cyan-400/80 font-mono mt-0.5">合宙 Air8202G 全景时空交互系统</p>
+      </div>
+    </div>
+
+    <!-- 授权状态通知 -->
+    <div class="space-y-2">
+      <h2 id="status-title" class="text-base font-semibold text-emerald-400">已成功获取合宙官方授权凭据</h2>
+      <p id="status-desc" class="text-xs text-gray-400 leading-relaxed">
+        正在尝试自动唤醒并切回 AirTrack Pro 原生应用...
+      </p>
+    </div>
+
+    <!-- 凭据缩略展示 -->
+    <div id="token-box" class="bg-black/50 rounded-xl p-3 border border-gray-800 text-left space-y-1 hidden">
+      <div class="text-[10px] text-gray-500 font-mono uppercase tracking-wider">OAuth Token</div>
+      <div id="token-text" class="text-xs font-mono text-cyan-300 break-all select-all"></div>
+    </div>
+
+    <!-- 操作按钮组 -->
+    <div class="space-y-3 pt-2">
+      <button id="btn-open-app" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-medium text-sm shadow-lg shadow-cyan-900/30 transition flex items-center justify-center space-x-2">
+        <span>🚀 点击直接打开 AirTrack Pro App</span>
+      </button>
+
+      <button id="btn-copy-token" class="w-full py-2.5 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-medium border border-gray-700 transition flex items-center justify-center space-x-2">
+        <span>📋 复制 Token 返回应用手动粘贴</span>
+      </button>
+
+      <button id="btn-open-web" class="w-full py-2 px-4 rounded-xl bg-transparent hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 text-xs transition">
+        🌐 在手机浏览器中使用网页版
+      </button>
+    </div>
+
+    <!-- 贴心说明 -->
+    <div class="text-[11px] text-gray-500 leading-normal border-t border-gray-800/80 pt-4">
+      如手机浏览器拦截自动拉起，请点击上方按钮直接打开应用；或复制 Token 后返回 AirTrack Pro 的“账号管理”中心快速换票。
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      function getParam(name) {
+        try {
+          var re = new RegExp('[?&]' + name + '=([^&#]*)');
+          var m = location.search.match(re);
+          if (m) return decodeURIComponent(m[1]);
+          m = location.hash.match(re);
+          if (m) return decodeURIComponent(m[1]);
+        } catch (e) {}
+        return null;
+      }
+
+      var token = getParam('token');
+      var tokenBox = document.getElementById('token-box');
+      var tokenText = document.getElementById('token-text');
+      var statusTitle = document.getElementById('status-title');
+      var statusDesc = document.getElementById('status-desc');
+      var statusIconBox = document.getElementById('status-icon-box');
+      var btnOpenApp = document.getElementById('btn-open-app');
+      var btnCopyToken = document.getElementById('btn-copy-token');
+      var btnOpenWeb = document.getElementById('btn-open-web');
+
+      if (!token) {
+        statusTitle.textContent = '未检测到授权 Token 凭据';
+        statusTitle.className = 'text-base font-semibold text-amber-400';
+        statusDesc.textContent = '您可能取消了授权或网络通信异常，请返回应用重试。';
+        statusIconBox.textContent = '!';
+        statusIconBox.className = 'w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-3xl';
+        btnOpenApp.textContent = '返回应用重新授权';
+        btnOpenApp.onclick = function () {
+          location.href = 'airtrack://oauth';
+        };
+        btnCopyToken.style.display = 'none';
+        return;
+      }
+
+      // 展示 Token
+      tokenBox.classList.remove('hidden');
+      tokenText.textContent = token;
+
+      // 深度链接
+      var deepLinkUrl = 'airtrack://oauth?token=' + encodeURIComponent(token);
+
+      // 尝试自动拉起 App
+      try {
+        window.location.href = deepLinkUrl;
+      } catch (e) {}
+
+      // 手动拉起按钮
+      btnOpenApp.onclick = function () {
+        window.location.href = deepLinkUrl;
+      };
+
+      // 复制 Token
+      btnCopyToken.onclick = function () {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(token).then(function () {
+            btnCopyToken.innerHTML = '<span>✓ 已成功复制 Token！请切回应用粘贴</span>';
+            btnCopyToken.classList.add('text-emerald-400', 'border-emerald-500/40');
+          });
+        } else {
+          var textarea = document.createElement('textarea');
+          textarea.value = token;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          btnCopyToken.innerHTML = '<span>✓ 已成功复制 Token！请切回应用粘贴</span>';
+          btnCopyToken.classList.add('text-emerald-400', 'border-emerald-500/40');
+        }
+      };
+
+      // 网页版打开
+      btnOpenWeb.onclick = function () {
+        var cleanOrigin = location.href.split('oauth-callback.html')[0];
+        location.href = cleanOrigin + 'index.html?token=' + encodeURIComponent(token);
+      };
+    })();
+  </script>
+</body>
+</html>
