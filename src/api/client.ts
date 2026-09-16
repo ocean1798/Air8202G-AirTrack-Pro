@@ -22,6 +22,27 @@ import {
 } from './accounts';
 import type { AccountDef } from './accounts';
 import { db, type StoredTrackPoint, type StoredDeviceProfile } from '../utils/db';
+import { voltageToPercentage } from '../utils/battery-model';
+
+/** 换算 4G 蜂窝信号中文评级描述 */
+export function getSignalLevelText(csq: number): string {
+  if (csq >= 20) return '强';
+  if (csq >= 12) return '中';
+  if (csq >= 5) return '弱';
+  return '无';
+}
+
+/** 换算人性化相对更新时间（如“刚刚”、“4分钟前”、“2小时前”） */
+export function formatRelativeTime(ts?: string | number): string {
+  if (!ts || ts === '—') return '—';
+  const ms = typeof ts === 'number' ? ts : new Date(String(ts).replace(/-/g, '/')).getTime();
+  if (isNaN(ms) || ms <= 0) return String(ts);
+  const diff = (Date.now() - ms) / 1000;
+  if (diff < 60) return '刚刚';
+  if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
+  return `${Math.floor(diff / 86400)} 天前`;
+}
 
 export { getAllRegisteredAccounts, DEFAULT_ACCOUNT_PHONE, findAccount, updateUserAccountLabel };
 export type { AccountDef };
@@ -665,6 +686,20 @@ export class AirCloudClient {
         // 兼容合宙最新定位接口的 signal 与历史 val_782 字段
         const rawCsq = latestLoc?.signal ?? latestLoc?.val_782 ?? latestLoc?.csq ?? 0;
         const csq = parseInt(String(rawCsq), 10) || 0;
+        const signalLevelText = isOnline ? getSignalLevelText(csq) : "无";
+
+        // 供电与电量换算：优先官方 percent，若无则由 val_799 毫伏值通过锂电曲线换算
+        const voltageMv = latestLoc?.val_799 ? parseInt(latestLoc.val_799, 10) : 0;
+        let battPct: number | undefined = undefined;
+        if (latestLoc?.percent !== undefined && latestLoc.percent !== null && latestLoc.percent !== "") {
+          battPct = parseInt(String(latestLoc.percent), 10);
+        } else if (voltageMv > 0) {
+          battPct = voltageToPercentage(voltageMv);
+        }
+
+        // 相对时间与格式化大地坐标
+        const relativeTime = formatRelativeTime(lastActiveTime);
+        const coordText = hasCoord ? `${rawLat!.toFixed(5)}, ${rawLng!.toFixed(5)}` : "暂无定位";
 
         const dev: DeviceInfo = {
           imei,
@@ -672,14 +707,21 @@ export class AirCloudClient {
           shortName,
           online: !!isOnline,
           lastActiveTime,
+          relativeTime,
+          coordText,
+          battPct,
+          signalLevelText,
+          fixType: latestLoc?.val_512 ? "GPS" : (hasCoord ? "GPS" : "基站"),
+          satCount: latestLoc?.val_515 ? parseInt(latestLoc.val_515, 10) : undefined,
+          tempC: latestLoc?.val_256 ? parseFloat(latestLoc.val_256) : undefined,
           lat: hasCoord ? rawLat : null,
           lng: hasCoord ? rawLng : null,
           gcjLat: hasCoord ? rawLat : null,
           gcjLng: hasCoord ? rawLng : null,
           speed: latestLoc?.speed ? parseFloat(latestLoc.speed) : 0,
-          voltageMv: latestLoc?.val_799 ? parseInt(latestLoc.val_799, 10) : 0,
+          voltageMv,
           csq,
-          firmwareVersion: 'Air8202G',
+          firmwareVersion: "Air8202G",
           address
         };
         devices.push(dev);
@@ -688,10 +730,10 @@ export class AirCloudClient {
           imei,
           accountPhone: this.activePhone,
           name: defaultName,
-          status: isOnline ? '在线' : '离线',
+          status: isOnline ? "在线" : "离线",
           csq: `CSQ ${dev.csq}`,
-          battMv: dev.voltageMv ? `${dev.voltageMv} mV` : '—',
-          battPct: dev.voltageMv ? Math.min(100, Math.max(0, Math.round(((dev.voltageMv - 2000) / 1000) * 100))) : 0,
+          battMv: dev.voltageMv ? `${dev.voltageMv} mV` : "—",
+          battPct: battPct ?? 0,
           lat: dev.lat,
           lng: dev.lng,
           latestTime: lastActiveTime,
@@ -715,27 +757,34 @@ export class AirCloudClient {
   }
 
   private profilesToDeviceInfos(profiles: StoredDeviceProfile[]): DeviceInfo[] {
-    return profiles.map(p => ({
-      imei: p.imei,
-      name: p.name,
-      shortName: p.name.slice(-7),
-      online: p.status === '在线',
-      lastActiveTime: p.latestTime,
-      lat: p.lat,
-      lng: p.lng,
-      gcjLat: p.lat,
-      gcjLng: p.lng,
-      speed: 0,
-      voltageMv: parseInt(p.battMv, 10) || 0,
-      csq: parseInt(p.csq.replace(/\D/g, ''), 10) || 0,
-    }));
+    return profiles.map(p => {
+      const csqNum = parseInt(p.csq.replace(/\D/g, ""), 10) || 0;
+      const isOnline = p.status === "在线";
+      const hasCoord = typeof p.lat === "number" && typeof p.lng === "number" && !isNaN(p.lat) && !isNaN(p.lng);
+      return {
+        imei: p.imei,
+        name: p.name,
+        shortName: p.name.slice(-7),
+        online: isOnline,
+        lastActiveTime: p.latestTime,
+        relativeTime: formatRelativeTime(p.latestTime),
+        coordText: hasCoord ? `${Number(p.lat).toFixed(5)}, ${Number(p.lng).toFixed(5)}` : "暂无定位",
+        battPct: p.battPct ?? (parseInt(p.battMv, 10) ? voltageToPercentage(parseInt(p.battMv, 10)) : undefined),
+        signalLevelText: isOnline ? getSignalLevelText(csqNum) : "无",
+        lat: p.lat,
+        lng: p.lng,
+        gcjLat: p.lat,
+        gcjLng: p.lng,
+        speed: 0,
+        voltageMv: parseInt(p.battMv, 10) || 0,
+        csq: csqNum,
+        address: p.address || "未上报物理定位"
+      };
+    });
   }
 
   /**
-   * 航位时空差分推导算法（Spatiotemporal Derivation）
-   * 解决合宙官方 AirCloud 接口不返回 speed 速度字段的核心问题。
-   */
-  public deriveSpeedsForTrackPoints(points: StoredTrackPoint[]): StoredTrackPoint[] {
+   * public deriveSpeedsForTrackPoints(points: StoredTrackPoint[]): StoredTrackPoint[] {
     if (!points || points.length === 0) return [];
     // 确保按时序单调递增
     const sorted = [...points].sort((a, b) => a.timestamp - b.timestamp);

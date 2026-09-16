@@ -38,6 +38,139 @@ const DB_VERSION = 1;
 const STORE_TRACKS = 'track_points';
 const STORE_DEVICES = 'device_profiles';
 
+export const SEED_DEVICE_PROFILES: StoredDeviceProfile[] = [
+  // 演示空间 01 (18101796680)
+  {
+    imei: '864317087173038',
+    accountPhone: '18101796680',
+    name: '终端·73038',
+    status: '在线',
+    csq: 'CSQ 31',
+    battMv: '3940 mV',
+    battPct: 78,
+    lat: 31.13218,
+    lng: 121.54868,
+    latestTime: '2026-09-16 20:45:12',
+    address: '上海市浦东新区康桥镇浦三路3801号',
+    updatedAt: Date.now()
+  },
+  {
+    imei: '864317087172311',
+    accountPhone: '18101796680',
+    name: '终端·72311',
+    status: '在线',
+    csq: 'CSQ 24',
+    battMv: '4110 mV',
+    battPct: 95,
+    lat: 34.79441,
+    lng: 114.33492,
+    latestTime: '2026-09-16 20:50:00',
+    address: '河南省开封市鼓楼区南苑街道丁角街56号',
+    updatedAt: Date.now()
+  },
+  {
+    imei: '864317087172121',
+    accountPhone: '18101796680',
+    name: '终端·72121',
+    status: '在线',
+    csq: 'CSQ 31',
+    battMv: '4080 mV',
+    battPct: 92,
+    lat: 34.79444,
+    lng: 114.33523,
+    latestTime: '2026-09-16 20:48:30',
+    address: '河南省开封市鼓楼区南苑街道项师傅炸鸡汉堡丁角街店',
+    updatedAt: Date.now()
+  },
+  {
+    imei: '864317087173012',
+    accountPhone: '18101796680',
+    name: '终端·73012',
+    status: '在线',
+    csq: 'CSQ 31',
+    battMv: '3890 mV',
+    battPct: 72,
+    lat: 34.19108,
+    lng: 108.88148,
+    latestTime: '2026-09-16 19:30:15',
+    address: '陕西省西安市雁塔区丈八街道中投国际A座',
+    updatedAt: Date.now()
+  },
+  {
+    imei: '864317087172782',
+    accountPhone: '18101796680',
+    name: '终端·72782',
+    status: '离线',
+    csq: 'CSQ 25',
+    battMv: '3620 mV',
+    battPct: 20,
+    lat: 34.20796,
+    lng: 108.86940,
+    latestTime: '2026-09-13 14:12:00',
+    address: '陕西省西安市雁塔区丈八街道川人冒大院冒菜',
+    updatedAt: Date.now()
+  },
+  // 演示空间 02 (19036766195)
+  {
+    imei: '864317087172071',
+    accountPhone: '19036766195',
+    name: '终端·72071',
+    status: '在线',
+    csq: 'CSQ 28',
+    battMv: '3990 mV',
+    battPct: 84,
+    lat: 43.82559,
+    lng: 87.61685,
+    latestTime: '2026-09-16 20:30:00',
+    address: '新疆维吾尔自治区乌鲁木齐市水磨沟区南湖东路',
+    updatedAt: Date.now()
+  },
+  {
+    imei: '864317083931439',
+    accountPhone: '19036766195',
+    name: '终端·31439',
+    status: '离线',
+    csq: 'CSQ 18',
+    battMv: '3710 mV',
+    battPct: 38,
+    lat: 43.81223,
+    lng: 87.58914,
+    latestTime: '2026-09-15 11:20:00',
+    address: '新疆维吾尔自治区乌鲁木齐市沙依巴克区友好南路',
+    updatedAt: Date.now()
+  },
+  // 演示空间 03 (15938684042)
+  {
+    imei: '864317087172741',
+    accountPhone: '15938684042',
+    name: '终端·72741',
+    status: '在线',
+    csq: 'CSQ 30',
+    battMv: '4020 mV',
+    battPct: 88,
+    lat: 31.18201,
+    lng: 121.52154,
+    latestTime: '2026-09-16 20:40:00',
+    address: '上海市浦东新区北蔡镇花绣路18弄',
+    updatedAt: Date.now()
+  },
+  // 演示空间 04 (13384022744)
+  {
+    imei: '864317087172683',
+    accountPhone: '13384022744',
+    name: '终端·72683',
+    status: '在线',
+    csq: 'CSQ 29',
+    battMv: '3950 mV',
+    battPct: 80,
+    lat: 43.83120,
+    lng: 87.62500,
+    latestTime: '2026-09-16 20:25:00',
+    address: '新疆维吾尔自治区乌鲁木齐市米东区米东北路',
+    updatedAt: Date.now()
+  }
+];
+
 class AirTrackDatabase {
   private dbPromise: Promise<IDBDatabase | null> | null = null;
   private memoryTracks: Map<string, StoredTrackPoint> = new Map();
@@ -228,10 +361,28 @@ class AirTrackDatabase {
         const index = store.index('idx_account');
         const req = index.getAll(IDBKeyRange.only(accountPhone));
 
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => resolve([]);
+        req.onsuccess = () => {
+          const res = req.result || [];
+          if (res.length > 0) {
+            resolve(res);
+          } else {
+            // 首次离线冷启动：若存在该空间的预置物理设备种子，自动写入本地并返回
+            const seeds = SEED_DEVICE_PROFILES.filter(d => d.accountPhone === accountPhone);
+            if (seeds.length > 0) {
+              this.putDeviceProfiles(seeds).catch(() => {});
+              resolve(seeds);
+            } else {
+              resolve([]);
+            }
+          }
+        };
+        req.onerror = () => {
+          const seeds = SEED_DEVICE_PROFILES.filter(d => d.accountPhone === accountPhone);
+          resolve(seeds);
+        };
       } catch (_) {
-        resolve([]);
+        const seeds = SEED_DEVICE_PROFILES.filter(d => d.accountPhone === accountPhone);
+        resolve(seeds);
       }
     });
   }

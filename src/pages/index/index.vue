@@ -134,17 +134,38 @@
               {{ d.online ? '在线' : '离线' }}
             </span>
           </div>
+          <!-- 第 2 行：IMEI 串号 -->
           <div :class="activeDeviceId === d.imei ? 'text-[10px] font-mono text-slate-400 mt-1' : 'text-[10px] font-mono text-slate-500 mt-1'">IMEI: {{ d.imei }}</div>
-          <div :class="activeDeviceId === d.imei ? 'text-[10px] text-slate-300 mt-1 truncate' : 'text-[10px] text-slate-400 mt-1 truncate'" :title="d.address">{{ d.address }}</div>
+
+          <!-- 第 3 行：经纬度大地坐标（支持点击复制） -->
+          <div class="flex items-center space-x-1 text-[10px] font-mono mt-0.5 text-slate-400 hover:text-cyan-300 cursor-pointer transition-colors"
+               @click.stop="copyCoordToClipboard(d.coordText)"
+               :title="'点击复制坐标: ' + (d.coordText || '暂无定位')">
+            <span class="text-slate-500 shrink-0">📍</span>
+            <span class="truncate font-sans select-all">{{ d.coordText || '暂无定位' }}</span>
+          </div>
+
+          <!-- 第 4 行：详细物理地址 -->
+          <div class="flex items-center space-x-1 text-[10px] mt-0.5 truncate"
+               :class="activeDeviceId === d.imei ? 'text-slate-300' : 'text-slate-400'"
+               :title="d.address">
+            <span class="text-slate-500 shrink-0">🏷️</span>
+            <span class="truncate">{{ d.address || '未上报物理定位' }}</span>
+          </div>
           
-          <!-- 底部状态条：明确标记最后上报时间与通信信号 -->
-          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono">
-            <div class="flex items-center space-x-1 truncate mr-1.5">
-              <span class="text-slate-500 shrink-0">最后上报:</span>
-              <span :class="activeDeviceId === d.imei ? 'text-slate-200 font-bold truncate' : 'text-slate-400 truncate'">{{ d.lastActiveTime }}</span>
+          <!-- 第 5 行：底栏状态条（电量百分比 · 信号等级 · 相对时间） -->
+          <div class="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between text-[10px] font-mono">
+            <div class="flex items-center space-x-1.5 truncate mr-1.5">
+              <span :class="d.battPct && d.battPct <= 20 ? 'text-rose-400 font-bold' : 'text-cyber-emerald font-bold'">
+                🔋 {{ d.battPct != null ? `${d.battPct}%` : '—' }}
+              </span>
+              <span class="text-slate-600">·</span>
+              <span :class="d.csq >= 12 ? 'text-cyan-300 font-bold' : (d.csq > 0 ? 'text-amber-300' : 'text-slate-500')">
+                📶 {{ d.csq > 0 ? `${d.signalLevelText || '强'}（${d.csq}）` : '无信号' }}
+              </span>
             </div>
-            <span :class="d.online ? 'text-cyber-primary font-bold shrink-0' : 'text-slate-500 shrink-0'">
-              {{ d.online ? `CSQ ${d.csq}` : '无信号' }}
+            <span class="text-slate-400 shrink-0" :title="'最后上报绝对时间: ' + d.lastActiveTime">
+              ⏱️ {{ d.relativeTime || '—' }}
             </span>
           </div>
         </div>
@@ -816,15 +837,40 @@ function rebuildDeviceDb(list: any[]) {
       shortName: d.shortName,
       lat: d.lat,
       lng: d.lng,
+      voltageMv: d.voltageMv || 0,
       battMv: d.voltageMv ? `${d.voltageMv} mV` : '未上报',
+      battPct: d.battPct,
       csq: d.csq ? `CSQ ${d.csq}` : '无信号',
+      csqNum: d.csq || 0,
+      signalLevelText: d.signalLevelText || (d.csq >= 20 ? '强' : d.csq >= 12 ? '中' : d.csq >= 5 ? '弱' : '无'),
+      relativeTime: d.relativeTime || '—',
+      coordText: d.coordText || (d.lat != null && d.lng != null ? `${Number(d.lat).toFixed(5)}, ${Number(d.lng).toFixed(5)}` : '暂无定位'),
       speed: typeof d.speed === 'number' ? d.speed : (parseFloat(d.speed) || 0),
       status: d.online ? '在线' : '离线',
       address: d.address || '未上报物理定位',
-      lastActiveTime: d.lastActiveTime,
-      online: d.online
+      lastActiveTime: d.lastActiveTime || '未上报',
+      online: d.online,
+      fixType: d.fixType || 'GPS',
+      satCount: d.satCount,
+      tempC: d.tempC
     };
   });
+}
+
+function copyCoordToClipboard(coord?: string) {
+  if (!coord || coord === '暂无定位') {
+    showCyberToast('当前设备暂未上报坐标', 'warning');
+    return;
+  }
+  if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(coord).then(() => {
+      showCyberToast(`已复制坐标：${coord}`, 'info');
+    }).catch(() => {
+      showCyberToast(`坐标：${coord}`, 'info');
+    });
+  } else {
+    showCyberToast(`坐标：${coord}`, 'info');
+  }
 }
 
 function formatPhone(phone: string): string {
@@ -1150,8 +1196,9 @@ async function fetchDeviceLiveTrackAndTags(imei: string) {
       }
       if (tagData.val_782) {
         const csq = parseInt(tagData.val_782, 10);
+        const level = csq >= 20 ? '强' : csq >= 12 ? '中' : csq >= 5 ? '弱' : '无';
         const csqEl = document.getElementById('tel-tag-csq');
-        if (csqEl) csqEl.innerText = `CSQ ${csq} (${csq >= 25 ? '满格' : '良好'})`;
+        if (csqEl) csqEl.innerText = `${level} (CSQ ${csq})`;
       }
     }
   } catch (err) {
@@ -1180,15 +1227,21 @@ function selectDeviceTab(imei: string) {
   const elName = document.getElementById('drawer-vehicle-name');
   if (elName) elName.innerText = dev.name;
   const elLastTime = document.getElementById('tel-tag-last-time');
-  if (elLastTime) elLastTime.innerText = dev.lastActiveTime || '未上报';
+  if (elLastTime) elLastTime.innerText = `${dev.lastActiveTime || '未上报'} (${dev.relativeTime || '—'})`;
   const elBatt = document.getElementById('tel-tag-batt');
-  if (elBatt) elBatt.innerText = dev.battMv;
+  if (elBatt) {
+    elBatt.innerText = dev.battPct != null ? `${dev.voltageMv} mV (${dev.battPct}%)` : dev.battMv;
+  }
   const elCsq = document.getElementById('tel-tag-csq');
-  if (elCsq) elCsq.innerText = dev.csq;
+  if (elCsq) {
+    elCsq.innerText = dev.csqNum > 0 ? `${dev.signalLevelText || '强'} (CSQ ${dev.csqNum})` : '无信号';
+  }
 
   // 同步更新顶部机头设备状态
   const mobHeaderName = document.getElementById('mob-drawer-vehicle-name');
   if (mobHeaderName) mobHeaderName.innerText = dev.name;
+  const elGnssBadge = document.getElementById('drawer-gnss-badge');
+  if (elGnssBadge) elGnssBadge.innerText = dev.fixType ? `${dev.fixType} 定位` : 'GNSS 3D';
 
   const located = typeof dev.lat === 'number' && typeof dev.lng === 'number' && !isNaN(dev.lat) && !isNaN(dev.lng);
   const coordText = located ? `${Number(dev.lat).toFixed(4)}°N, ${Number(dev.lng).toFixed(4)}°E` : '未上报经纬度';
@@ -1196,7 +1249,7 @@ function selectDeviceTab(imei: string) {
   const elCoord = document.getElementById('drawer-coord-text');
   if (elCoord) elCoord.innerText = coordText;
   const elTagCoord = document.getElementById('tel-tag-coords');
-  if (elTagCoord) elTagCoord.innerText = coordText;
+  if (elTagCoord) elTagCoord.innerText = `${dev.fixType || 'GPS'} · ${coordText}`;
   const mobHeaderCoord = document.getElementById('mob-drawer-coord-text');
   if (mobHeaderCoord) mobHeaderCoord.innerText = coordText;
 

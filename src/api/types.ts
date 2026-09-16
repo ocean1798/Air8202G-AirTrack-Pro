@@ -32,6 +32,20 @@ export interface DeviceInfo {
   shortName: string;
   online: boolean;
   lastActiveTime: string;
+  /** 相对更新时间，如“刚刚”、“4分钟前” */
+  relativeTime?: string;
+  /** 格式化坐标字符串，如“31.13218, 121.54868” */
+  coordText?: string;
+  /** 电池电量百分比（0-100） */
+  battPct?: number;
+  /** 4G信号强弱文字，如“强”、“中”、“弱”、“无” */
+  signalLevelText?: string;
+  /** 定位源类型：GPS / 基站 */
+  fixType?: string;
+  /** 搜星颗数 */
+  satCount?: number;
+  /** 芯片温度 (℃) */
+  tempC?: number;
   /** 未上报定位的物理设备为 null（不伪造坐标） */
   lat: number | null;
   lng: number | null;
