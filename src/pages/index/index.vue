@@ -73,6 +73,11 @@
             <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
           </div>
 
+          <!-- 桌面端 Android APK 下载快捷键 -->
+          <a href="https://github.com/ocean1798/Air8202G-AirTrack-Pro/releases/download/v1.0.0/airtrack-pro.apk" target="_blank" title="下载 Android 原生客户端 (APK)" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg flex items-center justify-center active:scale-90">
+            <i data-lucide="smartphone" class="w-4 h-4"></i>
+          </a>
+
           <!-- 桌面端顶部回中键 -->
           <div role="button" @click="recenterVehicle()" title="镜头平滑聚焦回当前车辆" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg active:scale-90">
             <i data-lucide="crosshair" class="w-4 h-4"></i>
@@ -626,6 +631,15 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- 4. 原生多端分发：Android 原生客户端下载 -->
+        <div class="mt-3 pt-3 border-t border-white/10">
+          <a href="https://github.com/ocean1798/Air8202G-AirTrack-Pro/releases/download/v1.0.0/airtrack-pro.apk" target="_blank" class="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-xl border border-cyber-primary/50 bg-gradient-to-r from-cyber-primary/20 via-cyber-900/60 to-cyber-primary/10 text-cyber-primary hover:bg-cyber-primary/25 text-xs font-bold transition shadow-glow-cyan text-center no-underline cursor-pointer">
+            <i data-lucide="smartphone" class="w-4 h-4"></i>
+            <span>下载 Android 原生安装包 (airtrack-pro.apk)</span>
+          </a>
+          <p class="text-[10px] text-slate-400 text-center mt-1">支持 Android 8.0+ 手机、平板与车载车机中控直接安装运行</p>
         </div>
 
       </div>
