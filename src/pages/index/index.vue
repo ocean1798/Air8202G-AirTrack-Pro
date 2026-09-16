@@ -2311,24 +2311,26 @@ function renderFullColoredTrackOnMap() {
 
 function renderRangeTrackOnMap() {
   if (!(window as any).__map || !(window as any).__trackLines || !TRACK_POINTS.length) return;
-  const numPoints = TRACK_POINTS.length;
-  if (numPoints < 2) {
-    (window as any).__trackLines.setGeometries([]);
-    return;
-  }
 
-  const idxStart = Math.min(Math.floor((rangeStart / 100) * (numPoints - 1)), numPoints - 1);
-  const idxEnd = Math.min(Math.floor((rangeEnd / 100) * (numPoints - 1)), numPoints - 1);
+  const startMs = timelineWindowStartMs;
+  const endMs = timelineWindowEndMs;
+  const duration = Math.max(1000, endMs - startMs);
+  const tStartMs = startMs + (rangeStart / 100) * duration;
+  const tEndMs = startMs + (rangeEnd / 100) * duration;
 
-  if (idxEnd <= idxStart) {
+  // 严格基于绝对时间窗口筛选点位集合，确保与时间轴高亮选区 100% 对应
+  const subPoints = TRACK_POINTS.filter(p => p.timestamp >= tStartMs && p.timestamp <= tEndMs);
+  const numSub = subPoints.length;
+
+  if (numSub < 2) {
     (window as any).__trackLines.setGeometries([]);
     return;
   }
 
   // 判断选定区间内是否属于静止驻留
   let minLat = 999, maxLat = -999, minLng = 999, maxLng = -999, maxSpeed = 0;
-  for (let i = idxStart; i <= idxEnd; i++) {
-    const p = TRACK_POINTS[i];
+  for (let i = 0; i < numSub; i++) {
+    const p = subPoints[i];
     if (p.lat < minLat) minLat = p.lat;
     if (p.lat > maxLat) maxLat = p.lat;
     if (p.lng < minLng) minLng = p.lng;
@@ -2345,9 +2347,9 @@ function renderRangeTrackOnMap() {
   }
 
   const rainbowPaths = [];
-  for (let i = idxStart; i < idxEnd; i++) {
-    const p1 = TRACK_POINTS[i];
-    const p2 = TRACK_POINTS[i + 1];
+  for (let i = 0; i < numSub - 1; i++) {
+    const p1 = subPoints[i];
+    const p2 = subPoints[i + 1];
     const avgSpeed = (p1.speed + p2.speed) / 2;
     const c = getContinuousSpeedColor(avgSpeed);
     rainbowPaths.push({
