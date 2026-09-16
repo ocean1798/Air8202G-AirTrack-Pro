@@ -24,7 +24,7 @@
           </div>
 
           <div v-if="!deviceList.length" class="shrink-0 px-3 py-1 text-xs text-slate-400">
-            {{ deviceLoading ? '正在同步云端真机…' : '当前账号无设备' }}
+            {{ deviceLoading ? '正在同步云端设备…' : '当前空间无设备' }}
           </div>
 
         </div>
@@ -33,7 +33,7 @@
         <div class="w-px h-5 bg-white/10 mx-1.5 shrink-0"></div>
 
         <!-- 移动端专享：纯用户头像 (不带电话号码) -->
-        <div role="button" @click="toggleOfficialModal()" title="官方评测账号管理" class="shrink-0 relative group p-0.5 rounded-full border border-cyber-primary/50 shadow-glow-cyan hover:border-cyber-primary active:scale-95 transition-all bg-cyber-950/80">
+        <div role="button" @click="toggleOfficialModal()" title="IoT工作空间与账号管理" class="shrink-0 relative group p-0.5 rounded-full border border-cyber-primary/50 shadow-glow-cyan hover:border-cyber-primary active:scale-95 transition-all bg-cyber-950/80">
           <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-600/40 via-cyber-800 to-blue-600/50 flex items-center justify-center overflow-hidden border border-white/20">
             <i data-lucide="user" class="w-3.5 h-3.5 text-cyber-primary"></i>
           </div>
@@ -62,11 +62,11 @@
           </div>
         </div>
 
-        <!-- 桌面端右侧控制簇：完整评测账号电话号码 + 顶部定位回正 + 左右侧边栏控制键 -->
+        <!-- 桌面端右侧控制簇：完整工作空间号码 + 顶部定位回正 + 左右侧边栏控制键 -->
         <div class="flex items-center space-x-2 pointer-events-auto">
           
-          <!-- 桌面端：评测账号多账号切换胶囊 -->
-          <div role="button" @click="toggleOfficialModal()" title="切换合宙评测账号" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
+          <!-- 桌面端：工作空间多账号切换胶囊 -->
+          <div role="button" @click="toggleOfficialModal()" title="切换IoT工作空间" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
             <span :class="activeAccountHasAuth ? 'w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-1.5 h-1.5 rounded-full bg-amber-400'"></span>
             <span class="text-slate-400">{{ activeAccountLabel }}:</span>
             <span class="font-bold text-white tracking-wider">{{ activeAccountPhone }}</span>
@@ -100,7 +100,7 @@
           <i data-lucide="navigation-2" class="w-3.5 h-3.5 text-cyber-primary"></i>
           <span class="text-xs font-bold text-slate-200">在网感知节点</span>
         </div>
-        <span class="text-[10px] font-mono text-slate-400 bg-cyber-900 px-2 py-0.5 rounded border border-cyber-700">共 {{ deviceList.length }} 台真机</span>
+        <span class="text-[10px] font-mono text-slate-400 bg-cyber-900 px-2 py-0.5 rounded border border-cyber-700">共 {{ deviceList.length }} 台设备</span>
       </div>
 
       <div class="flex-1 overflow-y-auto p-2 space-y-2" id="desktop-device-card-list">
@@ -127,22 +127,22 @@
         </div>
 
         <div v-if="!deviceList.length" class="px-2 py-4 text-[11px] text-slate-400 leading-relaxed">
-          <template v-if="deviceLoading">正在从合宙云端同步该账号真机…</template>
+          <template v-if="deviceLoading">正在从合宙云端同步该空间设备…</template>
           <template v-else-if="!activeAccountHasAuth">
-            当前账号未授权登录。<br />
+            当前工作空间未授权登录。<br />
             <span class="text-cyber-primary cursor-pointer underline" @click="redirectToOfficialOAuth()">点击前往合宙官方 OAuth 授权</span>
           </template>
           <template v-else-if="authError" class="text-amber-400">
             <span class="text-amber-400">{{ authError }}</span>
           </template>
-          <template v-else>该账号名下暂无已绑定真机。</template>
+          <template v-else>当前空间名下暂无已绑定设备。</template>
         </div>
 
       </div>
     </aside>
 
     <!-- ==================== 4. 移动端独占：右下角悬浮回正 FAB (< md) ==================== -->
-    <div class="md:hidden fixed right-3 z-30 transition-all duration-300 bottom-[172px] pointer-events-auto">
+    <div class="md:hidden fixed right-3 z-30 transition-all duration-300 bottom-[205px] pointer-events-auto">
       <div role="button" @click="recenterVehicle()" title="镜头平滑聚焦回当前车辆位置" class="w-10 h-10 rounded-2xl glass-panel border border-cyber-primary/60 text-cyber-primary flex items-center justify-center shadow-fab-shadow hover:bg-cyber-primary/20 hover:scale-105 active:scale-90 transition-all backdrop-blur-xl group bg-cyber-900/90">
         <i data-lucide="crosshair" class="w-5 h-5 text-cyber-primary group-hover:rotate-45 transition-transform"></i>
       </div>
@@ -344,11 +344,11 @@
 
         <div class="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between flex-wrap gap-2 text-xs font-mono">
           <div class="flex items-center space-x-1 text-[11px]">
-            <input type="date" id="input-date-start" value="2026-09-01" class="bg-cyber-950 border border-cyber-700/80 rounded px-1.5 py-0.5 text-slate-200 text-[10px] focus:border-cyber-primary focus:outline-none">
+            <input type="date" v-model="customDateStart" id="input-date-start" class="bg-cyber-950 border border-cyber-700/80 rounded px-1.5 py-0.5 text-slate-200 text-[10px] focus:border-cyber-primary focus:outline-none">
             <span class="text-slate-500">-</span>
-            <input type="date" id="input-date-end" value="2026-09-10" class="bg-cyber-950 border border-cyber-700/80 rounded px-1.5 py-0.5 text-slate-200 text-[10px] focus:border-cyber-primary focus:outline-none">
+            <input type="date" v-model="customDateEnd" id="input-date-end" class="bg-cyber-950 border border-cyber-700/80 rounded px-1.5 py-0.5 text-slate-200 text-[10px] focus:border-cyber-primary focus:outline-none">
           </div>
-          <div role="button" @click="applyCustomDateRange()" class="px-3 py-1 rounded-xl bg-cyber-primary text-cyber-950 font-bold text-xs hover:bg-cyan-300 transition shadow-glow-cyan flex items-center space-x-1">
+          <div role="button" @click="applyCustomDateRange()" class="px-3 py-1 rounded-xl bg-cyber-primary text-cyber-950 font-bold text-xs hover:bg-cyan-300 transition shadow-glow-cyan flex items-center space-x-1 cursor-pointer">
             <i data-lucide="search" class="w-3 h-3"></i>
             <span>加载</span>
           </div>
@@ -498,57 +498,136 @@
       </div>
     </div>
 
-    <!-- ==================== 7. 官方评测账号多账号切换弹窗 ==================== -->
-    <div id="official-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" @click.self="toggleOfficialModal()">
-      <div class="glass-panel max-w-md w-full p-5 rounded-2xl border border-cyber-primary/40 shadow-glow-cyan relative max-h-[86vh] overflow-y-auto">
-        <div role="button" @click="toggleOfficialModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+    <!-- ==================== 7. IoT 工作空间与多账号管理抽屉 ==================== -->
+    <div id="official-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden" @click.self="toggleOfficialModal()">
+      <div class="glass-panel max-w-lg w-full p-4 sm:p-5 rounded-2xl border border-cyber-primary/40 shadow-glow-cyan relative max-h-[90vh] overflow-y-auto">
+        <div role="button" @click="toggleOfficialModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1">
           <i data-lucide="x" class="w-4 h-4"></i>
         </div>
-        <div class="text-center">
-          <div class="w-10 h-10 rounded-xl bg-cyber-primary/20 border border-cyber-primary text-cyber-primary flex items-center justify-center mx-auto mb-3 shadow-glow-cyan">
-            <i data-lucide="users" class="w-5 h-5"></i>
-          </div>
-          <h3 class="text-sm font-bold text-white">合宙官方评测账号切换</h3>
-          <p class="text-xs text-slate-400 mt-1">4 个账号共用密码 Hz8202 · 100% 真实网关对接</p>
-        </div>
 
-        <div class="mt-4 space-y-2">
-          <div v-for="s in accountStates" :key="s.account.phone"
-               role="button"
-               @click="switchAccount(s.account.phone)"
-               :class="s.active ? 'p-3 rounded-xl border border-cyber-primary/70 bg-cyber-primary/10 cursor-pointer transition-all shadow-glow-cyan' : 'p-3 rounded-xl border border-cyber-700/50 bg-cyber-900/50 cursor-pointer transition-all hover:border-slate-500'">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-2">
-                <span :class="s.active ? 'w-2 h-2 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-2 h-2 rounded-full bg-slate-600'"></span>
-                <span :class="s.active ? 'text-xs font-bold text-white' : 'text-xs font-bold text-slate-300'">{{ s.account.label }}</span>
-                <span class="text-xs font-mono text-slate-400">{{ s.account.phone }}</span>
-              </div>
-              <span :class="s.hasAuth ? 'text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30' : 'text-[9px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30'">
-                {{ s.hasAuth ? '已登录' : '未登录' }}
-              </span>
-            </div>
-            <div class="text-[10px] text-slate-400 mt-1.5 flex items-center justify-between">
-              <span>{{ s.account.role }}</span>
-              <span class="font-mono text-slate-500">{{ s.active && deviceList.length ? deviceList.length + ' 台真机' : (s.hasAuth ? '点击切换查看' : '需先授权') }}</span>
-            </div>
+        <div class="flex items-center space-x-3 mb-4 pb-3 border-b border-white/10">
+          <div class="w-10 h-10 rounded-xl bg-cyber-primary/20 border border-cyber-primary text-cyber-primary flex items-center justify-center shadow-glow-cyan shrink-0">
+            <i data-lucide="server" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white tracking-wide">IoT 资产空间与账号管理</h3>
+            <p class="text-[11px] text-slate-400">支持自主接入合宙 IoT 账号，数据全链路本地缓存</p>
           </div>
         </div>
 
-        <div class="mt-4 pt-4 border-t border-white/10 space-y-2">
-          <div class="text-[10px] text-slate-500 font-mono break-all">
-            当前激活：{{ activeAccountPhone }} · 项目 Key {{ activeProjectKeyShort }}
+        <!-- 1. 当前激活工作空间卡片 -->
+        <div class="p-3.5 rounded-xl border border-cyber-primary/60 bg-gradient-to-r from-cyber-primary/10 via-cyber-900/60 to-cyber-950/80 mb-4 shadow-inner">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-mono text-slate-400">当前激活空间:</span>
+              <span class="text-xs font-bold text-white tracking-wide font-mono">{{ activeAccountPhone }}</span>
+            </div>
+            <span :class="activeAccountHasAuth ? 'text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-2 py-0.5 rounded border border-cyber-emerald/30 font-bold' : 'text-[9px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30'">
+              {{ activeAccountHasAuth ? '● 已授权连接' : '● 会话已断开' }}
+            </span>
           </div>
-          <div role="button" @click="redirectToOfficialOAuth()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan text-center cursor-pointer flex items-center justify-center space-x-1">
-            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-            <span>授权 / 重登当前账号（{{ activeAccountPhone }}）</span>
+          <div class="mt-2 text-[10px] font-mono text-slate-400 flex items-center justify-between">
+            <span>项目 Key: {{ activeProjectKeyShort }}</span>
+            <span>已载入: {{ deviceList.length }} 台设备</span>
           </div>
-          <div role="button" @click="syncOfficialData()" class="w-full py-2.5 rounded-xl text-xs font-medium border border-cyber-primary/40 text-slate-200 hover:bg-cyber-primary/10 transition text-center cursor-pointer">
-            立即同步刷新云端最新遥测
+          <div class="mt-3 flex items-center space-x-2">
+            <div role="button" @click="redirectToOfficialOAuth()" class="flex-1 py-1.5 rounded-lg text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition text-center cursor-pointer flex items-center justify-center space-x-1 shadow-glow-cyan">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+              <span>{{ activeAccountHasAuth ? '刷新授权' : '前往合宙安全授权' }}</span>
+            </div>
+            <div role="button" @click="syncOfficialData()" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-cyber-primary/40 text-slate-200 hover:bg-cyber-primary/10 transition text-center cursor-pointer flex items-center space-x-1">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>同步最新</span>
+            </div>
           </div>
-          <div v-if="authError" class="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-2">
+          <div v-if="authError" class="mt-2 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
             {{ authError }}
           </div>
         </div>
+
+        <!-- 2. 已连接空间列表 (支持切换) -->
+        <div class="mb-3">
+          <div class="text-xs font-bold text-slate-300 mb-2 flex items-center justify-between">
+            <span class="flex items-center space-x-1">
+              <i data-lucide="list" class="w-3.5 h-3.5 text-cyber-primary"></i>
+              <span>工作空间列表</span>
+            </span>
+            <span class="text-[10px] text-slate-400 font-mono">共 {{ accountStates.length }} 个</span>
+          </div>
+
+          <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            <div v-for="s in accountStates" :key="s.account.phone"
+                 role="button"
+                 @click="switchAccount(s.account.phone)"
+                 :class="s.active ? 'p-2.5 rounded-xl border border-cyber-primary/70 bg-cyber-primary/15 cursor-pointer transition-all shadow-glow-cyan flex items-center justify-between' : 'p-2.5 rounded-xl border border-cyber-700/50 bg-cyber-900/50 cursor-pointer transition-all hover:border-slate-500 flex items-center justify-between'">
+              <div class="flex items-center space-x-2.5">
+                <span :class="s.active ? 'w-2 h-2 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-2 h-2 rounded-full bg-slate-600'"></span>
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <span :class="s.active ? 'text-xs font-bold text-white' : 'text-xs font-bold text-slate-300'">{{ s.account.label }}</span>
+                    <span class="text-[11px] font-mono text-slate-400">{{ s.account.phone }}</span>
+                    <span v-if="s.account.isDemo" class="text-[8px] font-mono text-cyan-400 bg-cyan-950/80 px-1 py-0.2 rounded border border-cyan-500/30">演示</span>
+                  </div>
+                  <div class="text-[10px] text-slate-400 mt-0.5">{{ s.account.role }}</div>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-2">
+                <span :class="s.hasAuth ? 'text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30' : 'text-[9px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded'">
+                  {{ s.hasAuth ? '在线' : '离线' }}
+                </span>
+                <div v-if="!s.account.isDemo" role="button" @click="removeUserAccount(s.account.phone, $event)" title="移除该账号" class="text-slate-500 hover:text-rose-400 p-1">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 添加新合宙账号 (表单) -->
+        <div class="mt-3 pt-3 border-t border-white/10">
+          <div role="button" @click="isAddingAccount = !isAddingAccount" class="text-xs font-bold text-cyber-primary flex items-center justify-between py-1 cursor-pointer">
+            <span class="flex items-center space-x-1.5">
+              <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+              <span>添加新合宙账号 (用户自主接入)</span>
+            </span>
+            <i :data-lucide="isAddingAccount ? 'chevron-up' : 'chevron-down'" class="w-3.5 h-3.5 text-slate-400"></i>
+          </div>
+
+          <div v-if="isAddingAccount" class="mt-2.5 p-3 rounded-xl bg-cyber-950/80 border border-cyber-700/60 space-y-2.5">
+            <div>
+              <label class="text-[10px] font-mono text-slate-400 block mb-1">合宙 IoT 注册手机号码:</label>
+              <div class="flex items-center space-x-2">
+                <input v-model="newAccountInputPhone" type="tel" placeholder="请输入您的合宙手机号" class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:border-cyber-primary focus:outline-none font-mono">
+                <div role="button" @click="startOAuthForPhone()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shrink-0 cursor-pointer shadow-glow-cyan">
+                  官方安全授权
+                </div>
+              </div>
+              <p class="text-[9px] text-slate-400 mt-1">点击将前往合宙官方页面完成密码与验证码校验，成功后自动回跳接入</p>
+            </div>
+
+            <!-- 开发者凭据直接录入 -->
+            <div class="pt-2 border-t border-white/5">
+              <div role="button" @click="showManualCreds = !showManualCreds" class="text-[10px] font-mono text-slate-400 hover:text-slate-200 flex items-center space-x-1 cursor-pointer">
+                <span>{{ showManualCreds ? '收起开发者直接导入' : '开发者通道: 直接输入 Token / Salt / Sid 凭据' }}</span>
+                <i :data-lucide="showManualCreds ? 'chevron-up' : 'chevron-down'" class="w-3 h-3"></i>
+              </div>
+
+              <div v-if="showManualCreds" class="mt-2 space-y-1.5 text-[11px] font-mono">
+                <input v-model="manualToken" placeholder="Authorization Token" class="w-full bg-cyber-900 border border-cyber-700 rounded px-2 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none">
+                <div class="grid grid-cols-2 gap-1.5">
+                  <input v-model="manualSalt" placeholder="Salt 盐值" class="bg-cyber-900 border border-cyber-700 rounded px-2 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none">
+                  <input v-model="manualSid" placeholder="SID (默认 336677)" class="bg-cyber-900 border border-cyber-700 rounded px-2 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none">
+                </div>
+                <input v-model="manualProjectKey" placeholder="Project Key (选填，留空自动拉取)" class="w-full bg-cyber-900 border border-cyber-700 rounded px-2 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none">
+                <div role="button" @click="submitManualCreds()" class="w-full py-1.5 rounded bg-cyber-primary/20 border border-cyber-primary/40 text-cyber-primary font-bold text-xs hover:bg-cyber-primary/30 transition text-center cursor-pointer">
+                  保存并接入
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -654,6 +733,40 @@ function refreshAccountStates() {
   activeProjectKey.value = (apiClient as any).projectKey || '';
 }
 
+const isAddingAccount = ref(false);
+const newAccountInputPhone = ref('');
+const showManualCreds = ref(false);
+const manualToken = ref('');
+const manualSalt = ref('');
+const manualSid = ref('336677');
+const manualProjectKey = ref('');
+
+function startOAuthForPhone(phone?: string) {
+  const target = (phone || newAccountInputPhone.value || activeAccountPhone.value).trim();
+  if (!target) return;
+  window.location.href = apiClient.buildOAuthUrl(target, window.location.href);
+}
+
+function submitManualCreds() {
+  const p = (newAccountInputPhone.value || activeAccountPhone.value).trim();
+  if (!p || !manualToken.value.trim() || !manualSalt.value.trim()) return;
+  apiClient.manualImportAuth(p, manualToken.value.trim(), manualSalt.value.trim(), manualSid.value.trim() || '336677', manualProjectKey.value.trim());
+  showManualCreds.value = false;
+  isAddingAccount.value = false;
+  newAccountInputPhone.value = '';
+  manualToken.value = '';
+  manualSalt.value = '';
+  refreshAccountStates();
+  loadRealDevices();
+}
+
+function removeUserAccount(phone: string, event: Event) {
+  event.stopPropagation();
+  apiClient.removeAccount(phone);
+  refreshAccountStates();
+  loadRealDevices();
+}
+
 function mobileTabClass(d: any) {
   const base = 'mob-device-tab shrink-0 px-2.5 py-1 rounded-xl glass-panel flex items-center space-x-1.5 transition-all active:scale-95';
   return d.imei === activeDeviceId.value
@@ -708,7 +821,7 @@ async function loadRealDevices() {
       const modal = document.getElementById('official-modal');
       if (modal) modal.classList.remove('hidden');
     } else {
-      authError.value = e?.message || '云端真机清单同步失败';
+      authError.value = e?.message || '云端设备资产清单同步失败';
     }
     console.warn('[AirTrack] loadRealDevices failed', e);
   } finally {
@@ -721,7 +834,7 @@ async function loadRealDevices() {
   }
 }
 
-/** 切换合宙评测账号 */
+/** 切换合宙工作空间账号 */
 async function switchAccount(phone: string) {
   if (phone === apiClient.getActivePhone()) {
     syncOfficialData();
@@ -808,7 +921,7 @@ function selectDeviceTab(imei: string) {
   const mobHeaderCoord = document.getElementById('mob-drawer-coord-text');
   if (mobHeaderCoord) mobHeaderCoord.innerText = coordText;
 
-  // 仅对真实上报过定位的真机做地图定位；未上报设备不做任何坐标推测
+  // 仅对真实上报过定位的物理设备做地图定位；未上报设备不做任何坐标推测
   if (located) {
     if ((window as any).__map) {
       const center = new TMap.LatLng(dev.lat, dev.lng);
@@ -836,13 +949,7 @@ function selectDeviceTab(imei: string) {
     (window as any).__vehicleMarker.setGeometries([]);
   }
 
-  generateTrackDataForScope(masterMode === 'range' ? currentMacroScope : 'recent_window');
-  if (masterMode === 'range') {
-    renderRangeTrackOnMap();
-  } else {
-    renderFullColoredTrackOnMap();
-  }
-  renderStateAtPosition(committedPlayhead, false);
+  loadTrackDataForScope(masterMode === 'range' ? currentMacroScope : 'recent_window');
 
   // 触发真实云端接口同步
   fetchDeviceLiveTrackAndTags(imei);
@@ -852,93 +959,90 @@ function recenterVehicle() {
   if (activeDeviceId.value) selectDeviceTab(activeDeviceId.value);
 }
 
-const TOTAL_POINTS = 100;
 let TRACK_POINTS: any[] = [];
 let currentBaseLat = 34.794375;
 let currentBaseLng = 114.335039;
 let currentMacroScope = '90d';
+let isTrackLoading = false;
 
-function generateTrackDataForScope(scope: string, startDate: string | null = null, endDate: string | null = null) {
-  TRACK_POINTS = [];
-  let startTimeMs = 0, endTimeMs = 0;
-  const now = new Date('2026-09-15T16:00:00');
-
-  if (scope === 'today' || scope === 'recent_window') {
-    startTimeMs = new Date('2026-09-15T12:00:00').getTime();
-    endTimeMs = now.getTime();
-  } else if (scope === 'yesterday') {
-    startTimeMs = new Date('2026-09-14T00:00:00').getTime();
-    endTimeMs = new Date('2026-09-14T23:59:59').getTime();
-  } else if (scope === '3d') {
-    startTimeMs = new Date('2026-09-12T00:00:00').getTime();
-    endTimeMs = now.getTime();
-  } else if (scope === '7d') {
-    startTimeMs = new Date('2026-09-08T00:00:00').getTime();
-    endTimeMs = now.getTime();
-  } else if (scope === '30d') {
-    startTimeMs = new Date('2026-08-16T00:00:00').getTime();
-    endTimeMs = now.getTime();
-  } else if (scope === '90d') {
-    startTimeMs = new Date('2026-06-15T00:00:00').getTime();
-    endTimeMs = now.getTime();
-  } else if (scope === 'custom' && startDate && endDate) {
-    startTimeMs = new Date(startDate + 'T00:00:00').getTime();
-    endTimeMs = new Date(endDate + 'T23:59:59').getTime();
-  } else {
-    startTimeMs = new Date('2026-09-15T12:00:00').getTime();
-    endTimeMs = now.getTime();
-  }
-
-  const isMultiDay = (endTimeMs - startTimeMs) > 86400000;
-  const dev = DEVICES_DB[activeDeviceId.value];
-  if (!dev || typeof dev.lat !== 'number' || typeof dev.lng !== 'number') {
-    updateTimelineScaleTicks(isMultiDay);
+async function loadTrackDataForScope(scope: string, startDate: string | null = null, endDate: string | null = null) {
+  const imei = activeDeviceId.value;
+  if (!imei) {
+    TRACK_POINTS = [];
     drawSpeedWaveCanvas();
     return;
   }
 
-  for (let i = 0; i < TOTAL_POINTS; i++) {
-    const ratio = i / (TOTAL_POINTS - 1);
-    const curMs = startTimeMs + ratio * (endTimeMs - startTimeMs);
-    const curDate = new Date(curMs);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const Y = curDate.getFullYear();
-    const M = pad(curDate.getMonth() + 1);
-    const D = pad(curDate.getDate());
-    const h = pad(curDate.getHours());
-    const m = pad(curDate.getMinutes());
-    const s = pad(curDate.getSeconds());
-    const timeStr = `${Y}-${M}-${D} ${h}:${m}:${s}`;
+  const dev = DEVICES_DB[imei];
+  isTrackLoading = true;
 
-    // 物理真机室内测试：真实静止驻留 (0.0 km/h)
-    TRACK_POINTS.push({
-      lat: dev.lat,
-      lng: dev.lng,
-      speed: 0.0,
-      timeStr,
-      curDate,
-      isMultiDay,
-      index: i
-    });
+  try {
+    const points = await apiClient.getHistoricalTrack(
+      imei,
+      scope,
+      startDate || undefined,
+      endDate || undefined
+    );
+
+    if (points && points.length > 0) {
+      TRACK_POINTS = points;
+      updateTimelineScaleTicks(points[0].isMultiDay);
+      drawSpeedWaveCanvas();
+
+      if (masterMode === 'range') {
+        renderRangeTrackOnMap();
+      } else {
+        renderFullColoredTrackOnMap();
+      }
+      renderStateAtPosition(committedPlayhead, false);
+      return;
+    }
+  } catch (err) {
+    console.warn('[AirTrack] loadTrackDataForScope failed', err);
+  } finally {
+    isTrackLoading = false;
   }
 
-  updateTimelineScaleTicks(isMultiDay);
+  // 兜底：若云端或本地该时间段暂无轨迹上报，但设备本身有最新坐标
+  if (dev && typeof dev.lat === 'number' && typeof dev.lng === 'number') {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    TRACK_POINTS = [{
+      index: 0,
+      lat: dev.lat,
+      lng: dev.lng,
+      gcjLat: dev.lat,
+      gcjLng: dev.lng,
+      speed: 0.0,
+      timeStr,
+      timestamp: now.getTime(),
+      isMultiDay: false
+    }];
+  } else {
+    TRACK_POINTS = [];
+  }
+
+  updateTimelineScaleTicks(false);
   drawSpeedWaveCanvas();
+  if ((window as any).__trackLines) {
+    (window as any).__trackLines.setGeometries([]);
+  }
 }
 
 function updateTimelineScaleTicks(isMultiDay: boolean) {
+  if (!TRACK_POINTS.length) return;
+  const numPoints = TRACK_POINTS.length;
   const pStart = TRACK_POINTS[0];
-  const pMid1 = TRACK_POINTS[Math.floor(TOTAL_POINTS * 0.25)];
-  const pMid2 = TRACK_POINTS[Math.floor(TOTAL_POINTS * 0.5)];
-  const pMid3 = TRACK_POINTS[Math.floor(TOTAL_POINTS * 0.75)];
-  const pEnd = TRACK_POINTS[TOTAL_POINTS - 1];
+  const pMid1 = TRACK_POINTS[Math.floor(numPoints * 0.25)];
+  const pMid2 = TRACK_POINTS[Math.floor(numPoints * 0.5)];
+  const pMid3 = TRACK_POINTS[Math.floor(numPoints * 0.75)];
+  const pEnd = TRACK_POINTS[numPoints - 1];
 
   const fmt = (p: any, label = '') => {
-    if (!p) return '';
+    if (!p || !p.timeStr) return '';
     if (isMultiDay) {
-      const M = String(p.curDate.getMonth() + 1).padStart(2, '0');
-      const D = String(p.curDate.getDate()).padStart(2, '0');
-      return `${M}-${D}${label}`;
+      return `${p.timeStr.slice(5, 10)}${label}`;
     } else {
       return `${p.timeStr.slice(11, 16)}${label}`;
     }
@@ -1022,11 +1126,12 @@ function drawSpeedWaveCanvas() {
 
   if (!TRACK_POINTS.length) return;
 
+  const numPoints = TRACK_POINTS.length;
   const pts: any[] = [];
   const BASELINE_H = 3;
   const MAX_WAVE_H = h - 5;
-  for (let i = 0; i < TOTAL_POINTS; i++) {
-    const x = (i / (TOTAL_POINTS - 1)) * w;
+  for (let i = 0; i < numPoints; i++) {
+    const x = numPoints > 1 ? (i / (numPoints - 1)) * w : 0;
     const sp = TRACK_POINTS[i].speed;
     const waveH = BASELINE_H + (sp / 65) * (MAX_WAVE_H - BASELINE_H);
     const y = h - waveH;
@@ -1034,8 +1139,8 @@ function drawSpeedWaveCanvas() {
   }
 
   const speedGradient = ctx.createLinearGradient(0, 0, w, 0);
-  for (let i = 0; i < TOTAL_POINTS; i++) {
-    const stop = i / (TOTAL_POINTS - 1);
+  for (let i = 0; i < numPoints; i++) {
+    const stop = numPoints > 1 ? i / (numPoints - 1) : 0;
     speedGradient.addColorStop(stop, getContinuousSpeedColor(TRACK_POINTS[i].speed).rgb);
   }
 
@@ -1097,6 +1202,13 @@ let committedPlayhead = 100;
 let isHovering = false;
 let isDragging = false;
 
+const todayDate = new Date();
+const padTwo = (n: number) => String(n).padStart(2, '0');
+const formatYMD = (d: Date) => `${d.getFullYear()}-${padTwo(d.getMonth() + 1)}-${padTwo(d.getDate())}`;
+
+const customDateEnd = ref(formatYMD(todayDate));
+const customDateStart = ref(formatYMD(new Date(todayDate.getTime() - 30 * 86400000)));
+
 function toggleDateRangePopover() {
   if (masterMode === 'live') return;
   const popover = document.getElementById('date-range-popover');
@@ -1123,7 +1235,7 @@ function selectMacroPreset(preset: string) {
     else if (preset === '90d') label.innerText = '近1季';
   }
 
-  generateTrackDataForScope(preset);
+  loadTrackDataForScope(preset);
   toggleDateRangePopover();
 
   if (masterMode === 'range') {
@@ -1136,14 +1248,14 @@ function selectMacroPreset(preset: string) {
 }
 
 function applyCustomDateRange() {
-  const dStart = (document.getElementById('input-date-start') as HTMLInputElement)?.value;
-  const dEnd = (document.getElementById('input-date-end') as HTMLInputElement)?.value;
+  const dStart = customDateStart.value || (document.getElementById('input-date-start') as HTMLInputElement)?.value;
+  const dEnd = customDateEnd.value || (document.getElementById('input-date-end') as HTMLInputElement)?.value;
   if (!dStart || !dEnd) return;
 
   currentMacroScope = 'custom';
   const label = document.getElementById('current-range-label');
   if (label) label.innerText = `${dStart.slice(5)}~${dEnd.slice(5)}`;
-  generateTrackDataForScope('custom', dStart, dEnd);
+  loadTrackDataForScope('custom', dStart, dEnd);
   toggleDateRangePopover();
 
   if (masterMode === 'range') {
@@ -1191,7 +1303,7 @@ function switchMasterMode(mode: string) {
     if (liveStatusBar) liveStatusBar.classList.remove('hidden');
     if (rangeStatusBar) rangeStatusBar.classList.add('hidden');
 
-    generateTrackDataForScope('recent_window');
+    loadTrackDataForScope('recent_window');
 
     committedPlayhead = 100;
     renderStateAtPosition(committedPlayhead, false);
@@ -1212,7 +1324,7 @@ function switchMasterMode(mode: string) {
     if (liveStatusBar) liveStatusBar.classList.add('hidden');
     if (rangeStatusBar) rangeStatusBar.classList.remove('hidden');
 
-    generateTrackDataForScope(currentMacroScope);
+    loadTrackDataForScope(currentMacroScope);
 
     committedPlayhead = rangeEnd;
     updateRangeDOM();
@@ -1225,8 +1337,10 @@ function switchMasterMode(mode: string) {
 
 function renderStateAtPosition(percent: number, isPreview = false) {
   if (!TRACK_POINTS.length) return;
-  const idx = Math.min(Math.floor((percent / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+  const numPoints = TRACK_POINTS.length;
+  const idx = Math.min(Math.floor((percent / 100) * (numPoints - 1)), numPoints - 1);
   const pt = TRACK_POINTS[idx];
+  if (!pt) return;
   const sColor = getContinuousSpeedColor(pt.speed);
 
   if (!isPreview) {
@@ -1236,7 +1350,7 @@ function renderStateAtPosition(percent: number, isPreview = false) {
     if (dot) dot.style.backgroundColor = sColor.hex;
 
     const liveTime = document.getElementById('live-latest-time');
-    if (liveTime) liveTime.innerText = pt.timeStr.slice(11, 19);
+    if (liveTime && pt.timeStr) liveTime.innerText = pt.timeStr.slice(11, 19);
     const liveSpeed = document.getElementById('live-latest-speed');
     if (liveSpeed) {
       liveSpeed.innerText = `${pt.speed} km/h`;
@@ -1249,7 +1363,7 @@ function renderStateAtPosition(percent: number, isPreview = false) {
     }
 
     const timeBox = document.getElementById('current-point-time');
-    if (timeBox) timeBox.innerText = pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 16);
+    if (timeBox && pt.timeStr) timeBox.innerText = pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 16);
 
     const speedTag = document.getElementById('current-speed-tag');
     if (speedTag) {
@@ -1258,12 +1372,25 @@ function renderStateAtPosition(percent: number, isPreview = false) {
       speedTag.style.color = sColor.hex;
       speedTag.innerText = `${pt.speed} km/h`;
     }
+
+    // 同步地图上车辆标点位置，实现滑块拖拽平滑跟跑
+    if ((window as any).__vehicleMarker && typeof TMap !== 'undefined' && typeof pt.lat === 'number' && typeof pt.lng === 'number') {
+      const pos = new TMap.LatLng(pt.lat, pt.lng);
+      (window as any).__vehicleMarker.setGeometries([{
+        id: 'v1',
+        styleId: 'car_icon',
+        position: pos,
+        properties: { title: `${pt.speed} km/h` }
+      }]);
+    }
   }
 
-  const elCoord = document.getElementById('drawer-coord-text');
-  if (elCoord) elCoord.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
-  const elTagCoord = document.getElementById('tel-tag-coords');
-  if (elTagCoord) elTagCoord.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
+  if (typeof pt.lat === 'number' && typeof pt.lng === 'number') {
+    const elCoord = document.getElementById('drawer-coord-text');
+    if (elCoord) elCoord.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
+    const elTagCoord = document.getElementById('tel-tag-coords');
+    if (elTagCoord) elTagCoord.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
+  }
   
   const drawerSpeed = document.getElementById('drawer-speed-badge');
   if (drawerSpeed) {
@@ -1282,7 +1409,7 @@ function renderStateAtPosition(percent: number, isPreview = false) {
       id: 'v1',
       styleId: 'car_icon',
       position: new TMap.LatLng(pt.lat, pt.lng),
-      properties: { title: DEVICES_DB[activeDeviceId.value]?.name || '合宙真机' }
+      properties: { title: DEVICES_DB[activeDeviceId.value]?.name || '合宙设备' }
     }]);
   }
 }
@@ -1303,8 +1430,11 @@ function onTimelineMouseMove(e: MouseEvent) {
     hoverNeedle.style.left = p + '%';
   }
 
-  const idx = Math.min(Math.floor((p / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+  if (!TRACK_POINTS.length) return;
+  const numPoints = TRACK_POINTS.length;
+  const idx = Math.min(Math.floor((p / 100) * (numPoints - 1)), numPoints - 1);
   const pt = TRACK_POINTS[idx];
+  if (!pt) return;
   const sColor = getContinuousSpeedColor(pt.speed);
 
   const bubbleTime = pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 19);
@@ -1374,8 +1504,9 @@ function updateRangeDOM() {
   }
 
   if (!TRACK_POINTS.length) return;
-  const idxStart = Math.min(Math.floor((rangeStart / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
-  const idxEnd = Math.min(Math.floor((rangeEnd / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+  const numPoints = TRACK_POINTS.length;
+  const idxStart = Math.min(Math.floor((rangeStart / 100) * (numPoints - 1)), numPoints - 1);
+  const idxEnd = Math.min(Math.floor((rangeEnd / 100) * (numPoints - 1)), numPoints - 1);
   
   const pS = TRACK_POINTS[idxStart];
   const pE = TRACK_POINTS[idxEnd];
@@ -1579,8 +1710,34 @@ function setupSilkyTimelineInteractions() {
 
 function renderFullColoredTrackOnMap() {
   if (!(window as any).__map || !(window as any).__trackLines || !TRACK_POINTS.length) return;
+  const numPoints = TRACK_POINTS.length;
+  if (numPoints < 2) {
+    (window as any).__trackLines.setGeometries([]);
+    return;
+  }
+
+  // 1. 判断是否属于室内静止驻留 (最大经纬度跨度 < 0.0003 即 ~30米，且无运动速度)
+  let minLat = 999, maxLat = -999, minLng = 999, maxLng = -999, maxSpeed = 0;
+  for (let i = 0; i < numPoints; i++) {
+    const p = TRACK_POINTS[i];
+    if (p.lat < minLat) minLat = p.lat;
+    if (p.lat > maxLat) maxLat = p.lat;
+    if (p.lng < minLng) minLng = p.lng;
+    if (p.lng > maxLng) maxLng = p.lng;
+    if (p.speed > maxSpeed) maxSpeed = p.speed;
+  }
+  const deltaLat = maxLat - minLat;
+  const deltaLng = maxLng - minLng;
+  const isStationaryDwell = (deltaLat < 0.0003 && deltaLng < 0.0003 && maxSpeed < 3.0);
+
+  if (isStationaryDwell) {
+    // 室内静止驻留点：不绘制多点漂移杂乱折线，直接清空路线，仅保留车辆标点
+    (window as any).__trackLines.setGeometries([]);
+    return;
+  }
+
   const rainbowPaths = [];
-  for (let i = 0; i < TOTAL_POINTS - 1; i++) {
+  for (let i = 0; i < numPoints - 1; i++) {
     const p1 = TRACK_POINTS[i];
     const p2 = TRACK_POINTS[i + 1];
     const avgSpeed = (p1.speed + p2.speed) / 2;
@@ -1601,8 +1758,38 @@ function renderFullColoredTrackOnMap() {
 
 function renderRangeTrackOnMap() {
   if (!(window as any).__map || !(window as any).__trackLines || !TRACK_POINTS.length) return;
-  const idxStart = Math.min(Math.floor((rangeStart / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
-  const idxEnd = Math.min(Math.floor((rangeEnd / 100) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+  const numPoints = TRACK_POINTS.length;
+  if (numPoints < 2) {
+    (window as any).__trackLines.setGeometries([]);
+    return;
+  }
+
+  const idxStart = Math.min(Math.floor((rangeStart / 100) * (numPoints - 1)), numPoints - 1);
+  const idxEnd = Math.min(Math.floor((rangeEnd / 100) * (numPoints - 1)), numPoints - 1);
+
+  if (idxEnd <= idxStart) {
+    (window as any).__trackLines.setGeometries([]);
+    return;
+  }
+
+  // 判断选定区间内是否属于静止驻留
+  let minLat = 999, maxLat = -999, minLng = 999, maxLng = -999, maxSpeed = 0;
+  for (let i = idxStart; i <= idxEnd; i++) {
+    const p = TRACK_POINTS[i];
+    if (p.lat < minLat) minLat = p.lat;
+    if (p.lat > maxLat) maxLat = p.lat;
+    if (p.lng < minLng) minLng = p.lng;
+    if (p.lng > maxLng) maxLng = p.lng;
+    if (p.speed > maxSpeed) maxSpeed = p.speed;
+  }
+  const deltaLat = maxLat - minLat;
+  const deltaLng = maxLng - minLng;
+  const isStationaryDwell = (deltaLat < 0.0003 && deltaLng < 0.0003 && maxSpeed < 3.0);
+
+  if (isStationaryDwell) {
+    (window as any).__trackLines.setGeometries([]);
+    return;
+  }
 
   const rainbowPaths = [];
   for (let i = idxStart; i < idxEnd; i++) {

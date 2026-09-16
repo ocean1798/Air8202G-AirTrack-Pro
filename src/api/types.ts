@@ -32,7 +32,7 @@ export interface DeviceInfo {
   shortName: string;
   online: boolean;
   lastActiveTime: string;
-  /** 未上报定位的真机为 null（不伪造坐标） */
+  /** 未上报定位的物理设备为 null（不伪造坐标） */
   lat: number | null;
   lng: number | null;
   gcjLat: number | null;

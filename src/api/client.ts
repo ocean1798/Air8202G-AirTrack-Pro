@@ -1,20 +1,27 @@
 /**
- * AirCloud Open API v5 统一客户端（多账号版）
+ * AirTrack Pro - 商业级 IoT 客户端与时空数据中枢
  *
- * 设计要点：
- * 1. 100% 对接合宙官方真实网关，绝不捏造设备、绝不合成虚假轨迹。
- * 2. 支持 4 个官方评测账号独立登录态与一键切换，凭据按账号隔离存储。
- * 3. 官方 OAuth 回调 token 自动换票并写入「触发登录的那个账号」命名空间。
- * 4. 网关返回 code 105（顶号 / 未登录）时显式抛出，由 UI 引导重新授权。
+ * 核心特性：
+ * 1. 100% 对接合宙官方真实网关，真实物理坐标与路网移动轨迹。
+ * 2. 离线时空缓存：基于 IndexedDB (`AirTrackDB_v1`) 持久化设备档案与历史轨迹点。
+ * 3. 本地优先检索：切换时段优先从本地毫秒级重绘，云端静默受控增量同步。
+ * 4. 商业化多账号管理：支持任意合宙账号安全授权与多项目自动适配。
  */
 
 import type { DeviceInfo, TrackPoint } from './types';
 import { OfficialTags } from './types';
 import { DeviceRateLimiter } from './rate-limiter';
-import { OFFICIAL_ACCOUNTS, DEFAULT_ACCOUNT_PHONE, findAccount } from './accounts';
+import {
+  getAllRegisteredAccounts,
+  findAccount,
+  registerUserAccount,
+  unregisterUserAccount,
+  DEFAULT_ACCOUNT_PHONE
+} from './accounts';
 import type { AccountDef } from './accounts';
+import { db, type StoredTrackPoint, type StoredDeviceProfile } from '../utils/db';
 
-export { OFFICIAL_ACCOUNTS, DEFAULT_ACCOUNT_PHONE, findAccount };
+export { getAllRegisteredAccounts, DEFAULT_ACCOUNT_PHONE, findAccount };
 export type { AccountDef };
 
 export const OFFICIAL_API_CONFIG = {
@@ -25,7 +32,7 @@ export const OFFICIAL_API_CONFIG = {
 
 /** 网关鉴权失败 / 会话被顶号 */
 export class AuthExpiredError extends Error {
-  constructor(message = '合宙云端登录态已失效（可能在其他设备重复登录）') {
+  constructor(message = '合宙云端会话已断开（可能在其他设备重复登录）') {
     super(message);
     this.name = 'AuthExpiredError';
   }
@@ -33,6 +40,7 @@ export class AuthExpiredError extends Error {
 
 const LS_ACTIVE_ACCOUNT = 'airtrack_active_account';
 const LS_PENDING_ACCOUNT = 'airtrack_pending_account';
+const LS_PROJECTS_CACHE = 'airtrack_projects_cache_';
 const lsAuthKey = (phone: string) => `airtrack_auth_${phone}`;
 const lsServiceKey = (phone: string) => `airtrack_service_${phone}`;
 const lsProfileKey = (phone: string) => `airtrack_profile_${phone}`;
@@ -66,11 +74,16 @@ export class AirCloudClient {
     this.loadFromStorage();
   }
 
-  // ============================ 账号会话 ============================
+  // ============================ 账号管理 ============================
 
   /** 读取当前激活账号 */
   public getActiveAccount(): AccountDef {
-    return findAccount(this.activePhone) || OFFICIAL_ACCOUNTS[0];
+    return findAccount(this.activePhone) || {
+      phone: this.activePhone,
+      label: `账号 ${this.activePhone.slice(-4)}`,
+      role: '用户私有空间',
+      projectKey: this.projectKey
+    };
   }
 
   public getActivePhone(): string {
@@ -78,10 +91,9 @@ export class AirCloudClient {
   }
 
   /**
-   * 切换激活账号：立即加载该账号自己的凭据与项目 Key
+   * 切换激活账号
    */
   public setActiveAccount(phone: string): void {
-    if (!findAccount(phone)) return;
     this.activePhone = phone;
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem(LS_ACTIVE_ACCOUNT, phone);
@@ -90,7 +102,19 @@ export class AirCloudClient {
     this.loadFromStorage();
   }
 
-  /** 清空内存凭据（避免串号） */
+  /** 移除账号并清除本地缓存 */
+  public removeAccount(phone: string): void {
+    unregisterUserAccount(phone);
+    this.clearAuth(phone);
+    if (this.activePhone === phone) {
+      const all = getAllRegisteredAccounts();
+      if (all.length > 0) {
+        this.setActiveAccount(all[0].phone);
+      }
+    }
+  }
+
+  /** 清空内存凭据 */
   private resetCredentials(): void {
     this.token = '';
     this.salt = '';
@@ -112,17 +136,18 @@ export class AirCloudClient {
     }
   }
 
-  /** 返回全部账号的运行时状态（供切换面板渲染） */
+  /** 返回全部已注册账号的运行时状态 */
   public getAccountStates(): AccountRuntimeState[] {
-    return OFFICIAL_ACCOUNTS.map(account => ({
+    const all = getAllRegisteredAccounts();
+    return all.map(account => ({
       account,
       hasAuth: this.hasAuth(account.phone),
-      projectKey: this.readProjectKey(account.phone) || account.projectKey,
+      projectKey: this.readProjectKey(account.phone) || account.projectKey || '',
       active: account.phone === this.activePhone
     }));
   }
 
-  /** 读取当前激活会话的账号档案（用于顶部展示） */
+  /** 读取当前会话的用户 Profile */
   public getActiveProfile(): { name?: string; mobile?: string } | null {
     if (typeof window === 'undefined' || !window.localStorage) return null;
     try {
@@ -138,18 +163,18 @@ export class AirCloudClient {
     return window.localStorage.getItem(lsProjectKey(phone)) || '';
   }
 
-  private writeProjectKey(phone: string, key: string): void {
+  public writeProjectKey(phone: string, key: string): void {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem(lsProjectKey(phone), key);
     }
   }
 
-  /** 从 localStorage 恢复当前激活账号的动态凭据 */
+  /** 从 localStorage 恢复当前账号凭据 */
   public loadFromStorage(): void {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
       const storedActive = window.localStorage.getItem(LS_ACTIVE_ACCOUNT);
-      if (storedActive && findAccount(storedActive)) {
+      if (storedActive) {
         this.activePhone = storedActive;
       }
     } catch { /* ignore */ }
@@ -168,15 +193,13 @@ export class AirCloudClient {
         const serv = JSON.parse(servStr);
         if (serv && serv.sid) this.sid = serv.sid;
       }
-      this.projectKey = this.readProjectKey(this.activePhone) || this.getActiveAccount().projectKey;
+      this.projectKey = this.readProjectKey(this.activePhone) || this.getActiveAccount().projectKey || '';
     } catch (e) {
       console.warn('[AirCloud] loadFromStorage error', e);
     }
   }
 
-  /**
-   * 保存认证信息到「指定账号」的独立命名空间
-   */
+  /** 保存认证凭据并自动注册账号 */
   public saveAuth(auth: any, service: any, profile?: any, phone?: string): void {
     const p = phone || this.activePhone;
     if (typeof window === 'undefined' || !window.localStorage) return;
@@ -192,9 +215,21 @@ export class AirCloudClient {
     if (auth) window.localStorage.setItem(lsAuthKey(p), JSON.stringify(auth));
     if (service) window.localStorage.setItem(lsServiceKey(p), JSON.stringify(service));
     if (profile) window.localStorage.setItem(lsProfileKey(p), JSON.stringify(profile));
+
+    // 自动纳入已注册账号列表
+    registerUserAccount({ phone: p });
   }
 
-  /** 清除某账号登录态 */
+  /** 手动直接导入凭据（开发者与高级用户通道） */
+  public manualImportAuth(phone: string, token: string, salt: string, sid: string, projectKey?: string): void {
+    this.saveAuth({ token, salt }, { sid }, {}, phone);
+    if (projectKey) {
+      this.writeProjectKey(phone, projectKey);
+    }
+    this.setActiveAccount(phone);
+  }
+
+  /** 清除某账号登录凭据 */
   public clearAuth(phone?: string): void {
     const p = phone || this.activePhone;
     if (typeof window === 'undefined' || !window.localStorage) return;
@@ -210,7 +245,7 @@ export class AirCloudClient {
   // ============================ OAuth 登录 ============================
 
   /**
-   * 发起官方 OAuth 授权：记录待登录账号，回跳地址为本应用当前地址
+   * 发起官方 OAuth 授权跳转
    */
   public buildOAuthUrl(phone: string, currentHref: string): string {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -220,7 +255,6 @@ export class AirCloudClient {
     return `${OFFICIAL_API_CONFIG.oauthAuthorizeUrl}?return_to=${encodeURIComponent(clean)}`;
   }
 
-  /** 取出并消费「待登录账号」 */
   public consumePendingAccount(): string | null {
     if (typeof window === 'undefined' || !window.localStorage) return null;
     const p = window.localStorage.getItem(LS_PENDING_ACCOUNT);
@@ -228,9 +262,7 @@ export class AirCloudClient {
     return p;
   }
 
-  /**
-   * 使用 OAuth 回调 token 换取业务凭据（写入指定账号命名空间）
-   */
+  /** 使用 OAuth token 换票 */
   public async exchangeOAuthToken(oauthToken: string, phone?: string): Promise<boolean> {
     const target = phone || this.activePhone;
     try {
@@ -256,20 +288,31 @@ export class AirCloudClient {
     return false;
   }
 
-  /**
-   * 真实拉取账号下的项目清单 (/list_my_projects)
-   */
+  // ============================ 项目管理 ============================
+
   public async listProjects(): Promise<Array<{ name: string; project_key: string }>> {
-    const resp = await this.postApi('/list_my_projects', { page: 1, size: 50 });
-    if (resp && resp.code === 0 && Array.isArray(resp.value)) {
-      return resp.value;
-    }
+    try {
+      const resp = await this.postApi('/list_my_projects', { page: 1, size: 50 });
+      if (resp && resp.code === 0 && Array.isArray(resp.value)) {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(LS_PROJECTS_CACHE + this.activePhone, JSON.stringify(resp.value));
+        }
+        return resp.value;
+      }
+    } catch (_) {}
+    return this.getCachedProjects();
+  }
+
+  public getCachedProjects(): Array<{ name: string; project_key: string }> {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const raw = window.localStorage.getItem(LS_PROJECTS_CACHE + this.activePhone);
+        if (raw) return JSON.parse(raw);
+      }
+    } catch (_) {}
     return [];
   }
 
-  /**
-   * 确保当前账号持有有效 projectKey（缺省时向云端发现并缓存）
-   */
   public async ensureProjectKey(): Promise<string> {
     if (this.projectKey) return this.projectKey;
     try {
@@ -291,9 +334,6 @@ export class AirCloudClient {
 
   // ============================ 网关请求 ============================
 
-  /**
-   * 底层真实 HTTP POST 网关请求
-   */
   public async postApi(endpoint: string, payload: Record<string, any>): Promise<any> {
     this.loadFromStorage();
     const url = `${OFFICIAL_API_CONFIG.gateway}/${endpoint.replace(/^\//, '')}`;
@@ -321,202 +361,315 @@ export class AirCloudClient {
     return json;
   }
 
-  // ============================ 业务数据 ============================
+  // ============================ 业务数据与离线缓存 ============================
 
   /**
-   * 真实拉取当前账号下设备清单及其最新物理定位
+   * 拉取设备清单：优先云端，云端受阻或未登录时从本地 IndexedDB 恢复
    */
   public async getDeviceList(): Promise<DeviceInfo[]> {
-    await this.ensureProjectKey();
-
+    // 1. 若当前未授权或离线，尝试直接加载本地已持久化档案
     if (!this.hasAuth()) {
-      throw new AuthExpiredError('当前账号尚未授权登录');
-    }
-
-    const resp = await this.postApi('/list_my_devices', {
-      project: this.projectKey,
-      page: 1,
-      size: 50
-    });
-
-    if (resp && resp.code === 105) {
-      throw new AuthExpiredError();
-    }
-
-    if (!(resp && resp.code === 0 && resp.value && Array.isArray(resp.value.records))) {
-      throw new Error(resp && typeof resp.value === 'string' ? resp.value : '云端设备清单获取失败');
-    }
-
-    const hints = this.getActiveAccount().nameHints || {};
-    const devices: DeviceInfo[] = [];
-
-    for (const item of resp.value.records) {
-      const imei: string = item.deviceid || item.deviceId;
-      let latestLoc: any = null;
-      try {
-        const locResp = await this.postApi('/aircloud/latest_location', { client_id: imei });
-        if (locResp && locResp.code === 0 && locResp.value && typeof locResp.value === 'object') {
-          latestLoc = locResp.value;
-        }
-      } catch { /* 单设备定位失败不影响其他设备 */ }
-
-      const hint = hints[imei];
-      const lat = latestLoc?.lat ? parseFloat(latestLoc.lat) : null;
-      const lng = latestLoc?.lng ? parseFloat(latestLoc.lng) : null;
-
-      devices.push({
-        imei,
-        name: hint?.name || `8202G·终端${imei.slice(-4)}`,
-        shortName: hint?.shortName || `终端${imei.slice(-4)}`,
-        online: latestLoc !== null,
-        lastActiveTime: latestLoc?.time || '—',
-        lat: lat as any,
-        lng: lng as any,
-        gcjLat: lat as any,
-        gcjLng: lng as any,
-        speed: 0,
-        voltageMv: 0,
-        csq: latestLoc?.signal ? parseInt(latestLoc.signal, 10) : 0,
-        firmwareVersion: 'Air8202G',
-        address: latestLoc?.address || '未上报物理定位'
-      });
-    }
-
-    // 按最新上报时间倒序，最近活跃的设备排在最前
-    devices.sort((a, b) => String(b.lastActiveTime).localeCompare(String(a.lastActiveTime)));
-    return devices;
-  }
-
-  /**
-   * 真实拉取设备历史轨迹 (/aircloud/location_history)
-   * 严格执行合宙官方 15 秒单设备轮询间隔保护，冷却期内直接复用真实缓存
-   */
-  public async getHistoricalTrack(imei: string, scope: string = '90d'): Promise<TrackPoint[]> {
-    const cacheKey = `${this.activePhone}:${imei}:${scope}`;
-
-    // 15 秒工业级冷却保护（防 429）
-    const cooldown = this.rateLimiter.checkCooldown(cacheKey);
-    if (!cooldown.canRequest) {
-      const cached = this.rateLimiter.getCachedData<TrackPoint[]>(cacheKey);
-      if (cached) return cached;
-      return [];
-    }
-
-    if (!this.hasAuth()) return [];
-
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-
-    const endDate = new Date(now);
-    const startDate = new Date(now);
-    if (scope === 'today') {
-      startDate.setHours(0, 0, 0, 0);
-    } else if (scope === 'yesterday') {
-      startDate.setDate(startDate.getDate() - 1);
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setDate(endDate.getDate() - 1);
-      endDate.setHours(23, 59, 59, 0);
-    } else if (scope === '7d') {
-      startDate.setDate(startDate.getDate() - 7);
-    } else {
-      startDate.setDate(startDate.getDate() - 90);
+      const cached = await db.getDeviceProfiles(this.activePhone);
+      if (cached.length > 0) {
+        return this.profilesToDeviceInfos(cached);
+      }
+      throw new AuthExpiredError('当前空间尚未授权');
     }
 
     try {
-      const resp = await this.postApi('/aircloud/location_history', {
-        client_id: imei,
-        start: fmt(startDate),
-        end: fmt(endDate),
+      await this.ensureProjectKey();
+
+      const resp = await this.postApi('/list_my_devices', {
+        project: this.projectKey,
         page: 1,
-        size: 100
+        size: 50
       });
 
       if (resp && resp.code === 105) {
         throw new AuthExpiredError();
       }
 
-      if (resp && resp.code === 0 && resp.value && Array.isArray(resp.value.records) && resp.value.records.length > 0) {
-        const rawPoints = resp.value.records;
-        const isMultiDay = (endDate.getTime() - startDate.getTime()) > 86400000;
-
-        rawPoints.sort((a: any, b: any) =>
-          new Date(String(a.time).replace(/-/g, '/')).getTime() - new Date(String(b.time).replace(/-/g, '/')).getTime()
-        );
-
-        const track: TrackPoint[] = rawPoints.map((p: any, idx: number) => {
-          const lat = parseFloat(p.lat);
-          const lng = parseFloat(p.lng);
-          const curMs = new Date(String(p.time).replace(/-/g, '/')).getTime();
-
-          // 物理真实速度：优先取上报值，缺失时按位移差 / 时间差物理推导
-          let speed = p.speed ? parseFloat(p.speed) : 0;
-          if (speed === 0 && idx > 0) {
-            const prev = rawPoints[idx - 1];
-            const prevMs = new Date(String(prev.time).replace(/-/g, '/')).getTime();
-            const dt = (curMs - prevMs) / 1000;
-            if (dt > 0 && dt < 300) {
-              const dLat = (lat - parseFloat(prev.lat)) * 111000;
-              const dLng = (lng - parseFloat(prev.lng)) * 111000 * Math.cos(lat * Math.PI / 180);
-              const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-              speed = Math.min(120, parseFloat(((dist / dt) * 3.6).toFixed(1)));
-            }
-          }
-
-          return {
-            index: idx,
-            lat,
-            lng,
-            gcjLat: lat,
-            gcjLng: lng,
-            speed,
-            timeStr: String(p.time),
-            timestamp: curMs,
-            isMultiDay
-          };
-        });
-
-        this.rateLimiter.markRequest(cacheKey, track);
-        return track;
+      if (!(resp && resp.code === 0 && resp.value && Array.isArray(resp.value.records))) {
+        throw new Error(resp && typeof resp.value === 'string' ? resp.value : '设备清单拉取失败');
       }
 
-      // 无轨迹也标记请求，避免同一时间窗反复打网关
-      this.rateLimiter.markRequest(cacheKey);
-    } catch (e) {
-      if (e instanceof AuthExpiredError) throw e;
-      console.warn(`[AirCloud] Real track fetch failed for ${imei}`, e);
-    }
+      const hints = this.getActiveAccount().nameHints || {};
+      const devices: DeviceInfo[] = [];
+      const toCache: StoredDeviceProfile[] = [];
 
-    return [];
+      for (const item of resp.value.records) {
+        const imei: string = item.deviceid || item.deviceId;
+        let latestLoc: any = null;
+
+        try {
+          const locResp = await this.postApi('/aircloud/latest_location', { client_id: imei });
+          if (locResp && locResp.code === 0 && locResp.value) {
+            latestLoc = locResp.value;
+          }
+        } catch (_) {}
+
+        const rawLat = latestLoc ? parseFloat(latestLoc.lat) : null;
+        const rawLng = latestLoc ? parseFloat(latestLoc.lng) : null;
+        const hasCoord = typeof rawLat === 'number' && !isNaN(rawLat) && typeof rawLng === 'number' && !isNaN(rawLng);
+
+        const isOnline = item.status === 'online' || (latestLoc && latestLoc.status === 'online');
+        const defaultName = hints[imei]?.name || `车载终端·${imei.slice(-5)}`;
+        const shortName = hints[imei]?.shortName || `终端${imei.slice(-5)}`;
+        const address = latestLoc?.address || '未上报物理定位';
+        const lastActiveTime = latestLoc?.time || item.last_time || item.created_at || '—';
+
+        const dev: DeviceInfo = {
+          imei,
+          name: defaultName,
+          shortName,
+          online: !!isOnline,
+          lastActiveTime,
+          lat: hasCoord ? rawLat : null,
+          lng: hasCoord ? rawLng : null,
+          gcjLat: hasCoord ? rawLat : null,
+          gcjLng: hasCoord ? rawLng : null,
+          speed: latestLoc?.speed ? parseFloat(latestLoc.speed) : 0,
+          voltageMv: latestLoc?.val_799 ? parseInt(latestLoc.val_799, 10) : 0,
+          csq: latestLoc?.val_782 ? parseInt(latestLoc.val_782, 10) : (latestLoc?.csq ? parseInt(latestLoc.csq, 10) : 0),
+          firmwareVersion: 'Air8202G',
+          address
+        };
+        devices.push(dev);
+
+        toCache.push({
+          imei,
+          accountPhone: this.activePhone,
+          name: defaultName,
+          status: isOnline ? '在线' : (hasCoord ? '驻留' : '离线'),
+          csq: `CSQ ${dev.csq}`,
+          battMv: dev.voltageMv ? `${dev.voltageMv} mV` : '—',
+          battPct: dev.voltageMv ? Math.min(100, Math.max(0, Math.round(((dev.voltageMv - 2000) / 1000) * 100))) : 0,
+          lat: dev.lat,
+          lng: dev.lng,
+          latestTime: lastActiveTime,
+          address,
+          updatedAt: Date.now()
+        });
+      }
+
+      // 写入本地持久化
+      await db.putDeviceProfiles(toCache);
+      devices.sort((a, b) => String(b.lastActiveTime).localeCompare(String(a.lastActiveTime)));
+      return devices;
+    } catch (err) {
+      // 网络或鉴权失败时，安全回退到本地离线档案
+      const cached = await db.getDeviceProfiles(this.activePhone);
+      if (cached.length > 0) {
+        return this.profilesToDeviceInfos(cached);
+      }
+      throw err;
+    }
+  }
+
+  private profilesToDeviceInfos(profiles: StoredDeviceProfile[]): DeviceInfo[] {
+    return profiles.map(p => ({
+      imei: p.imei,
+      name: p.name,
+      shortName: p.name.slice(-7),
+      online: p.status === '在线',
+      lastActiveTime: p.latestTime,
+      lat: p.lat,
+      lng: p.lng,
+      gcjLat: p.lat,
+      gcjLng: p.lng,
+      speed: 0,
+      voltageMv: parseInt(p.battMv, 10) || 0,
+      csq: parseInt(p.csq.replace(/\D/g, ''), 10) || 0,
+      address: p.address
+    }));
   }
 
   /**
-   * 真实拉取设备 Tag 遥测数据 (Tag 799 电池, Tag 782 CSQ, Tag 1293 IMU加速度)
+   * 真实拉取设备历史轨迹（本地优先 + 受控增量同步）
+   */
+  public async getHistoricalTrack(
+    imei: string,
+    scope: string = '90d',
+    customStart?: string,
+    customEnd?: string,
+    forceCloud = false
+  ): Promise<TrackPoint[]> {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+    let startDate: Date;
+    let endDate: Date = new Date();
+
+    if (scope === 'custom' && customStart && customEnd) {
+      startDate = new Date(customStart + 'T00:00:00');
+      endDate = new Date(customEnd + 'T23:59:59');
+    } else if (scope === 'today' || scope === 'recent_window') {
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+    } else if (scope === 'yesterday') {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(startDate);
+      endDate.setHours(23, 59, 59, 0);
+    } else if (scope === '3d') {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 3);
+    } else if (scope === '7d') {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+    } else if (scope === '30d') {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+    } else {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 90);
+    }
+
+    const startMs = startDate.getTime();
+    const endMs = endDate.getTime();
+    const isMultiDay = (endMs - startMs) > 86400000;
+
+    // 1. 本地优先：若已存在缓存且不强制刷新，毫秒级直接返回
+    if (!forceCloud) {
+      const cached = await db.getTrackPointsByRange(this.activePhone, imei, startMs, endMs);
+      if (cached && cached.length > 0) {
+        return cached.map((p, idx) => ({
+          index: idx,
+          lat: p.lat,
+          lng: p.lng,
+          gcjLat: p.lat,
+          gcjLng: p.lng,
+          speed: p.speed,
+          timeStr: p.timeStr,
+          timestamp: p.timestamp,
+          isMultiDay
+        }));
+      }
+    }
+
+    // 2. 未授权时直接返回本地点位
+    if (!this.hasAuth()) {
+      const cached = await db.getTrackPointsByRange(this.activePhone, imei, startMs, endMs);
+      return cached.map((p, idx) => ({
+        index: idx,
+        lat: p.lat,
+        lng: p.lng,
+        gcjLat: p.lat,
+        gcjLng: p.lng,
+        speed: p.speed,
+        timeStr: p.timeStr,
+        timestamp: p.timestamp,
+        isMultiDay
+      }));
+    }
+
+    // 3. 受控向云端增量拉取（单次最多 2 页，带 300ms 延时保护避免 429）
+    try {
+      const fetchedStored: StoredTrackPoint[] = [];
+
+      for (let page = 1; page <= 2; page++) {
+        if (page > 1) await new Promise(r => setTimeout(r, 300));
+
+        const resp = await this.postApi('/aircloud/location_history', {
+          client_id: imei,
+          start: fmt(startDate),
+          end: fmt(endDate),
+          page,
+          size: 500
+        });
+
+        if (resp && resp.code === 105) throw new AuthExpiredError();
+        if (resp && resp.code === 0 && resp.value && Array.isArray(resp.value.records)) {
+          const records = resp.value.records;
+          for (const p of records) {
+            const lat = parseFloat(p.lat);
+            const lng = parseFloat(p.lng);
+            if (isNaN(lat) || isNaN(lng)) continue;
+            const curMs = new Date(String(p.time).replace(/-/g, '/')).getTime();
+
+            fetchedStored.push({
+              key: `${imei}_${curMs}`,
+              accountPhone: this.activePhone,
+              imei,
+              timestamp: curMs,
+              timeStr: String(p.time),
+              lat,
+              lng,
+              wlat: p.wlat ? parseFloat(p.wlat) : undefined,
+              wlng: p.wlng ? parseFloat(p.wlng) : undefined,
+              speed: p.speed ? parseFloat(p.speed) : 0,
+              address: p.address
+            });
+          }
+          const totalPages = parseInt(resp.value.pages, 10) || 1;
+          if (page >= totalPages) break;
+        } else {
+          break;
+        }
+      }
+
+      if (fetchedStored.length > 0) {
+        await db.putTrackPoints(fetchedStored);
+      }
+    } catch (e) {
+      if (e instanceof AuthExpiredError) throw e;
+      console.warn(`[AirCloud] Incremental track fetch failed for ${imei}`, e);
+    }
+
+    // 4. 从本地时序库检索出最终完整的有序点位集合
+    const finalPoints = await db.getTrackPointsByRange(this.activePhone, imei, startMs, endMs);
+    finalPoints.sort((a, b) => a.timestamp - b.timestamp);
+
+    // 计算相邻点速度推导（若原始速度缺失）
+    return finalPoints.map((p, idx) => {
+      let speed = p.speed;
+      if (speed === 0 && idx > 0) {
+        const prev = finalPoints[idx - 1];
+        const dt = (p.timestamp - prev.timestamp) / 1000;
+        if (dt > 0 && dt < 300) {
+          const dLat = (p.lat - prev.lat) * 111000;
+          const dLng = (p.lng - prev.lng) * 111000 * Math.cos(p.lat * Math.PI / 180);
+          const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+          // 仅当物理位移大于 GNSS 漂移阈值时推算速度
+          if (dist > 15) {
+            speed = Math.min(140, parseFloat(((dist / dt) * 3.6).toFixed(1)));
+          }
+        }
+      }
+
+      return {
+        index: idx,
+        lat: p.lat,
+        lng: p.lng,
+        gcjLat: p.lat,
+        gcjLng: p.lng,
+        speed,
+        timeStr: p.timeStr,
+        timestamp: p.timestamp,
+        isMultiDay
+      };
+    });
+  }
+
+  /**
+   * 拉取设备传感器遥测数据 (Tag 799, 782, 1293)
    */
   public async getRealTagTelemetry(imei: string): Promise<any> {
     if (!this.hasAuth()) return null;
     try {
       const resp = await this.postApi('/aircloud/list_by_tags', {
         client_id: imei,
-        tags: [
-          OfficialTags.LATITUDE,
-          OfficialTags.LONGITUDE,
-          OfficialTags.SPEED,
-          OfficialTags.CSQ,
-          OfficialTags.BATTERY_MV,
-          OfficialTags.IMU_ACCEL
-        ],
+        tags: [OfficialTags.BATTERY_MV, OfficialTags.CSQ, OfficialTags.IMU_ACCEL],
         page: 1,
         size: 5
       });
-      if (resp && resp.code === 0 && resp.value?.records?.length > 0) {
+      if (resp && resp.code === 0 && resp.value && Array.isArray(resp.value.records) && resp.value.records.length > 0) {
         return resp.value.records[0];
       }
-    } catch (e) {
-      console.warn(`[AirCloud] Tag telemetry failed for ${imei}`, e);
-    }
+    } catch (_) {}
     return null;
   }
 }
 
-export const apiClient = new AirCloudClient();
+export const apiClient = AirCloudClient.getInstance();
