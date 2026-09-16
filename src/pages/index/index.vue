@@ -45,24 +45,18 @@
       <!-- 2.2 桌面 Web 端独占顶部 Bar (>= md 严格完整呈现) -->
       <div class="hidden md:flex items-center justify-between w-full pointer-events-none">
         
-        <!-- 桌面端左侧：品牌与在网状态完整标牌 -->
-        <div class="glass-panel px-3.5 py-2 rounded-2xl flex items-center space-x-3 pointer-events-auto border border-cyber-700/60 shadow-lg">
-          <div class="w-7 h-7 rounded-xl bg-gradient-to-tr from-cyan-500/30 to-blue-600/40 border border-cyber-primary/50 flex items-center justify-center shadow-glow-cyan">
-            <i data-lucide="satellite" class="w-4 h-4 text-cyber-primary"></i>
+        <!-- 桌面端左侧：品牌标牌 (纯净专业，移除多余标签) -->
+        <div class="glass-panel px-3.5 py-2 rounded-2xl flex items-center space-x-2.5 pointer-events-auto border border-cyber-700/60 shadow-lg">
+          <div class="w-6 h-6 rounded-lg bg-gradient-to-tr from-cyan-500/30 to-blue-600/40 border border-cyber-primary/50 flex items-center justify-center shadow-glow-cyan">
+            <i data-lucide="satellite" class="w-3.5 h-3.5 text-cyber-primary"></i>
           </div>
-          <div>
-            <div class="flex items-center space-x-1.5">
-              <span class="font-bold text-xs tracking-wider text-white">AirTrack Pro</span>
-              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold">Web 控制台</span>
-            </div>
-            <div class="text-[10px] text-slate-400 font-mono flex items-center space-x-2">
-              <span id="desktop-top-device-name" class="text-slate-200">{{ activeDeviceId && deviceList.length ? (deviceList[0].name + ' 等 ' + deviceList.length + ' 台') : '等待云端同步' }}</span>
-              <span class="text-cyber-emerald">● 蜂窝网络已连接</span>
-            </div>
+          <div class="flex items-center space-x-2">
+            <span class="font-bold text-xs tracking-wider text-white">AirTrack Pro</span>
+            <span class="text-[10px] text-slate-400 font-mono">通用IoT时空追踪平台</span>
           </div>
         </div>
 
-        <!-- 桌面端右侧控制簇：完整工作空间号码 + 顶部定位回正 + 左右侧边栏控制键 -->
+        <!-- 桌面端右侧控制簇：完整工作空间号码 + Android客户端快捷下载 (移除错位按钮) -->
         <div class="flex items-center space-x-2 pointer-events-auto">
           
           <!-- 桌面端：工作空间多账号切换胶囊 -->
@@ -78,25 +72,20 @@
             <i data-lucide="smartphone" class="w-4 h-4"></i>
           </a>
 
-          <!-- 桌面端顶部回中键 -->
-          <div role="button" @click="recenterVehicle()" title="定位至当前设备" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg active:scale-90">
-            <i data-lucide="crosshair" class="w-4 h-4"></i>
-          </div>
-
-          <!-- 桌面端左侧设备列表折叠键 -->
-          <div role="button" @click="toggleDeviceDock()" id="btn-dock" title="展开/收起设备列表" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
-            <i data-lucide="layers" class="w-4 h-4"></i>
-          </div>
-
-          <!-- 桌面端右侧感知面板折叠键 -->
-          <div role="button" @click="toggleInspectorDrawer()" id="btn-inspector" title="展开/收起设备详情" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
-            <i data-lucide="panel-right" class="w-4 h-4"></i>
-          </div>
-
         </div>
 
       </div>
     </header>
+
+    <!-- 桌面端独占：左侧设备列表展开悬浮把手 -->
+    <div id="btn-dock-expand" role="button" @click="toggleDeviceDock()" title="展开设备列表" class="hidden fixed top-16 left-3 z-20 glass-panel p-2.5 rounded-2xl border border-cyber-700/60 text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-xl items-center justify-center cursor-pointer pointer-events-auto">
+      <i data-lucide="layers" class="w-4 h-4"></i>
+    </div>
+
+    <!-- 桌面端独占：右侧设备详情展开悬浮把手 -->
+    <div id="btn-inspector-expand" role="button" @click="toggleInspectorDrawer()" title="展开设备详情" class="hidden fixed top-16 right-3 z-20 glass-panel p-2.5 rounded-2xl border border-cyber-700/60 text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-xl items-center justify-center cursor-pointer pointer-events-auto">
+      <i data-lucide="panel-right" class="w-4 h-4"></i>
+    </div>
 
     <!-- ==================== 3. 桌面端独占：左侧在网设备泊位坞 (hidden md:flex) ==================== -->
     <aside id="device-dock" class="hidden md:flex drawer-transition fixed top-16 left-3 bottom-28 w-72 md:w-80 glass-panel rounded-2xl border border-cyber-700/60 z-20 flex-col pointer-events-auto shadow-2xl">
@@ -104,8 +93,11 @@
         <div class="flex items-center space-x-2">
           <i data-lucide="navigation-2" class="w-3.5 h-3.5 text-cyber-primary"></i>
           <span class="text-xs font-bold text-slate-200">监控设备列表</span>
+          <span class="text-[10px] font-mono text-slate-400 bg-cyber-900 px-1.5 py-0.2 rounded border border-cyber-700">共 {{ deviceList.length }} 台</span>
         </div>
-        <span class="text-[10px] font-mono text-slate-400 bg-cyber-900 px-2 py-0.5 rounded border border-cyber-700">共 {{ deviceList.length }} 台设备</span>
+        <div role="button" @click="toggleDeviceDock()" id="btn-collapse-dock" title="收起设备列表" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </div>
       </div>
 
       <div class="flex-1 overflow-y-auto p-2 space-y-2" id="desktop-device-card-list">
@@ -201,147 +193,99 @@
         </div>
 
         <div class="flex items-center space-x-2">
-          <div role="button" @click.stop="toggleQuickArm()" id="btn-quick-arm" class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-cyber-emerald text-white hover:bg-emerald-600 transition flex items-center space-x-1 shadow-glow-emerald">
-            <i data-lucide="shield-check" class="w-3 h-3"></i>
-            <span id="quick-arm-text">已设防</span>
-          </div>
-
           <div role="button" id="btn-sheet-chevron" class="md:hidden p-1 text-slate-400 hover:text-white transition-transform">
             <i data-lucide="chevron-up" class="w-4 h-4" id="icon-sheet-chevron"></i>
+          </div>
+
+          <!-- 桌面端独占收起按钮 -->
+          <div role="button" @click="toggleInspectorDrawer()" id="btn-collapse-inspector" title="收起设备详情" class="hidden md:flex p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
           </div>
         </div>
       </div>
 
-      <!-- 纵向平铺流式内容体 -->
-      <div class="flex-1 overflow-y-auto p-3 space-y-3.5 scroll-smooth overscroll-contain">
+      <!-- 纵向平铺流式内容体：纯净真实的设备物理遥测看板 -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-3 scroll-smooth overscroll-contain">
         
-        <!-- 模块 1 · 3D姿态与航向拟真 -->
-        <section class="glass-panel p-3 rounded-xl border border-cyber-primary/30 flex flex-col items-center justify-center shadow-lg">
-          <div class="w-full flex items-center justify-between text-[11px] mb-1">
+        <!-- 遥测模块 1 · 物理空间定位状态 -->
+        <section class="glass-panel p-3 rounded-xl border border-cyber-primary/30 space-y-2 shadow-lg">
+          <div class="flex items-center justify-between text-[11px] pb-1.5 border-b border-white/10">
             <span class="text-slate-200 font-bold flex items-center space-x-1.5">
-              <i data-lucide="compass" class="w-3.5 h-3.5 text-cyber-primary"></i>
-              <span>设备三轴姿态与航向角</span>
+              <i data-lucide="map-pin" class="w-3.5 h-3.5 text-cyber-primary"></i>
+              <span>物理时空定位 (GNSS / LBS)</span>
             </span>
-            <span class="text-[9px] font-mono text-cyber-primary bg-cyber-primary/10 px-1.5 py-0.5 rounded border border-cyber-primary/30">25Hz IMU</span>
+            <span class="text-[9px] font-mono text-cyber-primary bg-cyber-primary/10 px-1.5 py-0.5 rounded border border-cyber-primary/30">真实数据</span>
           </div>
 
-          <div class="relative w-32 h-32 sm:w-36 sm:h-36 my-2 flex items-center justify-center">
-            <div class="compass-ring w-32 h-32 sm:w-36 sm:h-36 flex items-center justify-center shadow-glow-cyan">
-              <div id="horizon-disc" class="absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border border-cyber-primary/30 flex flex-col items-center justify-center bg-gradient-to-b from-cyan-950/40 via-cyber-900 to-amber-950/40 transition-transform duration-100">
-                <div class="w-full h-0.5 bg-cyber-primary shadow-glow-cyan"></div>
-                <div class="text-[8px] font-mono text-cyber-primary/80 mt-0.5">HORIZON</div>
-              </div>
-              <div id="yaw-pointer" class="absolute w-1 h-24 sm:h-28 bg-gradient-to-t from-transparent via-rose-500 to-rose-400 rounded-full transition-transform duration-100"></div>
+          <div class="space-y-1.5 font-mono text-[11px]">
+            <div class="flex items-start justify-between">
+              <span class="text-slate-400 shrink-0">物理地址:</span>
+              <span class="text-slate-200 text-right font-sans break-all ml-2" id="drawer-address-text">—</span>
             </div>
-          </div>
-
-          <div class="grid grid-cols-3 gap-2 w-full text-center text-[10px] font-mono mt-1">
-            <div class="bg-cyber-900 p-1.5 rounded-lg border border-cyber-700/50">
-              <div class="text-slate-400">俯仰 (Pitch)</div>
-              <div class="text-xs font-bold text-cyber-primary mt-0.5" id="val-pitch">+4.2°</div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">大地坐标:</span>
+              <span class="text-slate-200" id="drawer-coord-detail">—</span>
             </div>
-            <div class="bg-cyber-900 p-1.5 rounded-lg border border-cyber-700/50">
-              <div class="text-slate-400">横滚 (Roll)</div>
-              <div class="text-xs font-bold text-cyber-emerald mt-0.5" id="val-roll">-1.5°</div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">实时航速:</span>
+              <span class="text-cyber-primary font-bold" id="drawer-speed-detail">0.0 km/h</span>
             </div>
-            <div class="bg-cyber-900 p-1.5 rounded-lg border border-cyber-700/50">
-              <div class="text-slate-400">航向 (Yaw)</div>
-              <div class="text-xs font-bold text-cyber-amber mt-0.5" id="val-yaw">68.0°</div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">最后上报时间:</span>
+              <span class="text-slate-200" id="tel-tag-last-time">—</span>
             </div>
           </div>
         </section>
 
-        <!-- 模块 2 · 三轴加速度动态波形 -->
-        <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 shadow-lg">
-          <div class="flex items-center justify-between text-[11px] mb-1">
-            <span class="text-slate-200 font-bold flex items-center space-x-1.5">
-              <i data-lucide="activity" class="w-3.5 h-3.5 text-cyber-emerald"></i>
-              <span>三轴加速度波形 (Tag 1293)</span>
-            </span>
-            <span class="text-[9px] font-mono text-cyan-400">Z: 982mg</span>
-          </div>
-          <div id="chart-accel" class="w-full h-32 sm:h-36"></div>
-        </section>
-
-        <!-- 模块 3 · 设备遥测参数 (Telemetry Tags) -->
+        <!-- 遥测模块 2 · 硬件供电与射频状态 -->
         <section class="glass-panel rounded-xl overflow-hidden border border-cyber-700/60 shadow-lg">
           <div class="p-2.5 bg-cyber-900/90 border-b border-cyber-700/50 flex items-center justify-between text-[11px]">
             <span class="text-slate-200 font-bold flex items-center space-x-1.5">
               <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyber-primary"></i>
-              <span>设备遥测参数 (Telemetry Tags)</span>
+              <span>硬件遥测参数 (Telemetry Tags)</span>
             </span>
             <span class="text-[9px] font-mono text-cyber-emerald">数据已同步</span>
           </div>
           <div class="font-mono text-[11px] divide-y divide-cyber-700/40">
-            <div class="p-2.5 flex items-center justify-between bg-cyber-900/40">
-              <span class="text-cyber-primary font-bold">最后上报时间</span>
-              <span class="text-slate-200 font-bold" id="tel-tag-last-time">—</span>
+            <div class="p-2.5 flex items-center justify-between">
+              <span class="text-slate-400">Tag 799 (电池供电)</span>
+              <span class="text-cyber-emerald font-bold" id="tel-tag-batt">—</span>
             </div>
             <div class="p-2.5 flex items-center justify-between">
-              <span class="text-cyber-primary font-bold">Tag 799 (电池供电)</span>
-              <span class="text-cyber-emerald font-bold" id="tel-tag-batt">4080 mV (92%)</span>
+              <span class="text-slate-400">Tag 782 (蜂窝信号)</span>
+              <span class="text-cyan-300 font-bold" id="tel-tag-csq">—</span>
             </div>
             <div class="p-2.5 flex items-center justify-between">
-              <span class="text-cyber-primary font-bold">Tag 782 (蜂窝信号)</span>
-              <span class="text-cyan-300 font-bold" id="tel-tag-csq">CSQ 31 (4G满格)</span>
-            </div>
-            <div class="p-2.5 flex items-center justify-between bg-cyber-900/40">
-              <span class="text-cyber-primary font-bold">Tag 512 / 513 (经纬度)</span>
-              <span class="text-slate-200" id="tel-tag-coords">31.2407°N, 121.4888°E</span>
+              <span class="text-slate-400">Tag 512/513 (定位源)</span>
+              <span class="text-slate-200" id="tel-tag-coords">—</span>
             </div>
             <div class="p-2.5 flex items-center justify-between">
-              <span class="text-cyber-primary font-bold">Tag 514 (行驶航速)</span>
-              <span class="text-cyber-emerald font-bold" id="tel-tag-speed">18.2 km/h</span>
-            </div>
-            <div class="p-2.5 flex items-center justify-between bg-cyber-900/40">
-              <span class="text-cyber-primary font-bold">Tag 1294 (补发轨迹包)</span>
-              <span class="text-slate-300">10秒高频定位上报</span>
+              <span class="text-slate-400">Tag 514 (行驶航速)</span>
+              <span class="text-cyber-emerald font-bold" id="tel-tag-speed">0.0 km/h</span>
             </div>
           </div>
         </section>
 
-        <!-- 模块 4 · 电子围栏控制 -->
-        <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 space-y-2.5 shadow-lg">
-          <div class="flex items-center justify-between text-xs">
+        <!-- 遥测模块 3 · 设备硬件与空间归属 -->
+        <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 space-y-2 shadow-lg text-[11px] font-mono">
+          <div class="flex items-center justify-between text-xs pb-1 border-b border-white/5">
             <span class="text-slate-200 font-bold flex items-center space-x-1.5">
-              <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-cyber-amber"></i>
-              <span>电子围栏 (Geo-fence)</span>
+              <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i>
+              <span>设备资产属性</span>
             </span>
-            <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1.5 py-0.5 rounded">围栏内 (安全)</span>
+            <span class="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">4G Cat.1 + GNSS</span>
           </div>
-          <p class="text-[10px] text-slate-400">以当前驻留点为中心设置半径 1000 米监控围栏。</p>
-          <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[10px] font-mono">
-            <span class="text-slate-400">震动防盗灵敏度:</span>
-            <span class="text-cyber-primary font-bold">中级 (0.5g)</span>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">硬件型号:</span>
+            <span class="text-slate-200">合宙 Air8202G</span>
           </div>
-        </section>
-
-        <!-- 模块 5 · 行驶统计与驾驶评分 -->
-        <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 space-y-2 shadow-lg">
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-slate-200 font-bold flex items-center space-x-1.5">
-              <i data-lucide="file-bar-chart" class="w-3.5 h-3.5 text-cyber-indigo"></i>
-              <span>行驶统计与驾驶评分</span>
-            </span>
-            <span class="text-[9px] font-mono text-slate-400">综合统计</span>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">模组串号 (IMEI):</span>
+            <span class="text-slate-200">{{ activeDeviceId || '—' }}</span>
           </div>
-          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-            <div class="bg-cyber-900/80 p-2.5 rounded-lg border border-cyber-700/50">
-              <div class="text-[10px] text-slate-400">总行驶里程</div>
-              <div class="text-base font-black text-white mt-0.5">18.6 <span class="text-[10px] text-slate-400 font-normal">km</span></div>
-            </div>
-            <div class="bg-cyber-900/80 p-2.5 rounded-lg border border-cyber-700/50">
-              <div class="text-[10px] text-slate-400">平均移速</div>
-              <div class="text-base font-black text-cyber-primary mt-0.5">22.4 <span class="text-[10px] text-slate-400 font-normal">km/h</span></div>
-            </div>
-            <div class="bg-cyber-900/80 p-2.5 rounded-lg border border-cyber-700/50">
-              <div class="text-[10px] text-slate-400">怠速驻留累计</div>
-              <div class="text-base font-black text-amber-400 mt-0.5">12.5 <span class="text-[10px] text-slate-400 font-normal">min</span></div>
-            </div>
-            <div class="bg-cyber-900/80 p-2.5 rounded-lg border border-cyber-700/50">
-              <div class="text-[10px] text-slate-400">驾驶评分</div>
-              <div class="text-base font-black text-cyber-emerald mt-0.5">96.8 <span class="text-[10px] text-slate-400 font-normal">分</span></div>
-            </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">当前归属账号:</span>
+            <span class="text-slate-200">{{ formatPhone(activeAccountPhone) }}</span>
           </div>
         </section>
 
@@ -465,27 +409,35 @@
         <!-- 单行一体化流线工具条 -->
         <div class="flex items-center justify-between flex-wrap gap-1.5 pt-1 border-t border-white/5 text-xs font-mono">
           
-          <!-- 模式切换器 -->
-          <div class="flex items-center bg-cyber-950/90 rounded-xl border border-white/10 p-0.5 shadow-inner">
-            <div role="button" @click="switchMasterMode('live')" id="btn-mode-live" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan">
-              <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
-              <span>跟随最新</span>
+          <div class="flex items-center space-x-1.5">
+            <!-- 视角回正/定位按钮 (移到底部控制台，符合操作动线) -->
+            <div role="button" @click="recenterVehicle()" title="定位至当前设备视角" class="px-2 py-0.5 sm:py-1 rounded-xl glass-panel text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition border border-white/10 flex items-center space-x-1 text-[10px] sm:text-[11px] shadow-sm cursor-pointer active:scale-95 bg-cyber-950/80">
+              <i data-lucide="crosshair" class="w-3.5 h-3.5 text-cyber-primary"></i>
+              <span class="font-bold">定位</span>
             </div>
-            <div role="button" @click="switchMasterMode('range')" id="btn-mode-range" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1">
-              <i data-lucide="sliders" class="w-3 h-3"></i>
-              <span>区间回放</span>
-            </div>
-            
-            <div id="macro-date-divider" class="h-3.5 w-px bg-white/10 mx-1 hidden"></div>
-            
-            <div role="button" @click="toggleDateRangePopover()" id="btn-date-trigger" class="px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-[11px] text-slate-200 hover:text-cyber-primary transition flex items-center space-x-1 group hidden">
-              <i data-lucide="calendar" class="w-3 h-3 text-cyber-primary"></i>
-              <span id="current-range-label" class="font-bold truncate max-w-[70px] sm:max-w-none">近90天</span>
-              <i data-lucide="chevron-down" class="w-2.5 h-2.5 text-slate-400"></i>
+
+            <!-- 模式切换器 -->
+            <div class="flex items-center bg-cyber-950/90 rounded-xl border border-white/10 p-0.5 shadow-inner">
+              <div role="button" @click="switchMasterMode('live')" id="btn-mode-live" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
+                <span>跟随最新</span>
+              </div>
+              <div role="button" @click="switchMasterMode('range')" id="btn-mode-range" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1">
+                <i data-lucide="sliders" class="w-3 h-3"></i>
+                <span>区间回放</span>
+              </div>
+              
+              <div id="macro-date-divider" class="h-3.5 w-px bg-white/10 mx-1 hidden"></div>
+              
+              <div role="button" @click="toggleDateRangePopover()" id="btn-date-trigger" class="px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-[11px] text-slate-200 hover:text-cyber-primary transition flex items-center space-x-1 group hidden">
+                <i data-lucide="calendar" class="w-3 h-3 text-cyber-primary"></i>
+                <span id="current-range-label" class="font-bold truncate max-w-[70px] sm:max-w-none">近90天</span>
+                <i data-lucide="chevron-down" class="w-2.5 h-2.5 text-slate-400"></i>
+              </div>
             </div>
           </div>
 
-          <!-- 播放控制簇 -->
+          <!-- 播放控制簇 (区间回放模式独占，彻底移除无用快速回放按钮) -->
           <div id="unified-play-cluster" class="flex items-center gap-1.5 hidden">
             <div class="flex items-center bg-cyber-950/90 p-0.5 rounded-xl border border-white/10 gap-1">
               <div role="button" @click="toggleRangePlay()" id="btn-range-play" class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:brightness-110 transition flex items-center gap-1 shadow-glow-emerald">
@@ -495,34 +447,32 @@
               <div role="button" @click="setPlaySpeed(1, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-cyber-primary/20 text-cyber-primary font-bold">1x</div>
               <div role="button" @click="setPlaySpeed(5, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white">5x</div>
             </div>
-
-            <div role="button" @click="applyTimePreset('sprint')" class="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-cyber-primary font-bold text-[10px] sm:text-[11px] bg-cyber-primary/15 border border-cyber-primary/40 hover:bg-cyber-primary/25 shadow-glow-cyan transition flex items-center gap-1" title="快速回放">
-              <span>快速回放</span>
-            </div>
           </div>
 
-          <!-- 状态呈现区 -->
-          <div class="flex items-center space-x-1.5 text-[10px] sm:text-[11px]">
+          <!-- 状态呈现区：包含明确颜色指示与三态图例 -->
+          <div class="flex items-center space-x-2 text-[10px] sm:text-[11px]">
             
-            <div id="live-status-bar" class="flex items-center space-x-1 sm:space-x-2">
-              <div class="flex items-center space-x-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
-                <span class="text-cyber-emerald font-bold hidden sm:inline">视角跟随</span>
+            <div id="live-status-bar" class="flex items-center space-x-1.5 sm:space-x-2">
+              <div class="flex items-center space-x-1.5 px-2 py-0.5 rounded-lg border border-cyber-700/60 bg-cyber-950/80" id="live-state-badge">
+                <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan" id="live-state-dot"></span>
+                <span id="live-state-text" class="text-white font-bold">原地静止</span>
               </div>
-              <div class="flex items-center space-x-1">
-                <span id="live-latest-time" class="text-white font-bold">14:00:00</span>
-              </div>
-              <span class="text-slate-500">·</span>
-              <div class="flex items-center space-x-1">
-                <span id="live-latest-speed" class="text-cyber-primary font-bold">18.2 km/h</span>
+              <span id="live-latest-time" class="text-slate-300 font-mono hidden sm:inline">—</span>
+              <span id="live-latest-speed" class="text-cyber-primary font-bold font-mono">0.0 km/h</span>
+
+              <!-- 状态三色图例指示 (与时间轴及地图颜色完全对齐) -->
+              <div class="hidden lg:flex items-center space-x-2 pl-2 border-l border-white/10 text-[9px] text-slate-400 font-sans">
+                <span class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span><span>移动</span></span>
+                <span class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span><span>静止</span></span>
+                <span class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span><span>离线/盲区</span></span>
               </div>
             </div>
 
             <div id="range-status-bar" class="flex items-center space-x-1 sm:space-x-2 hidden">
-              <div class="flex items-center space-x-1">
-                <span id="current-point-time" class="text-white font-bold">07-27 17:58</span>
-                <span id="current-speed-tag" class="px-1 py-0.2 rounded text-[9px] font-bold border transition-all">
-                  31.5 km/h
+              <div class="flex items-center space-x-1.5">
+                <span id="current-point-time" class="text-white font-bold font-mono">—</span>
+                <span id="current-speed-tag" class="px-1.5 py-0.2 rounded text-[9px] font-bold border transition-all">
+                  0.0 km/h
                 </span>
               </div>
             </div>
@@ -783,7 +733,7 @@ import { onMounted, onUnmounted, nextTick, ref, computed } from 'vue';
 import { App as CapApp } from '@capacitor/app';
 import { Browser as CapBrowser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
-import { AirCloudClient } from '../../api/client';
+import { AirCloudClient, calculateScopeWindow } from '../../api/client';
 import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-model';
 import { wgs84ToGcj02 } from '../../utils/coord-transform';
 
@@ -868,7 +818,7 @@ function rebuildDeviceDb(list: any[]) {
       lng: d.lng,
       battMv: d.voltageMv ? `${d.voltageMv} mV` : '未上报',
       csq: d.csq ? `CSQ ${d.csq}` : '无信号',
-      speed: `${d.speed ?? 0} km/h`,
+      speed: typeof d.speed === 'number' ? d.speed : (parseFloat(d.speed) || 0),
       status: d.online ? '在线' : '离线',
       address: d.address || '未上报物理定位',
       lastActiveTime: d.lastActiveTime,
@@ -1241,7 +1191,7 @@ function selectDeviceTab(imei: string) {
   if (mobHeaderName) mobHeaderName.innerText = dev.name;
 
   const located = typeof dev.lat === 'number' && typeof dev.lng === 'number' && !isNaN(dev.lat) && !isNaN(dev.lng);
-  const coordText = located ? `${dev.lat.toFixed(4)}°N, ${dev.lng.toFixed(4)}°E` : '未上报经纬度';
+  const coordText = located ? `${Number(dev.lat).toFixed(4)}°N, ${Number(dev.lng).toFixed(4)}°E` : '未上报经纬度';
 
   const elCoord = document.getElementById('drawer-coord-text');
   if (elCoord) elCoord.innerText = coordText;
@@ -1263,13 +1213,6 @@ function selectDeviceTab(imei: string) {
           properties: { title: dev.name }
         }]);
       }
-      if ((window as any).__fenceCircle) {
-        (window as any).__fenceCircle.setGeometries([{
-          center: center,
-          radius: 1000,
-          styleId: 'fence'
-        }]);
-      }
     }
     currentBaseLat = dev.lat;
     currentBaseLng = dev.lng;
@@ -1278,6 +1221,15 @@ function selectDeviceTab(imei: string) {
     (window as any).__vehicleMarker.setGeometries([]);
   }
 
+  // 同步更新右侧感知面板中的物理遥测详情
+  const elAddress = document.getElementById('drawer-address-text');
+  if (elAddress) elAddress.innerText = dev.address || '未上报物理地址';
+  const elCoordDetail = document.getElementById('drawer-coord-detail');
+  if (elCoordDetail) elCoordDetail.innerText = coordText;
+  const elSpeedDetail = document.getElementById('drawer-speed-detail');
+  if (elSpeedDetail) elSpeedDetail.innerText = `${Number(dev.speed || 0).toFixed(1)} km/h`;
+
+  updateLiveStatusBar();
   loadTrackDataForScope(masterMode === 'range' ? currentMacroScope : 'recent_window');
 
   // 触发真实云端接口同步
@@ -1294,11 +1246,27 @@ let currentBaseLng = 114.335039;
 let currentMacroScope = '90d';
 let isTrackLoading = false;
 
+// 全局时空时间轴时间窗口（绝对毫秒时间戳）
+let timelineWindowStartMs = Date.now() - 90 * 86400 * 1000;
+let timelineWindowEndMs = Date.now();
+let timelineWindowIsMultiDay = true;
+
+/**
+ * 依据选择的时间跨度加载轨迹（计算绝对时间窗口 + 触发云端增量拉取 + 投影时间轴）
+ */
 async function loadTrackDataForScope(scope: string, startDate: string | null = null, endDate: string | null = null) {
+  // 1. 严格计算绝对时间窗口基准
+  const win = calculateScopeWindow(scope, startDate || undefined, endDate || undefined);
+  timelineWindowStartMs = win.startMs;
+  timelineWindowEndMs = win.endMs;
+  timelineWindowIsMultiDay = win.isMultiDay;
+  updateTimelineScaleTicks();
+
   const imei = activeDeviceId.value;
   if (!imei) {
     TRACK_POINTS = [];
     drawSpeedWaveCanvas();
+    updateLiveStatusBar();
     return;
   }
 
@@ -1306,17 +1274,20 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
   isTrackLoading = true;
 
   try {
+    // 强制触发云端同步，确保所选跨度的数据真实拉取到位
     const points = await apiClient.getHistoricalTrack(
       imei,
       scope,
       startDate || undefined,
-      endDate || undefined
+      endDate || undefined,
+      true
     );
 
     if (points && points.length > 0) {
       TRACK_POINTS = points;
-      updateTimelineScaleTicks(points[0].isMultiDay);
+      updateTimelineScaleTicks();
       drawSpeedWaveCanvas();
+      updateLiveStatusBar();
 
       if (masterMode === 'range') {
         renderRangeTrackOnMap();
@@ -1332,7 +1303,7 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
     isTrackLoading = false;
   }
 
-  // 兜底：若云端或本地该时间段暂无轨迹上报，但设备本身有最新坐标
+  // 兜底：若该跨度内暂无轨迹上报，但设备有最新经纬度
   if (dev && typeof dev.lat === 'number' && typeof dev.lng === 'number') {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -1352,50 +1323,133 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
     TRACK_POINTS = [];
   }
 
-  updateTimelineScaleTicks(false);
+  updateTimelineScaleTicks();
   drawSpeedWaveCanvas();
+  updateLiveStatusBar();
   if ((window as any).__trackLines) {
     (window as any).__trackLines.setGeometries([]);
   }
 }
 
-function updateTimelineScaleTicks(isMultiDay: boolean) {
-  if (!TRACK_POINTS.length) return;
-  const numPoints = TRACK_POINTS.length;
-  const pStart = TRACK_POINTS[0];
-  const pMid1 = TRACK_POINTS[Math.floor(numPoints * 0.25)];
-  const pMid2 = TRACK_POINTS[Math.floor(numPoints * 0.5)];
-  const pMid3 = TRACK_POINTS[Math.floor(numPoints * 0.75)];
-  const pEnd = TRACK_POINTS[numPoints - 1];
+/**
+ * 时间轴刻度更新：完全基于绝对时间窗口 [timelineWindowStartMs, timelineWindowEndMs]
+ */
+function updateTimelineScaleTicks() {
+  const startMs = timelineWindowStartMs;
+  const endMs = timelineWindowEndMs;
+  const duration = Math.max(1000, endMs - startMs);
 
-  // 自适应判断：若首尾时间处于同一天，中间刻度采用清晰的 HH:mm 时分格式，杜绝纯日期重复
-  const sDay = pStart.timeStr ? pStart.timeStr.slice(0, 10) : '';
-  const eDay = pEnd.timeStr ? pEnd.timeStr.slice(0, 10) : '';
-  const isSameDay = sDay === eDay;
-
-  const fmt = (p: any, label = '') => {
-    if (!p || !p.timeStr) return '';
-    if (isSameDay) {
-      return `${p.timeStr.slice(11, 16)}${label}`;
-    } else {
-      return `${p.timeStr.slice(5, 10)} ${p.timeStr.slice(11, 16)}${label}`;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const fmtMs = (ms: number) => {
+    const d = new Date(ms);
+    const m = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const h = pad(d.getHours());
+    const min = pad(d.getMinutes());
+    if (timelineWindowIsMultiDay) {
+      return `${m}-${day} ${h}:${min}`;
     }
+    return `${h}:${min}`;
   };
 
   const tStart = document.getElementById('scale-tick-start');
-  if (tStart) {
-    tStart.innerText = pStart.timeStr ? (isSameDay ? `${pStart.timeStr.slice(5, 10)} ${pStart.timeStr.slice(11, 16)}` : fmt(pStart)) : '';
-  }
+  if (tStart) tStart.innerText = fmtMs(startMs);
+
   const t1 = document.getElementById('scale-tick-1');
-  if (t1) t1.innerText = fmt(pMid1);
+  if (t1) t1.innerText = fmtMs(startMs + duration * 0.25);
+
   const t2 = document.getElementById('scale-tick-2');
-  if (t2) t2.innerText = fmt(pMid2);
+  if (t2) t2.innerText = fmtMs(startMs + duration * 0.5);
+
   const t3 = document.getElementById('scale-tick-3');
-  if (t3) t3.innerText = fmt(pMid3);
+  if (t3) t3.innerText = fmtMs(startMs + duration * 0.75);
+
   const tEnd = document.getElementById('scale-tick-end');
   if (tEnd) {
-    const endText = pEnd.timeStr ? (isSameDay ? pEnd.timeStr.slice(11, 16) : `${pEnd.timeStr.slice(5, 10)} ${pEnd.timeStr.slice(11, 16)}`) : '';
-    tEnd.innerHTML = `<span>${endText}</span><span class="w-1 h-1 rounded-full bg-cyber-primary animate-pulse-cyan"></span>`;
+    const endText = fmtMs(endMs);
+    const isLiveEdge = Math.abs(Date.now() - endMs) < 300000;
+    if (isLiveEdge) {
+      tEnd.innerHTML = `<span>${endText} (最新)</span><span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan"></span>`;
+    } else {
+      tEnd.innerHTML = `<span>${endText}</span>`;
+    }
+  }
+}
+
+/**
+ * 更新跟随最新状态栏：明确指示原地静止/移动中/信号中断三态及其专属颜色发光指示
+ */
+function updateLiveStatusBar() {
+  const badge = document.getElementById('live-state-badge');
+  const dot = document.getElementById('live-state-dot');
+  const txt = document.getElementById('live-state-text');
+  const timeEl = document.getElementById('live-latest-time');
+  const speedEl = document.getElementById('live-latest-speed');
+
+  const imei = activeDeviceId.value;
+  const dev = imei ? DEVICES_DB[imei] : null;
+
+  if (!dev || !dev.online) {
+    // 离线/盲区状态：玫瑰红指示
+    if (badge) {
+      badge.className = 'flex items-center space-x-1.5 px-2 py-0.5 rounded-lg border border-rose-500/40 bg-rose-950/40';
+    }
+    if (dot) {
+      dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+    }
+    if (txt) {
+      txt.className = 'text-rose-300 font-bold';
+      txt.innerText = '信号中断 · 盲区';
+    }
+    if (timeEl) {
+      timeEl.innerText = dev?.lastActiveTime ? `最后上报: ${dev.lastActiveTime.slice(11, 19)}` : '未上报';
+    }
+    if (speedEl) {
+      speedEl.innerText = '离线';
+      speedEl.style.color = '#f43f5e';
+    }
+    return;
+  }
+
+  const isMoving = dev.speed && dev.speed > 3;
+  if (isMoving) {
+    // 移动中：翡翠绿高亮指示
+    if (badge) {
+      badge.className = 'flex items-center space-x-1.5 px-2 py-0.5 rounded-lg border border-cyber-emerald/40 bg-emerald-950/40 shadow-glow-emerald';
+    }
+    if (dot) {
+      dot.className = 'w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan';
+    }
+    if (txt) {
+      txt.className = 'text-emerald-300 font-bold';
+      txt.innerText = '移动中';
+    }
+    if (timeEl) {
+      timeEl.innerText = dev.lastActiveTime ? dev.lastActiveTime.slice(11, 19) : '在线';
+    }
+    if (speedEl) {
+      speedEl.innerText = `${Number(dev.speed || 0).toFixed(1)} km/h`;
+      speedEl.style.color = '#00f0ff';
+    }
+  } else {
+    // 原地静止：暗蓝灰稳态指示
+    if (badge) {
+      badge.className = 'flex items-center space-x-1.5 px-2 py-0.5 rounded-lg border border-slate-600 bg-slate-800/80';
+    }
+    if (dot) {
+      dot.className = 'w-2 h-2 rounded-full bg-slate-400';
+    }
+    if (txt) {
+      txt.className = 'text-slate-300 font-bold';
+      txt.innerText = '原地静止';
+    }
+    if (timeEl) {
+      timeEl.innerText = dev.lastActiveTime ? dev.lastActiveTime.slice(11, 19) : '在线';
+    }
+    if (speedEl) {
+      speedEl.innerText = '0.0 km/h';
+      speedEl.style.color = '#94a3b8';
+    }
   }
 }
 
@@ -1442,6 +1496,9 @@ function getRealCanvas(): HTMLCanvasElement | null {
   return null;
 }
 
+/**
+ * 绘制真实时空速度波形时间轴画布（基于时间戳投影在绝对时间窗口坐标系上）
+ */
 function drawSpeedWaveCanvas() {
   const canvas = getRealCanvas();
   if (!canvas) return;
@@ -1459,51 +1516,138 @@ function drawSpeedWaveCanvas() {
   const w = rect.width;
   const h = rect.height;
 
+  const startMs = timelineWindowStartMs;
+  const endMs = timelineWindowEndMs;
+  const duration = Math.max(1000, endMs - startMs);
+
+  // 1. 若当前窗口内无任何有效点位：呈现带微光斜纹的暂无数据状态
   if (!TRACK_POINTS.length) {
+    ctx.save();
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    for (let x = -h; x < w + h; x += 14) {
+      ctx.beginPath();
+      ctx.moveTo(x, h);
+      ctx.lineTo(x + h, 0);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('所选时间跨度内暂无物理轨迹上报', w / 2, h / 2);
+    ctx.restore();
     return;
   }
 
-  const numPoints = TRACK_POINTS.length;
-
-  // 1. 底层高饱和度连续速度能量色带填充（横向 100% 铺满胶囊轨道高度，再现 v3.5 Chroma Pro 原型质感）
-  const grad = ctx.createLinearGradient(0, 0, w, 0);
-  for (let i = 0; i < numPoints; i++) {
-    const stop = numPoints > 1 ? i / (numPoints - 1) : 0;
-    const col = getContinuousSpeedColor(TRACK_POINTS[i].speed).rgb;
-    grad.addColorStop(stop, col);
-  }
-  ctx.fillStyle = grad;
+  // 2. 底层深色基线填充
+  ctx.fillStyle = '#1e293b';
   ctx.fillRect(0, 0, w, h);
 
-  // 2. 识别离线盲区，在盲区区间上绘制克制的 45度半透明警示斜纹（不破坏整体色带连续感）
-  for (let i = 0; i < numPoints - 1; i++) {
-    const cur = TRACK_POINTS[i];
-    const next = TRACK_POINTS[i + 1];
-    const dt = (next.timestamp - cur.timestamp) / 1000;
-    const radLat = (next.lat * Math.PI) / 180;
-    const dLat = (next.lat - cur.lat) * 111000;
-    const dLng = (next.lng - cur.lng) * 111000 * Math.cos(radLat);
-    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-    const hasSpeed = (cur.speed && cur.speed > 3) || (next.speed && next.speed > 3);
+  // 3. 将真实点位投影到绝对时间轴坐标 [0, w]
+  const numPoints = TRACK_POINTS.length;
+  const mappedPoints = TRACK_POINTS.map(p => {
+    const ratio = Math.max(0, Math.min(1, (p.timestamp - startMs) / duration));
+    return {
+      x: ratio * w,
+      speed: p.speed || 0,
+      timestamp: p.timestamp,
+      point: p
+    };
+  }).sort((a, b) => a.x - b.x);
 
-    if (!hasSpeed && dt > 600 && dist > 100) {
-      const x1 = (i / (numPoints - 1)) * w;
-      const x2 = ((i + 1) / (numPoints - 1)) * w;
-      const segW = x2 - x1;
-      if (segW > 2) {
+  // 4. 连续运动/静止区间与离线盲区切片绘制
+  let segStartIdx = 0;
+  for (let i = 0; i < numPoints; i++) {
+    const isLast = (i === numPoints - 1);
+    const next = !isLast ? mappedPoints[i + 1] : null;
+    const isGap = next ? ((next.timestamp - mappedPoints[i].timestamp) > 900000) : true;
+
+    if (isGap || isLast) {
+      const pA = mappedPoints[segStartIdx];
+      const pB = mappedPoints[i];
+      const segW = Math.max(2, pB.x - pA.x);
+
+      // 色谱渐变填充
+      const grad = ctx.createLinearGradient(pA.x, 0, Math.max(pA.x + 1, pB.x), 0);
+      if (segStartIdx === i) {
+        const col = getContinuousSpeedColor(pA.speed).rgb;
+        ctx.fillStyle = col;
+        ctx.fillRect(Math.max(0, pA.x - 2), 0, 4, h);
+      } else {
+        for (let k = segStartIdx; k <= i; k++) {
+          const pt = mappedPoints[k];
+          const localStop = segW > 0 ? Math.max(0, Math.min(1, (pt.x - pA.x) / segW)) : 0;
+          grad.addColorStop(localStop, getContinuousSpeedColor(pt.speed).rgb);
+        }
+        ctx.fillStyle = grad;
+        ctx.fillRect(pA.x, 0, segW, h);
+
+        // 贝塞尔流体速度波形
+        let maxSp = 0;
+        for (let k = segStartIdx; k <= i; k++) {
+          if (mappedPoints[k].speed > maxSp) maxSp = mappedPoints[k].speed;
+        }
+        const peakSpeed = Math.max(25, maxSp);
+
         ctx.save();
-        ctx.fillStyle = 'rgba(225, 29, 72, 0.35)';
-        ctx.fillRect(x1, 0, segW, h);
-        ctx.strokeStyle = 'rgba(251, 113, 133, 0.45)';
-        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        for (let sx = x1 - h; sx < x2 + h; sx += 10) {
-          const px1 = Math.max(x1, sx);
-          const py1 = Math.max(0, sx < x1 ? (x1 - sx) : 0);
-          const px2 = Math.min(x2, sx + h);
-          const py2 = Math.min(h, h - (sx + h > x2 ? (sx + h - x2) : 0));
+        ctx.moveTo(pA.x, h);
+        for (let k = segStartIdx; k <= i; k++) {
+          const pt = mappedPoints[k];
+          const waveH = Math.min(h * 0.72, (pt.speed / peakSpeed) * (h * 0.65) + 3);
+          const y = h - waveH;
+          if (k === segStartIdx) {
+            ctx.lineTo(pt.x, y);
+          } else {
+            const prev = mappedPoints[k - 1];
+            const prevWaveH = Math.min(h * 0.72, (prev.speed / peakSpeed) * (h * 0.65) + 3);
+            const cx = (prev.x + pt.x) / 2;
+            ctx.bezierCurveTo(cx, h - prevWaveH, cx, y, pt.x, y);
+          }
+        }
+        ctx.lineTo(pB.x, h);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.fill();
+
+        // 顶部微光发光轮廓线
+        ctx.beginPath();
+        for (let k = segStartIdx; k <= i; k++) {
+          const pt = mappedPoints[k];
+          const waveH = Math.min(h * 0.72, (pt.speed / peakSpeed) * (h * 0.65) + 3);
+          const y = h - waveH;
+          if (k === segStartIdx) ctx.moveTo(pt.x, y);
+          else {
+            const prev = mappedPoints[k - 1];
+            const prevWaveH = Math.min(h * 0.72, (prev.speed / peakSpeed) * (h * 0.65) + 3);
+            const cx = (prev.x + pt.x) / 2;
+            ctx.bezierCurveTo(cx, h - prevWaveH, cx, y, pt.x, y);
+          }
+        }
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 5. 跨度超过15分钟的断层盲区绘制警示斜纹
+      if (next && (next.x - pB.x) > 3) {
+        const gapX1 = pB.x;
+        const gapX2 = next.x;
+        ctx.save();
+        ctx.fillStyle = 'rgba(225, 29, 72, 0.22)';
+        ctx.fillRect(gapX1, 0, gapX2 - gapX1, h);
+        ctx.strokeStyle = 'rgba(251, 113, 133, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let sx = gapX1 - h; sx < gapX2 + h; sx += 8) {
+          const px1 = Math.max(gapX1, sx);
+          const py1 = Math.max(0, sx < gapX1 ? (gapX1 - sx) : 0);
+          const px2 = Math.min(gapX2, sx + h);
+          const py2 = Math.min(h, h - (sx + h > gapX2 ? (sx + h - gapX2) : 0));
           if (px1 < px2 && py1 < py2) {
             ctx.moveTo(px1, py1);
             ctx.lineTo(px2, py2);
@@ -1512,62 +1656,10 @@ function drawSpeedWaveCanvas() {
         ctx.stroke();
         ctx.restore();
       }
+
+      segStartIdx = i + 1;
     }
   }
-
-  // 3. 计算平滑波峰点集合 (以速度为波高，模拟音频能量流体波形)
-  let maxSp = 0;
-  for (let i = 0; i < numPoints; i++) {
-    if (TRACK_POINTS[i].speed > maxSp) maxSp = TRACK_POINTS[i].speed;
-  }
-  const peakSpeed = Math.max(30, maxSp);
-
-  const pts: any[] = [];
-  for (let i = 0; i < numPoints; i++) {
-    const x = numPoints > 1 ? (i / (numPoints - 1)) * w : 0;
-    const sp = TRACK_POINTS[i].speed;
-    // 速度归一化到波高 (高度占比：静止时基线 3px，最高速占据 65% 高度)
-    const waveH = Math.min(h * 0.68, (sp / peakSpeed) * (h * 0.62) + 3);
-    const y = h - waveH;
-    pts.push({ x, y, speed: sp });
-  }
-
-  // 4. 贝塞尔平滑半透明流体波形填充 (模拟专业音频能量波与流体质感)
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(0, h);
-  ctx.lineTo(pts[0].x, pts[0].y);
-
-  for (let i = 0; i < pts.length - 1; i++) {
-    const xc = (pts[i].x + pts[i + 1].x) / 2;
-    const yc = (pts[i].y + pts[i + 1].y) / 2;
-    ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
-  }
-  ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-  ctx.lineTo(w, h);
-  ctx.closePath();
-
-  // 柔和半透明流体高光覆盖
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-  ctx.fill();
-  ctx.restore();
-
-  // 5. 顶部微光平滑流体波形发光轮廓线
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 0; i < pts.length - 1; i++) {
-    const xc = (pts[i].x + pts[i + 1].x) / 2;
-    const yc = (pts[i].y + pts[i + 1].y) / 2;
-    ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
-  }
-  ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-  ctx.shadowColor = 'rgba(0, 240, 255, 0.45)';
-  ctx.shadowBlur = 4;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.restore();
 }
 
 let masterMode = 'live';
@@ -1746,47 +1838,87 @@ function getPointStateInfo(idx: number) {
 }
 
 function renderStateAtPosition(percent: number, isPreview = false) {
-  if (!TRACK_POINTS.length) return;
-  const numPoints = TRACK_POINTS.length;
-  const idx = Math.min(Math.floor((percent / 100) * (numPoints - 1)), numPoints - 1);
-  const pt = TRACK_POINTS[idx];
-  if (!pt) return;
+  const startMs = timelineWindowStartMs;
+  const endMs = timelineWindowEndMs;
+  const duration = Math.max(1000, endMs - startMs);
+  const targetMs = startMs + (percent / 100) * duration;
+
+  if (!TRACK_POINTS.length) {
+    if (!isPreview) {
+      const playheadNeedle = document.getElementById('playhead-needle');
+      if (playheadNeedle) playheadNeedle.style.left = percent + '%';
+      const speedTag = document.getElementById('current-speed-tag');
+      if (speedTag) {
+        speedTag.style.backgroundColor = 'rgba(225, 29, 72, 0.25)';
+        speedTag.style.borderColor = 'rgba(244, 63, 94, 0.7)';
+        speedTag.style.color = '#fda4af';
+        speedTag.innerText = '暂无位置数据';
+      }
+      const timeBox = document.getElementById('current-point-time');
+      if (timeBox) {
+        const d = new Date(targetMs);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        timeBox.innerText = `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+    }
+    return;
+  }
+
+  // 1. 在当前已加载的点位集合中二分/遍历查找最靠近 targetMs 的点
+  let nearestIdx = 0;
+  let minDiff = Infinity;
+  for (let i = 0; i < TRACK_POINTS.length; i++) {
+    const diff = Math.abs(TRACK_POINTS[i].timestamp - targetMs);
+    if (diff < minDiff) {
+      minDiff = diff;
+      nearestIdx = i;
+    }
+  }
+
+  const pt = TRACK_POINTS[nearestIdx];
+  const isGap = minDiff > 900000; // 时间差大于15分钟视为处于盲区/离线期
   const sColor = getContinuousSpeedColor(pt.speed);
-  const stInfo = getPointStateInfo(idx);
+
+  let stType = 'moving';
+  let stLabel = `${pt.speed} km/h`;
+  let stColor = sColor.hex;
+
+  if (isGap) {
+    stType = 'offline';
+    stLabel = '离线盲区';
+    stColor = '#f43f5e';
+  } else if (!pt.speed || pt.speed < 2) {
+    stType = 'dwell';
+    stLabel = '原地静止';
+    stColor = '#94a3b8';
+  }
 
   if (!isPreview) {
     const playheadNeedle = document.getElementById('playhead-needle');
     if (playheadNeedle) playheadNeedle.style.left = percent + '%';
     const dot = document.getElementById('playhead-inner-dot');
-    if (dot) dot.style.backgroundColor = stInfo.color;
-
-    const liveTime = document.getElementById('live-latest-time');
-    if (liveTime && pt.timeStr) liveTime.innerText = pt.timeStr.slice(11, 19);
-    const liveSpeed = document.getElementById('live-latest-speed');
-    if (liveSpeed) {
-      liveSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
-      liveSpeed.style.color = stInfo.color;
-    }
-
-    const drawerSpeed = document.getElementById('drawer-speed-badge');
-    if (drawerSpeed) {
-      drawerSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
-    }
+    if (dot) dot.style.backgroundColor = stColor;
 
     const timeBox = document.getElementById('current-point-time');
-    if (timeBox && pt.timeStr) timeBox.innerText = pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 16);
+    if (timeBox) {
+      const curD = new Date(targetMs);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      timeBox.innerText = timelineWindowIsMultiDay
+        ? `${pad(curD.getMonth() + 1)}-${pad(curD.getDate())} ${pad(curD.getHours())}:${pad(curD.getMinutes())}`
+        : `${pad(curD.getHours())}:${pad(curD.getMinutes())}:${pad(curD.getSeconds())}`;
+    }
 
     const speedTag = document.getElementById('current-speed-tag');
     if (speedTag) {
-      if (stInfo.type === 'offline') {
+      if (stType === 'offline') {
         speedTag.style.backgroundColor = 'rgba(225, 29, 72, 0.25)';
         speedTag.style.borderColor = 'rgba(244, 63, 94, 0.7)';
         speedTag.style.color = '#fda4af';
         speedTag.innerText = '📡 信号中断 · 盲区';
-      } else if (stInfo.type === 'dwell') {
-        speedTag.style.backgroundColor = 'rgba(14, 116, 144, 0.28)';
-        speedTag.style.borderColor = 'rgba(56, 189, 248, 0.6)';
-        speedTag.style.color = '#38bdf8';
+      } else if (stType === 'dwell') {
+        speedTag.style.backgroundColor = 'rgba(51, 65, 85, 0.5)';
+        speedTag.style.borderColor = 'rgba(100, 116, 139, 0.6)';
+        speedTag.style.color = '#94a3b8';
         speedTag.innerText = '⏱️ 原地静止 · 0 km/h';
       } else {
         speedTag.style.backgroundColor = sColor.rgba(0.25);
@@ -1796,49 +1928,36 @@ function renderStateAtPosition(percent: number, isPreview = false) {
       }
     }
 
-    // 同步地图上车辆标点位置，实现滑块拖拽平滑跟跑
+    // 地图车辆标记跟进
     if ((window as any).__vehicleMarker && typeof TMap !== 'undefined' && typeof pt.lat === 'number' && typeof pt.lng === 'number') {
       const pos = new TMap.LatLng(pt.lat, pt.lng);
       (window as any).__vehicleMarker.setGeometries([{
         id: 'v1',
         styleId: 'car_icon',
         position: pos,
-        properties: { title: `${pt.speed} km/h` }
+        properties: { title: DEVICES_DB[activeDeviceId.value]?.name || '合宙设备' }
       }]);
+    }
+
+    const drawerSpeed = document.getElementById('drawer-speed-badge');
+    if (drawerSpeed) {
+      drawerSpeed.innerText = stType === 'moving' ? `${pt.speed} km/h` : stLabel;
+      drawerSpeed.style.color = stColor;
     }
   }
 
   if (typeof pt.lat === 'number' && typeof pt.lng === 'number') {
     const elCoord = document.getElementById('drawer-coord-text');
     if (elCoord) elCoord.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
+    const elCoordDetail = document.getElementById('drawer-coord-detail');
+    if (elCoordDetail) elCoordDetail.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
     const elTagCoord = document.getElementById('tel-tag-coords');
     if (elTagCoord) elTagCoord.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
-  }
-  
-  const drawerSpeed = document.getElementById('drawer-speed-badge');
-  if (drawerSpeed) {
-    drawerSpeed.style.backgroundColor = sColor.rgba(0.2);
-    drawerSpeed.style.color = stInfo.color;
-    drawerSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
-  }
-  const telSpeed = document.getElementById('tel-tag-speed');
-  if (telSpeed) {
-    telSpeed.style.color = stInfo.color;
-    telSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
-  }
-
-  if ((window as any).__vehicleMarker) {
-    (window as any).__vehicleMarker.setGeometries([{
-      id: 'v1',
-      styleId: 'car_icon',
-      position: new TMap.LatLng(pt.lat, pt.lng),
-      properties: { title: DEVICES_DB[activeDeviceId.value]?.name || '合宙设备' }
-    }]);
   }
 }
 
 function onTimelineMouseMove(e: MouseEvent) {
-  if (isDragging || !TRACK_POINTS.length) return;
+  if (isDragging) return;
 
   const container = document.getElementById('timeline-track-container');
   if (!container) return;
@@ -1853,28 +1972,47 @@ function onTimelineMouseMove(e: MouseEvent) {
     hoverNeedle.style.left = p + '%';
   }
 
-  if (!TRACK_POINTS.length) return;
-  const numPoints = TRACK_POINTS.length;
-  const idx = Math.min(Math.floor((p / 100) * (numPoints - 1)), numPoints - 1);
-  const pt = TRACK_POINTS[idx];
-  if (!pt) return;
-  const sColor = getContinuousSpeedColor(pt.speed);
-  const stInfo = getPointStateInfo(idx);
+  const startMs = timelineWindowStartMs;
+  const endMs = timelineWindowEndMs;
+  const duration = Math.max(1000, endMs - startMs);
+  const targetMs = startMs + (p / 100) * duration;
+  const curD = new Date(targetMs);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const timeStr = timelineWindowIsMultiDay
+    ? `${pad(curD.getMonth() + 1)}-${pad(curD.getDate())} ${pad(curD.getHours())}:${pad(curD.getMinutes())}`
+    : `${pad(curD.getHours())}:${pad(curD.getMinutes())}:${pad(curD.getSeconds())}`;
 
-  const bubbleTime = pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 19);
+  let nearestSp = 0;
+  let isGap = true;
+  if (TRACK_POINTS.length) {
+    let minDiff = Infinity;
+    let nearestIdx = 0;
+    for (let i = 0; i < TRACK_POINTS.length; i++) {
+      const diff = Math.abs(TRACK_POINTS[i].timestamp - targetMs);
+      if (diff < minDiff) {
+        minDiff = diff;
+        nearestIdx = i;
+      }
+    }
+    if (minDiff <= 900000) {
+      nearestSp = TRACK_POINTS[nearestIdx].speed || 0;
+      isGap = false;
+    }
+  }
+
   const elBTime = document.getElementById('hover-bubble-time');
-  if (elBTime) elBTime.innerText = bubbleTime;
+  if (elBTime) elBTime.innerText = timeStr;
   const speedBubble = document.getElementById('hover-bubble-speed');
   if (speedBubble) {
-    speedBubble.innerText = stInfo.label;
-    speedBubble.style.color = stInfo.color;
+    speedBubble.innerText = isGap ? '盲区/离线' : `${nearestSp.toFixed(1)} km/h`;
+    speedBubble.style.color = isGap ? '#f43f5e' : (nearestSp > 3 ? '#10b981' : '#94a3b8');
   }
 
   renderStateAtPosition(p, true);
 }
 
 function onTimelineUserClick(e: MouseEvent) {
-  if (isDragging || !TRACK_POINTS.length) return;
+  if (isDragging) return;
 
   const container = document.getElementById('timeline-track-container');
   if (!container) return;
@@ -1898,17 +2036,6 @@ function onTimelineMouseLeave() {
   renderStateAtPosition(committedPlayhead, false);
 }
 
-function applyTimePreset(type: string) {
-  if (type === 'sprint') {
-    rangeStart = 55;
-    rangeEnd = 78;
-  }
-  committedPlayhead = rangeStart;
-  updateRangeDOM();
-  renderStateAtPosition(committedPlayhead, false);
-  renderRangeTrackOnMap();
-}
-
 function updateRangeDOM() {
   if (rangeStart < 0) rangeStart = 0;
   if (rangeEnd > 100) rangeEnd = 100;
@@ -1927,21 +2054,23 @@ function updateRangeDOM() {
     if (maskR) maskR.style.width = (100 - rangeEnd) + '%';
   }
 
-  if (!TRACK_POINTS.length) return;
-  const numPoints = TRACK_POINTS.length;
-  const idxStart = Math.min(Math.floor((rangeStart / 100) * (numPoints - 1)), numPoints - 1);
-  const idxEnd = Math.min(Math.floor((rangeEnd / 100) * (numPoints - 1)), numPoints - 1);
-  
-  const pS = TRACK_POINTS[idxStart];
-  const pE = TRACK_POINTS[idxEnd];
+  const startMs = timelineWindowStartMs;
+  const endMs = timelineWindowEndMs;
+  const duration = Math.max(1000, endMs - startMs);
+  const tStartMs = startMs + (rangeStart / 100) * duration;
+  const tEndMs = startMs + (rangeEnd / 100) * duration;
 
-  const tStart = pS.isMultiDay ? pS.timeStr.slice(5, 16) : pS.timeStr.slice(11, 16);
-  const tEnd = pE.isMultiDay ? pE.timeStr.slice(5, 16) : pE.timeStr.slice(11, 16);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const fmt = (ms: number) => {
+    const d = new Date(ms);
+    return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
   const bL = document.getElementById('drag-bubble-left');
-  if (bL) bL.innerText = tStart;
+  if (bL) bL.innerText = fmt(tStartMs);
+
   const bR = document.getElementById('drag-bubble-right');
-  if (bR) bR.innerText = tEnd;
+  if (bR) bR.innerText = fmt(tEndMs);
 }
 
 function toggleRangePlay() {
@@ -2256,10 +2385,6 @@ function setMobileSheetState(state: string) {
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
-
-  if ((window as any).__accelChart) {
-    setTimeout(() => (window as any).__accelChart.resize(), 200);
-  }
 }
 
 function cycleMobileSheet() {
@@ -2308,35 +2433,31 @@ function setupMobileSheetTouchGestures() {
   }
 }
 
-let isArmed = true;
-function toggleQuickArm() {
-  isArmed = !isArmed;
-  const btn = document.getElementById('btn-quick-arm');
-  const text = document.getElementById('quick-arm-text');
-  if (!btn || !text) return;
-  if (isArmed) {
-    btn.className = 'px-2.5 py-1 rounded-xl text-[10px] font-bold bg-cyber-emerald text-white hover:bg-emerald-600 transition flex items-center space-x-1 shadow-glow-emerald';
-    text.innerText = '已设防';
-  } else {
-    btn.className = 'px-2.5 py-1 rounded-xl text-[10px] font-bold bg-cyber-800 text-slate-400 hover:text-white transition flex items-center space-x-1';
-    text.innerText = '已撤防';
-  }
-}
-
 let isDockOpen = true;
 function toggleDeviceDock() {
   if (window.innerWidth < 768) return;
   isDockOpen = !isDockOpen;
   const dock = document.getElementById('device-dock');
-  if (!dock) return;
-  if (isDockOpen) {
-    dock.style.transform = 'translateX(0)';
-    dock.style.opacity = '1';
-    dock.style.pointerEvents = 'auto';
-  } else {
-    dock.style.transform = 'translateX(-115%)';
-    dock.style.opacity = '0';
-    dock.style.pointerEvents = 'none';
+  const btnExpand = document.getElementById('btn-dock-expand');
+  if (dock) {
+    if (isDockOpen) {
+      dock.style.transform = 'translateX(0)';
+      dock.style.opacity = '1';
+      dock.style.pointerEvents = 'auto';
+    } else {
+      dock.style.transform = 'translateX(-115%)';
+      dock.style.opacity = '0';
+      dock.style.pointerEvents = 'none';
+    }
+  }
+  if (btnExpand) {
+    if (isDockOpen) {
+      btnExpand.classList.add('hidden');
+      btnExpand.classList.remove('flex');
+    } else {
+      btnExpand.classList.remove('hidden');
+      btnExpand.classList.add('flex');
+    }
   }
 }
 
@@ -2348,15 +2469,26 @@ function toggleInspectorDrawer() {
   }
   isInspectorOpen = !isInspectorOpen;
   const drawer = document.getElementById('inspector-drawer');
-  if (!drawer) return;
-  if (isInspectorOpen) {
-    drawer.style.transform = 'translateX(0)';
-    drawer.style.opacity = '1';
-    drawer.style.pointerEvents = 'auto';
-  } else {
-    drawer.style.transform = 'translateX(115%)';
-    drawer.style.opacity = '0';
-    drawer.style.pointerEvents = 'none';
+  const btnExpand = document.getElementById('btn-inspector-expand');
+  if (drawer) {
+    if (isInspectorOpen) {
+      drawer.style.transform = 'translateX(0)';
+      drawer.style.opacity = '1';
+      drawer.style.pointerEvents = 'auto';
+    } else {
+      drawer.style.transform = 'translateX(115%)';
+      drawer.style.opacity = '0';
+      drawer.style.pointerEvents = 'none';
+    }
+  }
+  if (btnExpand) {
+    if (isInspectorOpen) {
+      btnExpand.classList.add('hidden');
+      btnExpand.classList.remove('flex');
+    } else {
+      btnExpand.classList.remove('hidden');
+      btnExpand.classList.add('flex');
+    }
   }
 }
 
@@ -2372,61 +2504,6 @@ function redirectToOfficialOAuth() {
 async function syncOfficialData() {
   await loadRealDevices();
   toggleOfficialModal();
-}
-
-let compassTimer: any = null;
-
-function initAccelChart() {
-  const el = document.getElementById('chart-accel');
-  if (!el || typeof echarts === 'undefined') return;
-  const chart = echarts.init(el);
-  (window as any).__accelChart = chart;
-
-  const times: string[] = [];
-  const dataX: number[] = [], dataY: number[] = [], dataZ: number[] = [];
-  const now = Date.now();
-  for (let i = 30; i >= 0; i--) {
-    times.push(new Date(now - i * 100).toLocaleTimeString().slice(3));
-    dataX.push(140 + Math.sin(i * 0.4) * 20);
-    dataY.push(-80 + Math.cos(i * 0.4) * 15);
-    dataZ.push(980 + Math.sin(i * 0.2) * 10);
-  }
-
-  chart.setOption({
-    backgroundColor: 'transparent',
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['X轴', 'Y轴', 'Z轴'], textStyle: { color: '#94a3b8', fontSize: 10 } },
-    grid: { left: 30, right: 10, top: 25, bottom: 20 },
-    xAxis: { type: 'category', data: times, axisLine: { lineStyle: { color: '#334155' } }, axisLabel: { color: '#64748b', fontSize: 9 } },
-    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#1e293b' } }, axisLabel: { color: '#64748b', fontSize: 9 } },
-    series: [
-      { name: 'X轴', type: 'line', smooth: true, showSymbol: false, data: dataX, itemStyle: { color: '#f43f5e' } },
-      { name: 'Y轴', type: 'line', smooth: true, showSymbol: false, data: dataY, itemStyle: { color: '#10b981' } },
-      { name: 'Z轴', type: 'line', smooth: true, showSymbol: false, data: dataZ, itemStyle: { color: '#00f0ff' } }
-    ]
-  });
-}
-
-function startCompassSimulator() {
-  let t = 0;
-  compassTimer = setInterval(() => {
-    t += 0.05;
-    const pitch = 4.2 + Math.sin(t) * 1.5;
-    const roll = -1.5 + Math.cos(t) * 1.2;
-    const yaw = (68.0 + Math.sin(t * 0.5) * 5).toFixed(1);
-    
-    const elP = document.getElementById('val-pitch');
-    const elR = document.getElementById('val-roll');
-    const elY = document.getElementById('val-yaw');
-    if (elP) elP.innerText = (pitch > 0 ? '+' : '') + pitch.toFixed(1) + '°';
-    if (elR) elR.innerText = (roll > 0 ? '+' : '') + roll.toFixed(1) + '°';
-    if (elY) elY.innerText = yaw + '°';
-
-    const p = document.getElementById('yaw-pointer');
-    if (p) p.style.transform = `rotate(${yaw}deg)`;
-    const h = document.getElementById('horizon-disc');
-    if (h) h.style.transform = `rotate(${-roll}deg) translateY(${pitch * 1.2}px)`;
-  }, 100);
 }
 
 onMounted(() => {
@@ -2526,7 +2603,6 @@ onMounted(() => {
 
   window.addEventListener('resize', () => {
     drawSpeedWaveCanvas();
-    if ((window as any).__accelChart) (window as any).__accelChart.resize();
   });
 
   try {
@@ -2598,8 +2674,6 @@ onMounted(() => {
     refreshIcons();
   }, 1500);
 
-  initAccelChart();
-  startCompassSimulator();
   setupSilkyTimelineInteractions();
   setupMobileSheetTouchGestures();
   switchMasterMode('live');
@@ -2611,7 +2685,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  if (compassTimer) clearInterval(compassTimer);
   if (playTimer) clearInterval(playTimer);
   if ((window as any).__map) {
     (window as any).__map.destroy();

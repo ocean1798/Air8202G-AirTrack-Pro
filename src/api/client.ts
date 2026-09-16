@@ -58,6 +58,48 @@ export interface AccountRuntimeState {
   deviceCount?: number;
 }
 
+export function calculateScopeWindow(
+  scope: string = '90d',
+  customStart?: string,
+  customEnd?: string
+): { startMs: number; endMs: number; isMultiDay: boolean; startDate: Date; endDate: Date } {
+  let startDate: Date;
+  let endDate: Date = new Date();
+
+  if (scope === 'custom' && customStart && customEnd) {
+    startDate = new Date(customStart + 'T00:00:00');
+    endDate = new Date(customEnd + 'T23:59:59');
+  } else if (scope === 'today') {
+    startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+  } else if (scope === 'yesterday') {
+    startDate = new Date();
+    startDate.setDate(startDate.getDate() - 1);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(startDate);
+    endDate.setHours(23, 59, 59, 0);
+  } else if (scope === '3d') {
+    startDate = new Date();
+    startDate.setDate(startDate.getDate() - 3);
+  } else if (scope === '7d') {
+    startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
+  } else if (scope === '30d') {
+    startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+  } else if (scope === 'recent_window') {
+    startDate = new Date(Date.now() - 24 * 3600 * 1000);
+  } else {
+    startDate = new Date();
+    startDate.setDate(startDate.getDate() - 90);
+  }
+
+  const startMs = startDate.getTime();
+  const endMs = endDate.getTime();
+  const isMultiDay = (endMs - startMs) > 86400000;
+  return { startMs, endMs, isMultiDay, startDate, endDate };
+}
+
 export class AirCloudClient {
   private static instance: AirCloudClient;
   private rateLimiter: DeviceRateLimiter;
@@ -769,157 +811,84 @@ export class AirCloudClient {
   }
 
   /**
-   * 真实拉取设备历史轨迹（本地优先 + 受控增量同步）
+   * 真实拉取设备历史轨迹（增量同步 + 本地时序库检索）
    */
   public async getHistoricalTrack(
     imei: string,
     scope: string = '90d',
     customStart?: string,
     customEnd?: string,
-    forceCloud = false
+    forceCloud = true
   ): Promise<TrackPoint[]> {
     const pad = (n: number) => String(n).padStart(2, '0');
     const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 
-    let startDate: Date;
-    let endDate: Date = new Date();
+    const { startMs, endMs, isMultiDay, startDate, endDate } = calculateScopeWindow(scope, customStart, customEnd);
 
-    if (scope === 'custom' && customStart && customEnd) {
-      startDate = new Date(customStart + 'T00:00:00');
-      endDate = new Date(customEnd + 'T23:59:59');
-    } else if (scope === 'today' || scope === 'recent_window') {
-      startDate = new Date();
-      startDate.setHours(0, 0, 0, 0);
-    } else if (scope === 'yesterday') {
-      startDate = new Date();
-      startDate.setDate(startDate.getDate() - 1);
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date(startDate);
-      endDate.setHours(23, 59, 59, 0);
-    } else if (scope === '3d') {
-      startDate = new Date();
-      startDate.setDate(startDate.getDate() - 3);
-    } else if (scope === '7d') {
-      startDate = new Date();
-      startDate.setDate(startDate.getDate() - 7);
-    } else if (scope === '30d') {
-      startDate = new Date();
-      startDate.setDate(startDate.getDate() - 30);
-    } else {
-      startDate = new Date();
-      startDate.setDate(startDate.getDate() - 90);
-    }
+    // 1. 若具有鉴权凭据，且要求强制拉取云端，先执行云端分页同步
+    if (this.hasAuth() && forceCloud) {
+      try {
+        const fetchedStored: StoredTrackPoint[] = [];
 
-    const startMs = startDate.getTime();
-    const endMs = endDate.getTime();
-    const isMultiDay = (endMs - startMs) > 86400000;
+        for (let page = 1; page <= 5; page++) {
+          if (page > 1) await new Promise(r => setTimeout(r, 200));
 
-    // 1. 本地优先：若已存在缓存且不强制刷新，毫秒级直接返回（附带存量缓存自愈推导）
-    if (!forceCloud) {
-      const cached = await db.getTrackPointsByRange(this.activePhone, imei, startMs, endMs);
-      if (cached && cached.length > 0) {
-        let validPoints = cached;
-        const allZeroSpeed = cached.length >= 2 && cached.every(p => !p.speed || p.speed === 0);
-        if (allZeroSpeed) {
-          validPoints = this.deriveSpeedsForTrackPoints(cached);
-          db.putTrackPoints(validPoints).catch(() => {});
-        }
+          const resp = await this.postApi('/aircloud/location_history', {
+            client_id: imei,
+            start: fmt(startDate),
+            end: fmt(endDate),
+            page,
+            size: 500
+          });
 
-        return validPoints.map((p, idx) => ({
-          index: idx,
-          lat: p.lat,
-          lng: p.lng,
-          gcjLat: p.lat,
-          gcjLng: p.lng,
-          speed: p.speed || 0,
-          timeStr: p.timeStr,
-          timestamp: p.timestamp,
-          isMultiDay
-        }));
-      }
-    }
+          if (resp && resp.code === 105) throw new AuthExpiredError();
+          if (resp && resp.code === 0 && resp.value && Array.isArray(resp.value.records)) {
+            const records = resp.value.records;
+            for (const p of records) {
+              const lat = parseFloat(p.lat);
+              const lng = parseFloat(p.lng);
+              if (isNaN(lat) || isNaN(lng)) continue;
+              const curMs = new Date(String(p.time).replace(/-/g, '/')).getTime();
 
-    // 2. 未授权时直接返回本地点位
-    if (!this.hasAuth()) {
-      const cached = await db.getTrackPointsByRange(this.activePhone, imei, startMs, endMs);
-      let validPoints = cached;
-      const allZeroSpeed = cached.length >= 2 && cached.every(p => !p.speed || p.speed === 0);
-      if (allZeroSpeed) {
-        validPoints = this.deriveSpeedsForTrackPoints(cached);
-        db.putTrackPoints(validPoints).catch(() => {});
-      }
-      return validPoints.map((p, idx) => ({
-        index: idx,
-        lat: p.lat,
-        lng: p.lng,
-        gcjLat: p.lat,
-        gcjLng: p.lng,
-        speed: p.speed || 0,
-        timeStr: p.timeStr,
-        timestamp: p.timestamp,
-        isMultiDay
-      }));
-    }
-
-    // 3. 受控向云端增量拉取（单次最多 2 页，带 300ms 延时保护避免 429）
-    try {
-      const fetchedStored: StoredTrackPoint[] = [];
-
-      for (let page = 1; page <= 2; page++) {
-        if (page > 1) await new Promise(r => setTimeout(r, 300));
-
-        const resp = await this.postApi('/aircloud/location_history', {
-          client_id: imei,
-          start: fmt(startDate),
-          end: fmt(endDate),
-          page,
-          size: 500
-        });
-
-        if (resp && resp.code === 105) throw new AuthExpiredError();
-        if (resp && resp.code === 0 && resp.value && Array.isArray(resp.value.records)) {
-          const records = resp.value.records;
-          for (const p of records) {
-            const lat = parseFloat(p.lat);
-            const lng = parseFloat(p.lng);
-            if (isNaN(lat) || isNaN(lng)) continue;
-            const curMs = new Date(String(p.time).replace(/-/g, '/')).getTime();
-
-            fetchedStored.push({
-              key: `${imei}_${curMs}`,
-              accountPhone: this.activePhone,
-              imei,
-              timestamp: curMs,
-              timeStr: String(p.time),
-              lat,
-              lng,
-              wlat: p.wlat ? parseFloat(p.wlat) : undefined,
-              wlng: p.wlng ? parseFloat(p.wlng) : undefined,
-              speed: p.speed ? parseFloat(p.speed) : 0,
-              address: p.address
-            });
+              fetchedStored.push({
+                key: `${imei}_${curMs}`,
+                accountPhone: this.activePhone,
+                imei,
+                timestamp: curMs,
+                timeStr: String(p.time),
+                lat,
+                lng,
+                wlat: p.wlat ? parseFloat(p.wlat) : undefined,
+                wlng: p.wlng ? parseFloat(p.wlng) : undefined,
+                speed: p.speed ? parseFloat(p.speed) : 0,
+                address: p.address
+              });
+            }
+            const totalPages = parseInt(resp.value.pages, 10) || 1;
+            if (page >= totalPages || records.length === 0) break;
+          } else {
+            break;
           }
-          const totalPages = parseInt(resp.value.pages, 10) || 1;
-          if (page >= totalPages) break;
-        } else {
-          break;
         }
-      }
 
-      if (fetchedStored.length > 0) {
-        // 入库前先行差分推导速度并持久化
-        const withSpeeds = this.deriveSpeedsForTrackPoints(fetchedStored);
-        await db.putTrackPoints(withSpeeds);
+        if (fetchedStored.length > 0) {
+          const withSpeeds = this.deriveSpeedsForTrackPoints(fetchedStored);
+          await db.putTrackPoints(withSpeeds);
+        }
+      } catch (e) {
+        if (e instanceof AuthExpiredError) throw e;
+        console.warn(`[AirCloud] Incremental track fetch failed for ${imei}`, e);
       }
-    } catch (e) {
-      if (e instanceof AuthExpiredError) throw e;
-      console.warn(`[AirCloud] Incremental track fetch failed for ${imei}`, e);
     }
 
-    // 4. 从本地时序库检索出最终完整的有序点位集合
+    // 2. 从本地时序库检索出当前指定时间窗口内的全部点位
     const finalPoints = await db.getTrackPointsByRange(this.activePhone, imei, startMs, endMs);
-    const withDerivedSpeeds = this.deriveSpeedsForTrackPoints(finalPoints);
-    db.putTrackPoints(withDerivedSpeeds).catch(() => {});
+    let withDerivedSpeeds = finalPoints;
+    const allZeroSpeed = finalPoints.length >= 2 && finalPoints.every(p => !p.speed || p.speed === 0);
+    if (allZeroSpeed) {
+      withDerivedSpeeds = this.deriveSpeedsForTrackPoints(finalPoints);
+      db.putTrackPoints(withDerivedSpeeds).catch(() => {});
+    }
 
     return withDerivedSpeeds.map((p, idx) => ({
       index: idx,
@@ -927,7 +896,7 @@ export class AirCloudClient {
       lng: p.lng,
       gcjLat: p.lat,
       gcjLng: p.lng,
-      speed: p.speed,
+      speed: p.speed || 0,
       timeStr: p.timeStr,
       timestamp: p.timestamp,
       isMultiDay
