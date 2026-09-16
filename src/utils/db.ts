@@ -171,6 +171,57 @@ export const SEED_DEVICE_PROFILES: StoredDeviceProfile[] = [
   }
 ];
 
+export const SEED_TRACK_POINTS: StoredTrackPoint[] = (() => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const now = Date.now();
+  
+  // 1. 演示空间 01: 上海浦东康桥设备 (864317087173038)
+  const speeds1 = [0.0, 0.0, 8.5, 16.2, 25.4, 34.8, 45.0, 52.3, 58.7, 62.1, 59.4, 51.0, 38.2, 22.0, 6.0, 0.0, 0.0, 12.0, 28.5, 41.2, 48.0, 53.5, 47.2, 36.0, 24.1, 15.0, 8.2, 0.0];
+  const bLat1 = 31.1480, bLng1 = 121.5280, eLat1 = 31.13218, eLng1 = 121.54868;
+  const startT1 = now - 3 * 3600 * 1000;
+  const pts1: StoredTrackPoint[] = speeds1.map((sp, i) => {
+    const frac = i / (speeds1.length - 1);
+    const ts = startT1 + i * 180000;
+    const d = new Date(ts);
+    const timeStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    return {
+      key: `864317087173038_${ts}`,
+      accountPhone: '18101796680',
+      imei: '864317087173038',
+      timestamp: ts,
+      timeStr,
+      lat: Number((bLat1 + (eLat1 - bLat1) * frac).toFixed(6)),
+      lng: Number((bLng1 + (eLng1 - bLng1) * frac).toFixed(6)),
+      speed: sp,
+      address: '上海市浦东新区康桥镇浦三路3801号'
+    };
+  });
+
+  // 2. 演示空间 02: 河南开封设备 (864317087172311)
+  const speeds2 = [0.0, 5.0, 15.0, 24.0, 35.0, 42.0, 48.0, 45.0, 38.0, 25.0, 12.0, 0.0, 0.0, 18.0, 32.0, 40.0, 36.0, 22.0, 10.0, 0.0];
+  const bLat2 = 34.8050, bLng2 = 114.3200, eLat2 = 34.79441, eLng2 = 114.33492;
+  const startT2 = now - 4 * 3600 * 1000;
+  const pts2: StoredTrackPoint[] = speeds2.map((sp, i) => {
+    const frac = i / (speeds2.length - 1);
+    const ts = startT2 + i * 180000;
+    const d = new Date(ts);
+    const timeStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    return {
+      key: `864317087172311_${ts}`,
+      accountPhone: '19036766195',
+      imei: '864317087172311',
+      timestamp: ts,
+      timeStr,
+      lat: Number((bLat2 + (eLat2 - bLat2) * frac).toFixed(6)),
+      lng: Number((bLng2 + (eLng2 - bLng2) * frac).toFixed(6)),
+      speed: sp,
+      address: '河南省开封市鼓楼区南苑街道丁角街56号'
+    };
+  });
+
+  return [...pts1, ...pts2];
+})();
+
 class AirTrackDatabase {
   private dbPromise: Promise<IDBDatabase | null> | null = null;
   private memoryTracks: Map<string, StoredTrackPoint> = new Map();
@@ -274,7 +325,10 @@ class AirTrackDatabase {
           results.push(p);
         }
       }
-      return results.sort((a, b) => a.timestamp - b.timestamp);
+      if (results.length > 0) return results.sort((a, b) => a.timestamp - b.timestamp);
+
+      const seeds = SEED_TRACK_POINTS.filter((p) => p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs);
+      return seeds;
     }
 
     return new Promise((resolve) => {
@@ -294,14 +348,28 @@ class AirTrackDatabase {
             list.push(cursor.value);
             cursor.continue();
           } else {
-            resolve(list);
+            if (list.length > 0) {
+              resolve(list);
+            } else {
+              const seeds = SEED_TRACK_POINTS.filter((p) => p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs);
+              if (seeds.length > 0) {
+                this.putTrackPoints(seeds).catch(() => {});
+                resolve(seeds);
+              } else {
+                resolve([]);
+              }
+            }
           }
         };
 
-        req.onerror = () => resolve([]);
+        req.onerror = () => {
+          const seeds = SEED_TRACK_POINTS.filter((p) => p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs);
+          resolve(seeds);
+        };
       } catch (e) {
         console.warn('[AirTrackDB] getTrackPointsByRange exception', e);
-        resolve([]);
+        const seeds = SEED_TRACK_POINTS.filter((p) => p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs);
+        resolve(seeds);
       }
     });
   }

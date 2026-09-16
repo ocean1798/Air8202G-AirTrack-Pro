@@ -754,7 +754,7 @@ import { onMounted, onUnmounted, nextTick, ref, computed } from 'vue';
 import { App as CapApp } from '@capacitor/app';
 import { Browser as CapBrowser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
-import { AirCloudClient, calculateScopeWindow } from '../../api/client';
+import { AirCloudClient } from '../../api/client';
 import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-model';
 import { wgs84ToGcj02 } from '../../utils/coord-transform';
 
@@ -1177,6 +1177,7 @@ async function fetchDeviceLiveTrackAndTags(imei: string) {
     const realPoints = await apiClient.getHistoricalTrack(imei, masterMode === 'range' ? currentMacroScope : 'recent_window');
     if (realPoints && realPoints.length > 5) {
       TRACK_POINTS = realPoints;
+      updateTimelineScaleTicks(realPoints[0].isMultiDay);
       if (masterMode === 'range') {
         renderRangeTrackOnMap();
       } else {
@@ -1299,22 +1300,7 @@ let currentBaseLng = 114.335039;
 let currentMacroScope = '90d';
 let isTrackLoading = false;
 
-// 全局时空时间轴时间窗口（绝对毫秒时间戳）
-let timelineWindowStartMs = Date.now() - 90 * 86400 * 1000;
-let timelineWindowEndMs = Date.now();
-let timelineWindowIsMultiDay = true;
-
-/**
- * 依据选择的时间跨度加载轨迹（计算绝对时间窗口 + 触发云端增量拉取 + 投影时间轴）
- */
 async function loadTrackDataForScope(scope: string, startDate: string | null = null, endDate: string | null = null) {
-  // 1. 严格计算绝对时间窗口基准
-  const win = calculateScopeWindow(scope, startDate || undefined, endDate || undefined);
-  timelineWindowStartMs = win.startMs;
-  timelineWindowEndMs = win.endMs;
-  timelineWindowIsMultiDay = win.isMultiDay;
-  updateTimelineScaleTicks();
-
   const imei = activeDeviceId.value;
   if (!imei) {
     TRACK_POINTS = [];
@@ -1338,7 +1324,7 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
 
     if (points && points.length > 0) {
       TRACK_POINTS = points;
-      updateTimelineScaleTicks();
+      updateTimelineScaleTicks(points[0].isMultiDay);
       drawSpeedWaveCanvas();
       updateLiveStatusBar();
 
@@ -1376,7 +1362,7 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
     TRACK_POINTS = [];
   }
 
-  updateTimelineScaleTicks();
+  updateTimelineScaleTicks(false);
   drawSpeedWaveCanvas();
   updateLiveStatusBar();
   if ((window as any).__trackLines) {
@@ -1384,48 +1370,43 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
   }
 }
 
-/**
- * 时间轴刻度更新：完全基于绝对时间窗口 [timelineWindowStartMs, timelineWindowEndMs]
- */
-function updateTimelineScaleTicks() {
-  const startMs = timelineWindowStartMs;
-  const endMs = timelineWindowEndMs;
-  const duration = Math.max(1000, endMs - startMs);
+function updateTimelineScaleTicks(isMultiDay?: boolean) {
+  if (!TRACK_POINTS.length) return;
+  const numPoints = TRACK_POINTS.length;
+  const pStart = TRACK_POINTS[0];
+  const pMid1 = TRACK_POINTS[Math.floor(numPoints * 0.25)];
+  const pMid2 = TRACK_POINTS[Math.floor(numPoints * 0.5)];
+  const pMid3 = TRACK_POINTS[Math.floor(numPoints * 0.75)];
+  const pEnd = TRACK_POINTS[numPoints - 1];
 
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const fmtMs = (ms: number) => {
-    const d = new Date(ms);
-    const m = pad(d.getMonth() + 1);
-    const day = pad(d.getDate());
-    const h = pad(d.getHours());
-    const min = pad(d.getMinutes());
-    if (timelineWindowIsMultiDay) {
-      return `${m}-${day} ${h}:${min}`;
+  // 自适应判断：若首尾时间处于同一天，中间刻度采用清晰的 HH:mm 时分格式，杜绝纯日期重复
+  const sDay = pStart.timeStr ? pStart.timeStr.slice(0, 10) : '';
+  const eDay = pEnd.timeStr ? pEnd.timeStr.slice(0, 10) : '';
+  const isSameDay = sDay === eDay;
+
+  const fmt = (p: any, label = '') => {
+    if (!p || !p.timeStr) return '';
+    if (isSameDay) {
+      return `${p.timeStr.slice(11, 16)}${label}`;
+    } else {
+      return `${p.timeStr.slice(5, 10)} ${p.timeStr.slice(11, 16)}${label}`;
     }
-    return `${h}:${min}`;
   };
 
   const tStart = document.getElementById('scale-tick-start');
-  if (tStart) tStart.innerText = fmtMs(startMs);
-
+  if (tStart) {
+    tStart.innerText = pStart.timeStr ? (isSameDay ? `${pStart.timeStr.slice(5, 10)} ${pStart.timeStr.slice(11, 16)}` : fmt(pStart)) : '';
+  }
   const t1 = document.getElementById('scale-tick-1');
-  if (t1) t1.innerText = fmtMs(startMs + duration * 0.25);
-
+  if (t1) t1.innerText = fmt(pMid1);
   const t2 = document.getElementById('scale-tick-2');
-  if (t2) t2.innerText = fmtMs(startMs + duration * 0.5);
-
+  if (t2) t2.innerText = fmt(pMid2);
   const t3 = document.getElementById('scale-tick-3');
-  if (t3) t3.innerText = fmtMs(startMs + duration * 0.75);
-
+  if (t3) t3.innerText = fmt(pMid3);
   const tEnd = document.getElementById('scale-tick-end');
   if (tEnd) {
-    const endText = fmtMs(endMs);
-    const isLiveEdge = Math.abs(Date.now() - endMs) < 300000;
-    if (isLiveEdge) {
-      tEnd.innerHTML = `<span>${endText} (最新)</span><span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan"></span>`;
-    } else {
-      tEnd.innerHTML = `<span>${endText}</span>`;
-    }
+    const endText = pEnd.timeStr ? (isSameDay ? pEnd.timeStr.slice(11, 16) : `${pEnd.timeStr.slice(5, 10)} ${pEnd.timeStr.slice(11, 16)}`) : '';
+    tEnd.innerHTML = `<span>${endText}</span><span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan"></span>`;
   }
 }
 
@@ -1549,9 +1530,6 @@ function getRealCanvas(): HTMLCanvasElement | null {
   return null;
 }
 
-/**
- * 绘制真实时空速度波形时间轴画布（基于时间戳投影在绝对时间窗口坐标系上）
- */
 function drawSpeedWaveCanvas() {
   const canvas = getRealCanvas();
   if (!canvas) return;
@@ -1569,138 +1547,51 @@ function drawSpeedWaveCanvas() {
   const w = rect.width;
   const h = rect.height;
 
-  const startMs = timelineWindowStartMs;
-  const endMs = timelineWindowEndMs;
-  const duration = Math.max(1000, endMs - startMs);
-
-  // 1. 若当前窗口内无任何有效点位：呈现带微光斜纹的暂无数据状态
   if (!TRACK_POINTS.length) {
-    ctx.save();
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.lineWidth = 1;
-    for (let x = -h; x < w + h; x += 14) {
-      ctx.beginPath();
-      ctx.moveTo(x, h);
-      ctx.lineTo(x + h, 0);
-      ctx.stroke();
-    }
-    ctx.fillStyle = '#64748b';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('所选时间跨度内暂无物理轨迹上报', w / 2, h / 2);
-    ctx.restore();
     return;
   }
 
-  // 2. 底层深色基线填充
-  ctx.fillStyle = '#1e293b';
+  const numPoints = TRACK_POINTS.length;
+
+  // 1. 底层高饱和度连续速度能量色带填充（横向 100% 铺满胶囊轨道高度，再现 v3.5 Chroma Pro 原型质感）
+  const grad = ctx.createLinearGradient(0, 0, w, 0);
+  for (let i = 0; i < numPoints; i++) {
+    const stop = numPoints > 1 ? i / (numPoints - 1) : 0;
+    const col = getContinuousSpeedColor(TRACK_POINTS[i].speed).rgb;
+    grad.addColorStop(stop, col);
+  }
+  ctx.fillStyle = grad;
   ctx.fillRect(0, 0, w, h);
 
-  // 3. 将真实点位投影到绝对时间轴坐标 [0, w]
-  const numPoints = TRACK_POINTS.length;
-  const mappedPoints = TRACK_POINTS.map(p => {
-    const ratio = Math.max(0, Math.min(1, (p.timestamp - startMs) / duration));
-    return {
-      x: ratio * w,
-      speed: p.speed || 0,
-      timestamp: p.timestamp,
-      point: p
-    };
-  }).sort((a, b) => a.x - b.x);
+  // 2. 识别离线盲区，在盲区区间上绘制克制的 45度半透明警示斜纹（不破坏整体色带连续感）
+  for (let i = 0; i < numPoints - 1; i++) {
+    const cur = TRACK_POINTS[i];
+    const next = TRACK_POINTS[i + 1];
+    const dt = (next.timestamp - cur.timestamp) / 1000;
+    const radLat = (next.lat * Math.PI) / 180;
+    const dLat = (next.lat - cur.lat) * 111000;
+    const dLng = (next.lng - cur.lng) * 111000 * Math.cos(radLat);
+    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+    const hasSpeed = (cur.speed && cur.speed > 3) || (next.speed && next.speed > 3);
 
-  // 4. 连续运动/静止区间与离线盲区切片绘制
-  let segStartIdx = 0;
-  for (let i = 0; i < numPoints; i++) {
-    const isLast = (i === numPoints - 1);
-    const next = !isLast ? mappedPoints[i + 1] : null;
-    const isGap = next ? ((next.timestamp - mappedPoints[i].timestamp) > 900000) : true;
-
-    if (isGap || isLast) {
-      const pA = mappedPoints[segStartIdx];
-      const pB = mappedPoints[i];
-      const segW = Math.max(2, pB.x - pA.x);
-
-      // 色谱渐变填充
-      const grad = ctx.createLinearGradient(pA.x, 0, Math.max(pA.x + 1, pB.x), 0);
-      if (segStartIdx === i) {
-        const col = getContinuousSpeedColor(pA.speed).rgb;
-        ctx.fillStyle = col;
-        ctx.fillRect(Math.max(0, pA.x - 2), 0, 4, h);
-      } else {
-        for (let k = segStartIdx; k <= i; k++) {
-          const pt = mappedPoints[k];
-          const localStop = segW > 0 ? Math.max(0, Math.min(1, (pt.x - pA.x) / segW)) : 0;
-          grad.addColorStop(localStop, getContinuousSpeedColor(pt.speed).rgb);
-        }
-        ctx.fillStyle = grad;
-        ctx.fillRect(pA.x, 0, segW, h);
-
-        // 贝塞尔流体速度波形
-        let maxSp = 0;
-        for (let k = segStartIdx; k <= i; k++) {
-          if (mappedPoints[k].speed > maxSp) maxSp = mappedPoints[k].speed;
-        }
-        const peakSpeed = Math.max(25, maxSp);
-
+    if (!hasSpeed && dt > 600 && dist > 100) {
+      const x1 = (i / (numPoints - 1)) * w;
+      const x2 = ((i + 1) / (numPoints - 1)) * w;
+      const segW = x2 - x1;
+      if (segW > 2) {
         ctx.save();
+        ctx.fillStyle = 'rgba(225, 29, 72, 0.35)';
+        ctx.fillRect(x1, 0, segW, h);
+        ctx.strokeStyle = 'rgba(251, 113, 133, 0.45)';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(pA.x, h);
-        for (let k = segStartIdx; k <= i; k++) {
-          const pt = mappedPoints[k];
-          const waveH = Math.min(h * 0.72, (pt.speed / peakSpeed) * (h * 0.65) + 3);
-          const y = h - waveH;
-          if (k === segStartIdx) {
-            ctx.lineTo(pt.x, y);
-          } else {
-            const prev = mappedPoints[k - 1];
-            const prevWaveH = Math.min(h * 0.72, (prev.speed / peakSpeed) * (h * 0.65) + 3);
-            const cx = (prev.x + pt.x) / 2;
-            ctx.bezierCurveTo(cx, h - prevWaveH, cx, y, pt.x, y);
-          }
-        }
-        ctx.lineTo(pB.x, h);
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
-        ctx.fill();
-
-        // 顶部微光发光轮廓线
-        ctx.beginPath();
-        for (let k = segStartIdx; k <= i; k++) {
-          const pt = mappedPoints[k];
-          const waveH = Math.min(h * 0.72, (pt.speed / peakSpeed) * (h * 0.65) + 3);
-          const y = h - waveH;
-          if (k === segStartIdx) ctx.moveTo(pt.x, y);
-          else {
-            const prev = mappedPoints[k - 1];
-            const prevWaveH = Math.min(h * 0.72, (prev.speed / peakSpeed) * (h * 0.65) + 3);
-            const cx = (prev.x + pt.x) / 2;
-            ctx.bezierCurveTo(cx, h - prevWaveH, cx, y, pt.x, y);
-          }
-        }
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      // 5. 跨度超过15分钟的断层盲区绘制警示斜纹
-      if (next && (next.x - pB.x) > 3) {
-        const gapX1 = pB.x;
-        const gapX2 = next.x;
-        ctx.save();
-        ctx.fillStyle = 'rgba(225, 29, 72, 0.22)';
-        ctx.fillRect(gapX1, 0, gapX2 - gapX1, h);
-        ctx.strokeStyle = 'rgba(251, 113, 133, 0.35)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        for (let sx = gapX1 - h; sx < gapX2 + h; sx += 8) {
-          const px1 = Math.max(gapX1, sx);
-          const py1 = Math.max(0, sx < gapX1 ? (gapX1 - sx) : 0);
-          const px2 = Math.min(gapX2, sx + h);
-          const py2 = Math.min(h, h - (sx + h > gapX2 ? (sx + h - gapX2) : 0));
+        for (let sx = x1 - h; sx < x2 + h; sx += 10) {
+          const px1 = Math.max(x1, sx);
+          const py1 = Math.max(0, sx < x1 ? (x1 - sx) : 0);
+          const px2 = Math.min(x2, sx + h);
+          const py2 = Math.min(h, h - (sx + h > x2 ? (sx + h - x2) : 0));
           if (px1 < px2 && py1 < py2) {
             ctx.moveTo(px1, py1);
             ctx.lineTo(px2, py2);
@@ -1709,10 +1600,62 @@ function drawSpeedWaveCanvas() {
         ctx.stroke();
         ctx.restore();
       }
-
-      segStartIdx = i + 1;
     }
   }
+
+  // 3. 计算平滑波峰点集合 (以速度为波高，模拟音频能量流体波形)
+  let maxSp = 0;
+  for (let i = 0; i < numPoints; i++) {
+    if (TRACK_POINTS[i].speed > maxSp) maxSp = TRACK_POINTS[i].speed;
+  }
+  const peakSpeed = Math.max(30, maxSp);
+
+  const pts: any[] = [];
+  for (let i = 0; i < numPoints; i++) {
+    const x = numPoints > 1 ? (i / (numPoints - 1)) * w : 0;
+    const sp = TRACK_POINTS[i].speed;
+    // 速度归一化到波高 (高度占比：静止时基线 3px，最高速占据 65% 高度)
+    const waveH = Math.min(h * 0.68, (sp / peakSpeed) * (h * 0.62) + 3);
+    const y = h - waveH;
+    pts.push({ x, y, speed: sp });
+  }
+
+  // 4. 贝塞尔平滑半透明流体波形填充 (模拟专业音频能量波与流体质感)
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, h);
+  ctx.lineTo(pts[0].x, pts[0].y);
+
+  for (let i = 0; i < pts.length - 1; i++) {
+    const xc = (pts[i].x + pts[i + 1].x) / 2;
+    const yc = (pts[i].y + pts[i + 1].y) / 2;
+    ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+  }
+  ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+  ctx.lineTo(w, h);
+  ctx.closePath();
+
+  // 柔和半透明流体高光覆盖
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+  ctx.fill();
+  ctx.restore();
+
+  // 5. 顶部微光平滑流体波形发光轮廓线
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 0; i < pts.length - 1; i++) {
+    const xc = (pts[i].x + pts[i + 1].x) / 2;
+    const yc = (pts[i].y + pts[i + 1].y) / 2;
+    ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+  }
+  ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.shadowColor = 'rgba(0, 240, 255, 0.45)';
+  ctx.shadowBlur = 4;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
 }
 
 let masterMode = 'live';
@@ -1891,87 +1834,47 @@ function getPointStateInfo(idx: number) {
 }
 
 function renderStateAtPosition(percent: number, isPreview = false) {
-  const startMs = timelineWindowStartMs;
-  const endMs = timelineWindowEndMs;
-  const duration = Math.max(1000, endMs - startMs);
-  const targetMs = startMs + (percent / 100) * duration;
-
-  if (!TRACK_POINTS.length) {
-    if (!isPreview) {
-      const playheadNeedle = document.getElementById('playhead-needle');
-      if (playheadNeedle) playheadNeedle.style.left = percent + '%';
-      const speedTag = document.getElementById('current-speed-tag');
-      if (speedTag) {
-        speedTag.style.backgroundColor = 'rgba(225, 29, 72, 0.25)';
-        speedTag.style.borderColor = 'rgba(244, 63, 94, 0.7)';
-        speedTag.style.color = '#fda4af';
-        speedTag.innerText = '暂无位置数据';
-      }
-      const timeBox = document.getElementById('current-point-time');
-      if (timeBox) {
-        const d = new Date(targetMs);
-        const pad = (n: number) => String(n).padStart(2, '0');
-        timeBox.innerText = `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      }
-    }
-    return;
-  }
-
-  // 1. 在当前已加载的点位集合中二分/遍历查找最靠近 targetMs 的点
-  let nearestIdx = 0;
-  let minDiff = Infinity;
-  for (let i = 0; i < TRACK_POINTS.length; i++) {
-    const diff = Math.abs(TRACK_POINTS[i].timestamp - targetMs);
-    if (diff < minDiff) {
-      minDiff = diff;
-      nearestIdx = i;
-    }
-  }
-
-  const pt = TRACK_POINTS[nearestIdx];
-  const isGap = minDiff > 900000; // 时间差大于15分钟视为处于盲区/离线期
+  if (!TRACK_POINTS.length) return;
+  const numPoints = TRACK_POINTS.length;
+  const idx = Math.min(Math.floor((percent / 100) * (numPoints - 1)), numPoints - 1);
+  const pt = TRACK_POINTS[idx];
+  if (!pt) return;
   const sColor = getContinuousSpeedColor(pt.speed);
-
-  let stType = 'moving';
-  let stLabel = `${pt.speed} km/h`;
-  let stColor = sColor.hex;
-
-  if (isGap) {
-    stType = 'offline';
-    stLabel = '离线盲区';
-    stColor = '#f43f5e';
-  } else if (!pt.speed || pt.speed < 2) {
-    stType = 'dwell';
-    stLabel = '原地静止';
-    stColor = '#94a3b8';
-  }
+  const stInfo = getPointStateInfo(idx);
 
   if (!isPreview) {
     const playheadNeedle = document.getElementById('playhead-needle');
     if (playheadNeedle) playheadNeedle.style.left = percent + '%';
     const dot = document.getElementById('playhead-inner-dot');
-    if (dot) dot.style.backgroundColor = stColor;
+    if (dot) dot.style.backgroundColor = stInfo.color;
+
+    const liveTime = document.getElementById('live-latest-time');
+    if (liveTime && pt.timeStr) liveTime.innerText = pt.timeStr.slice(11, 19);
+    const liveSpeed = document.getElementById('live-latest-speed');
+    if (liveSpeed) {
+      liveSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
+      liveSpeed.style.color = stInfo.color;
+    }
+
+    const drawerSpeed = document.getElementById('drawer-speed-badge');
+    if (drawerSpeed) {
+      drawerSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
+    }
 
     const timeBox = document.getElementById('current-point-time');
-    if (timeBox) {
-      const curD = new Date(targetMs);
-      const pad = (n: number) => String(n).padStart(2, '0');
-      timeBox.innerText = timelineWindowIsMultiDay
-        ? `${pad(curD.getMonth() + 1)}-${pad(curD.getDate())} ${pad(curD.getHours())}:${pad(curD.getMinutes())}`
-        : `${pad(curD.getHours())}:${pad(curD.getMinutes())}:${pad(curD.getSeconds())}`;
-    }
+    if (timeBox && pt.timeStr) timeBox.innerText = pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 16);
 
     const speedTag = document.getElementById('current-speed-tag');
     if (speedTag) {
-      if (stType === 'offline') {
+      if (stInfo.type === 'offline') {
         speedTag.style.backgroundColor = 'rgba(225, 29, 72, 0.25)';
         speedTag.style.borderColor = 'rgba(244, 63, 94, 0.7)';
         speedTag.style.color = '#fda4af';
         speedTag.innerText = '📡 信号中断 · 盲区';
-      } else if (stType === 'dwell') {
-        speedTag.style.backgroundColor = 'rgba(51, 65, 85, 0.5)';
-        speedTag.style.borderColor = 'rgba(100, 116, 139, 0.6)';
-        speedTag.style.color = '#94a3b8';
+      } else if (stInfo.type === 'dwell') {
+        speedTag.style.backgroundColor = 'rgba(14, 116, 144, 0.28)';
+        speedTag.style.borderColor = 'rgba(56, 189, 248, 0.6)';
+        speedTag.style.color = '#38bdf8';
         speedTag.innerText = '⏱️ 原地静止 · 0 km/h';
       } else {
         speedTag.style.backgroundColor = sColor.rgba(0.25);
@@ -1981,21 +1884,15 @@ function renderStateAtPosition(percent: number, isPreview = false) {
       }
     }
 
-    // 地图车辆标记跟进
+    // 同步地图上车辆标点位置，实现滑块拖拽平滑跟跑
     if ((window as any).__vehicleMarker && typeof TMap !== 'undefined' && typeof pt.lat === 'number' && typeof pt.lng === 'number') {
       const pos = new TMap.LatLng(pt.lat, pt.lng);
       (window as any).__vehicleMarker.setGeometries([{
         id: 'v1',
         styleId: 'car_icon',
         position: pos,
-        properties: { title: DEVICES_DB[activeDeviceId.value]?.name || '合宙设备' }
+        properties: { title: `${pt.speed} km/h` }
       }]);
-    }
-
-    const drawerSpeed = document.getElementById('drawer-speed-badge');
-    if (drawerSpeed) {
-      drawerSpeed.innerText = stType === 'moving' ? `${pt.speed} km/h` : stLabel;
-      drawerSpeed.style.color = stColor;
     }
   }
 
@@ -2007,10 +1904,31 @@ function renderStateAtPosition(percent: number, isPreview = false) {
     const elTagCoord = document.getElementById('tel-tag-coords');
     if (elTagCoord) elTagCoord.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
   }
+  
+  const drawerSpeed = document.getElementById('drawer-speed-badge');
+  if (drawerSpeed) {
+    drawerSpeed.style.backgroundColor = sColor.rgba(0.2);
+    drawerSpeed.style.color = stInfo.color;
+    drawerSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
+  }
+  const telSpeed = document.getElementById('tel-tag-speed');
+  if (telSpeed) {
+    telSpeed.style.color = stInfo.color;
+    telSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
+  }
+
+  if ((window as any).__vehicleMarker) {
+    (window as any).__vehicleMarker.setGeometries([{
+      id: 'v1',
+      styleId: 'car_icon',
+      position: new TMap.LatLng(pt.lat, pt.lng),
+      properties: { title: DEVICES_DB[activeDeviceId.value]?.name || '合宙设备' }
+    }]);
+  }
 }
 
 function onTimelineMouseMove(e: MouseEvent) {
-  if (isDragging) return;
+  if (isDragging || !TRACK_POINTS.length) return;
 
   const container = document.getElementById('timeline-track-container');
   if (!container) return;
@@ -2025,40 +1943,21 @@ function onTimelineMouseMove(e: MouseEvent) {
     hoverNeedle.style.left = p + '%';
   }
 
-  const startMs = timelineWindowStartMs;
-  const endMs = timelineWindowEndMs;
-  const duration = Math.max(1000, endMs - startMs);
-  const targetMs = startMs + (p / 100) * duration;
-  const curD = new Date(targetMs);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const timeStr = timelineWindowIsMultiDay
-    ? `${pad(curD.getMonth() + 1)}-${pad(curD.getDate())} ${pad(curD.getHours())}:${pad(curD.getMinutes())}`
-    : `${pad(curD.getHours())}:${pad(curD.getMinutes())}:${pad(curD.getSeconds())}`;
+  if (!TRACK_POINTS.length) return;
+  const numPoints = TRACK_POINTS.length;
+  const idx = Math.min(Math.floor((p / 100) * (numPoints - 1)), numPoints - 1);
+  const pt = TRACK_POINTS[idx];
+  if (!pt) return;
+  const sColor = getContinuousSpeedColor(pt.speed);
+  const stInfo = getPointStateInfo(idx);
 
-  let nearestSp = 0;
-  let isGap = true;
-  if (TRACK_POINTS.length) {
-    let minDiff = Infinity;
-    let nearestIdx = 0;
-    for (let i = 0; i < TRACK_POINTS.length; i++) {
-      const diff = Math.abs(TRACK_POINTS[i].timestamp - targetMs);
-      if (diff < minDiff) {
-        minDiff = diff;
-        nearestIdx = i;
-      }
-    }
-    if (minDiff <= 900000) {
-      nearestSp = TRACK_POINTS[nearestIdx].speed || 0;
-      isGap = false;
-    }
-  }
-
+  const bubbleTime = pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 19);
   const elBTime = document.getElementById('hover-bubble-time');
-  if (elBTime) elBTime.innerText = timeStr;
+  if (elBTime) elBTime.innerText = bubbleTime;
   const speedBubble = document.getElementById('hover-bubble-speed');
   if (speedBubble) {
-    speedBubble.innerText = isGap ? '盲区/离线' : `${nearestSp.toFixed(1)} km/h`;
-    speedBubble.style.color = isGap ? '#f43f5e' : (nearestSp > 3 ? '#10b981' : '#94a3b8');
+    speedBubble.innerText = stInfo.label;
+    speedBubble.style.color = stInfo.color;
   }
 
   renderStateAtPosition(p, true);
@@ -2107,23 +2006,21 @@ function updateRangeDOM() {
     if (maskR) maskR.style.width = (100 - rangeEnd) + '%';
   }
 
-  const startMs = timelineWindowStartMs;
-  const endMs = timelineWindowEndMs;
-  const duration = Math.max(1000, endMs - startMs);
-  const tStartMs = startMs + (rangeStart / 100) * duration;
-  const tEndMs = startMs + (rangeEnd / 100) * duration;
+  if (!TRACK_POINTS.length) return;
+  const numPoints = TRACK_POINTS.length;
+  const idxStart = Math.min(Math.floor((rangeStart / 100) * (numPoints - 1)), numPoints - 1);
+  const idxEnd = Math.min(Math.floor((rangeEnd / 100) * (numPoints - 1)), numPoints - 1);
+  
+  const pS = TRACK_POINTS[idxStart];
+  const pE = TRACK_POINTS[idxEnd];
 
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const fmt = (ms: number) => {
-    const d = new Date(ms);
-    return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
+  const tStart = pS.isMultiDay ? pS.timeStr.slice(5, 16) : pS.timeStr.slice(11, 16);
+  const tEnd = pE.isMultiDay ? pE.timeStr.slice(5, 16) : pE.timeStr.slice(11, 16);
 
   const bL = document.getElementById('drag-bubble-left');
-  if (bL) bL.innerText = fmt(tStartMs);
-
+  if (bL) bL.innerText = tStart;
   const bR = document.getElementById('drag-bubble-right');
-  if (bR) bR.innerText = fmt(tEndMs);
+  if (bR) bR.innerText = tEnd;
 }
 
 function toggleRangePlay() {
@@ -2364,26 +2261,24 @@ function renderFullColoredTrackOnMap() {
 
 function renderRangeTrackOnMap() {
   if (!(window as any).__map || !(window as any).__trackLines || !TRACK_POINTS.length) return;
+  const numPoints = TRACK_POINTS.length;
+  if (numPoints < 2) {
+    (window as any).__trackLines.setGeometries([]);
+    return;
+  }
 
-  const startMs = timelineWindowStartMs;
-  const endMs = timelineWindowEndMs;
-  const duration = Math.max(1000, endMs - startMs);
-  const tStartMs = startMs + (rangeStart / 100) * duration;
-  const tEndMs = startMs + (rangeEnd / 100) * duration;
+  const idxStart = Math.min(Math.floor((rangeStart / 100) * (numPoints - 1)), numPoints - 1);
+  const idxEnd = Math.min(Math.floor((rangeEnd / 100) * (numPoints - 1)), numPoints - 1);
 
-  // 严格基于绝对时间窗口筛选点位集合，确保与时间轴高亮选区 100% 对应
-  const subPoints = TRACK_POINTS.filter(p => p.timestamp >= tStartMs && p.timestamp <= tEndMs);
-  const numSub = subPoints.length;
-
-  if (numSub < 2) {
+  if (idxEnd <= idxStart) {
     (window as any).__trackLines.setGeometries([]);
     return;
   }
 
   // 判断选定区间内是否属于静止驻留
   let minLat = 999, maxLat = -999, minLng = 999, maxLng = -999, maxSpeed = 0;
-  for (let i = 0; i < numSub; i++) {
-    const p = subPoints[i];
+  for (let i = idxStart; i <= idxEnd; i++) {
+    const p = TRACK_POINTS[i];
     if (p.lat < minLat) minLat = p.lat;
     if (p.lat > maxLat) maxLat = p.lat;
     if (p.lng < minLng) minLng = p.lng;
@@ -2400,9 +2295,9 @@ function renderRangeTrackOnMap() {
   }
 
   const rainbowPaths = [];
-  for (let i = 0; i < numSub - 1; i++) {
-    const p1 = subPoints[i];
-    const p2 = subPoints[i + 1];
+  for (let i = idxStart; i < idxEnd; i++) {
+    const p1 = TRACK_POINTS[i];
+    const p2 = TRACK_POINTS[i + 1];
     const avgSpeed = (p1.speed + p2.speed) / 2;
     const c = getContinuousSpeedColor(avgSpeed);
     rainbowPaths.push({
