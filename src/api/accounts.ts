@@ -11,8 +11,8 @@ export interface DeviceNameHint {
 export interface AccountDef {
   phone: string;
   password?: string;
-  label: string;
-  role: string;
+  label?: string;
+  role?: string;
   projectKey?: string;
   isDemo?: boolean;
   nameHints?: Record<string, DeviceNameHint>;
@@ -22,8 +22,8 @@ export const DEMO_ACCOUNTS: AccountDef[] = [
   {
     phone: '18101796680',
     password: 'Hz8202',
-    label: '演示网络 01',
-    role: '开封 / 西安 车载节点集群',
+    label: '演示空间 01',
+    role: '开封 / 西安 示范车队',
     projectKey: 'q0eilWQpyjZGFZFS6PFmREsRjUXoButr',
     isDemo: true,
     nameHints: {
@@ -36,8 +36,8 @@ export const DEMO_ACCOUNTS: AccountDef[] = [
   {
     phone: '19036766195',
     password: 'Hz8202',
-    label: '演示网络 02',
-    role: '上海浦东 移动物流集群',
+    label: '演示空间 02',
+    role: '上海浦东 车载冷链',
     projectKey: 'ggV1VA89GUTQBMgqKszpSN6E2ZuQG5va',
     isDemo: true,
     nameHints: {
@@ -48,8 +48,8 @@ export const DEMO_ACCOUNTS: AccountDef[] = [
   {
     phone: '15938684042',
     password: 'Hz8202',
-    label: '演示网络 03',
-    role: '上海浦东 外勤节点',
+    label: '演示空间 03',
+    role: '上海浦东 外勤巡检',
     projectKey: 'zmdfxP8TTUk6jBZoguWeQgSaEK6fiZu9',
     isDemo: true,
     nameHints: {
@@ -59,8 +59,8 @@ export const DEMO_ACCOUNTS: AccountDef[] = [
   {
     phone: '13384022744',
     password: 'Hz8202',
-    label: '演示网络 04',
-    role: '长途干线 移动节点',
+    label: '演示空间 04',
+    role: '跨省干线 物流监控',
     projectKey: 'c3SeanQXjxiBvHYHZIDgi9FM6yBZj09s',
     isDemo: true,
     nameHints: {
@@ -105,8 +105,8 @@ export function registerUserAccount(account: { phone: string; label?: string; pr
     const idx = list.findIndex(a => a.phone === account.phone);
     const item: AccountDef = {
       phone: account.phone,
-      label: account.label || `账号 ${account.phone.slice(-4)}`,
-      role: '用户私有云空间',
+      label: account.label ? account.label.trim() : (idx >= 0 && list[idx].label ? list[idx].label : ''),
+      role: '',
       projectKey: account.projectKey || '',
       isDemo: false,
       nameHints: {}
@@ -117,6 +117,20 @@ export function registerUserAccount(account: { phone: string; label?: string; pr
       list.unshift(item);
     }
     localStorage.setItem(LS_USER_ACCOUNTS, JSON.stringify(list));
+  } catch (_) {}
+}
+
+/** 修改用户账号自定义备注名 */
+export function updateUserAccountLabel(phone: string, newLabel: string) {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    const raw = localStorage.getItem(LS_USER_ACCOUNTS);
+    const list: AccountDef[] = raw ? JSON.parse(raw) : [];
+    const idx = list.findIndex(a => a.phone === phone);
+    if (idx >= 0) {
+      list[idx].label = newLabel.trim();
+      localStorage.setItem(LS_USER_ACCOUNTS, JSON.stringify(list));
+    }
   } catch (_) {}
 }
 

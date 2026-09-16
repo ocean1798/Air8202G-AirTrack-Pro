@@ -57,7 +57,7 @@
             </div>
             <div class="text-[10px] text-slate-400 font-mono flex items-center space-x-2">
               <span id="desktop-top-device-name" class="text-slate-200">{{ activeDeviceId && deviceList.length ? (deviceList[0].name + ' 等 ' + deviceList.length + ' 台') : '等待云端同步' }}</span>
-              <span class="text-cyber-emerald">● 4G蜂窝畅通</span>
+              <span class="text-cyber-emerald">● 蜂窝网络已连接</span>
             </div>
           </div>
         </div>
@@ -68,8 +68,8 @@
           <!-- 桌面端：工作空间多账号切换胶囊 -->
           <div role="button" @click="toggleOfficialModal()" title="切换IoT工作空间" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
             <span :class="activeAccountHasAuth ? 'w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-1.5 h-1.5 rounded-full bg-amber-400'"></span>
-            <span class="text-slate-400">{{ activeAccountLabel }}:</span>
-            <span class="font-bold text-white tracking-wider">{{ activeAccountPhone }}</span>
+            <span v-if="displayAccountLabel" class="text-slate-400">{{ displayAccountLabel }}:</span>
+            <span class="font-bold text-white tracking-wider">{{ formatPhone(activeAccountPhone) }}</span>
             <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
           </div>
 
@@ -79,17 +79,17 @@
           </a>
 
           <!-- 桌面端顶部回中键 -->
-          <div role="button" @click="recenterVehicle()" title="镜头平滑聚焦回当前车辆" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg active:scale-90">
+          <div role="button" @click="recenterVehicle()" title="定位至当前设备" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg active:scale-90">
             <i data-lucide="crosshair" class="w-4 h-4"></i>
           </div>
 
-          <!-- 桌面端左侧设备坞折叠键 -->
-          <div role="button" @click="toggleDeviceDock()" id="btn-dock" title="展开/收起左侧在网设备坞" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
+          <!-- 桌面端左侧设备列表折叠键 -->
+          <div role="button" @click="toggleDeviceDock()" id="btn-dock" title="展开/收起设备列表" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
             <i data-lucide="layers" class="w-4 h-4"></i>
           </div>
 
           <!-- 桌面端右侧感知面板折叠键 -->
-          <div role="button" @click="toggleInspectorDrawer()" id="btn-inspector" title="展开/收起右侧感知面板" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
+          <div role="button" @click="toggleInspectorDrawer()" id="btn-inspector" title="展开/收起设备详情" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg">
             <i data-lucide="panel-right" class="w-4 h-4"></i>
           </div>
 
@@ -103,7 +103,7 @@
       <div class="p-3 border-b border-cyber-700/50 flex items-center justify-between">
         <div class="flex items-center space-x-2">
           <i data-lucide="navigation-2" class="w-3.5 h-3.5 text-cyber-primary"></i>
-          <span class="text-xs font-bold text-slate-200">在网感知节点</span>
+          <span class="text-xs font-bold text-slate-200">监控设备列表</span>
         </div>
         <span class="text-[10px] font-mono text-slate-400 bg-cyber-900 px-2 py-0.5 rounded border border-cyber-700">共 {{ deviceList.length }} 台设备</span>
       </div>
@@ -115,19 +115,45 @@
              :id="'card-desk-' + d.imei"
              :class="desktopCardClass(d)">
           <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-1.5">
-              <span :class="activeDeviceId === d.imei ? 'w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan' : (d.online ? 'w-2 h-2 rounded-full bg-cyber-emerald' : 'w-2 h-2 rounded-full bg-slate-500')"></span>
-              <span :class="activeDeviceId === d.imei ? 'text-xs font-bold text-white' : 'text-xs font-bold text-slate-300'">{{ d.name }}</span>
+            <div class="flex items-center space-x-1.5 flex-1 min-w-0 mr-1.5">
+              <span :class="activeDeviceId === d.imei ? 'w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan shrink-0' : (d.online ? 'w-2 h-2 rounded-full bg-cyber-emerald shrink-0' : 'w-2 h-2 rounded-full bg-slate-500 shrink-0')"></span>
+              
+              <!-- 设备名称与快捷改名 -->
+              <div v-if="editingDevImei === d.imei" class="flex items-center space-x-1 flex-1 min-w-0" @click.stop>
+                <input :id="'edit-dev-input-' + d.imei"
+                       v-model="editingDevName"
+                       @keyup.enter="saveDeviceName(d.imei)"
+                       @blur="saveDeviceName(d.imei)"
+                       placeholder="输入设备名称..."
+                       class="bg-cyber-950 border border-cyber-primary text-xs text-white px-1.5 py-0.5 rounded outline-none w-full font-sans" />
+                <span role="button" @click.stop="saveDeviceName(d.imei)" class="text-cyber-primary text-xs cursor-pointer font-bold px-1 hover:text-cyan-300">✓</span>
+              </div>
+              <div v-else class="flex items-center space-x-1 truncate min-w-0 flex-1">
+                <span :class="activeDeviceId === d.imei ? 'text-xs font-bold text-white truncate' : 'text-xs font-bold text-slate-300 truncate'">{{ d.name }}</span>
+                <span role="button"
+                      @click.stop="startEditDeviceName(d.imei, d.name, $event)"
+                      title="修改设备名称/备注"
+                      class="text-slate-500 hover:text-cyber-primary cursor-pointer transition p-0.5 shrink-0">
+                  <i data-lucide="pencil" class="w-2.5 h-2.5"></i>
+                </span>
+              </div>
             </div>
-            <span :class="d.online ? 'text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30' : 'text-[9px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded'">
-              {{ d.online ? '在线' : '无定位' }}
+            <span :class="d.online ? 'text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30 shrink-0' : 'text-[9px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded shrink-0'">
+              {{ d.online ? '在线' : '离线' }}
             </span>
           </div>
           <div :class="activeDeviceId === d.imei ? 'text-[10px] font-mono text-slate-400 mt-1' : 'text-[10px] font-mono text-slate-500 mt-1'">IMEI: {{ d.imei }}</div>
           <div :class="activeDeviceId === d.imei ? 'text-[10px] text-slate-300 mt-1 truncate' : 'text-[10px] text-slate-400 mt-1 truncate'" :title="d.address">{{ d.address }}</div>
-          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span :class="activeDeviceId === d.imei ? 'text-cyber-emerald font-bold' : ''">{{ d.lastActiveTime }}</span>
-            <span class="text-slate-400">CSQ {{ d.csq }}</span>
+          
+          <!-- 底部状态条：明确标记最后上报时间与通信信号 -->
+          <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono">
+            <div class="flex items-center space-x-1 truncate mr-1.5">
+              <span class="text-slate-500 shrink-0">最后上报:</span>
+              <span :class="activeDeviceId === d.imei ? 'text-slate-200 font-bold truncate' : 'text-slate-400 truncate'">{{ d.lastActiveTime }}</span>
+            </div>
+            <span :class="d.online ? 'text-cyber-primary font-bold shrink-0' : 'text-slate-500 shrink-0'">
+              {{ d.online ? `CSQ ${d.csq}` : '无信号' }}
+            </span>
           </div>
         </div>
 
@@ -148,7 +174,7 @@
 
     <!-- ==================== 4. 移动端独占：右下角悬浮回正 FAB (< md) ==================== -->
     <div class="md:hidden fixed right-3 z-30 transition-all duration-300 bottom-[205px] pointer-events-auto">
-      <div role="button" @click="recenterVehicle()" title="镜头平滑聚焦回当前车辆位置" class="w-10 h-10 rounded-2xl glass-panel border border-cyber-primary/60 text-cyber-primary flex items-center justify-center shadow-fab-shadow hover:bg-cyber-primary/20 hover:scale-105 active:scale-90 transition-all backdrop-blur-xl group bg-cyber-900/90">
+      <div role="button" @click="recenterVehicle()" title="定位至当前设备" class="w-10 h-10 rounded-2xl glass-panel border border-cyber-primary/60 text-cyber-primary flex items-center justify-center shadow-fab-shadow hover:bg-cyber-primary/20 hover:scale-105 active:scale-90 transition-all backdrop-blur-xl group bg-cyber-900/90">
         <i data-lucide="crosshair" class="w-5 h-5 text-cyber-primary group-hover:rotate-45 transition-transform"></i>
       </div>
     </div>
@@ -165,7 +191,7 @@
       <div id="sheet-header-bar" class="px-3.5 py-2 border-b border-cyber-700/60 bg-cyber-900/95 flex items-center justify-between shrink-0 cursor-pointer md:cursor-default select-none">
         <div class="flex-1">
           <div class="flex items-center space-x-2">
-            <span class="text-xs font-bold text-white tracking-wide truncate max-w-[140px] sm:max-w-none" id="drawer-vehicle-name">8202G·开封旗舰机</span>
+            <span class="text-xs font-bold text-white tracking-wide truncate max-w-[140px] sm:max-w-none" id="drawer-vehicle-name">未选择设备</span>
             <span class="text-[9px] font-mono text-cyber-primary bg-cyber-primary/10 border border-cyber-primary/30 px-1.5 py-0.2 rounded" id="drawer-gnss-badge">GNSS 3D</span>
           </div>
           <div class="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center space-x-1.5 leading-tight">
@@ -194,7 +220,7 @@
           <div class="w-full flex items-center justify-between text-[11px] mb-1">
             <span class="text-slate-200 font-bold flex items-center space-x-1.5">
               <i data-lucide="compass" class="w-3.5 h-3.5 text-cyber-primary"></i>
-              <span>3D 姿态与航向拟真</span>
+              <span>设备三轴姿态与航向角</span>
             </span>
             <span class="text-[9px] font-mono text-cyber-primary bg-cyber-primary/10 px-1.5 py-0.5 rounded border border-cyber-primary/30">25Hz IMU</span>
           </div>
@@ -237,17 +263,21 @@
           <div id="chart-accel" class="w-full h-32 sm:h-36"></div>
         </section>
 
-        <!-- 模块 3 · 工业级 Tag 遥测黑匣子明细 -->
+        <!-- 模块 3 · 设备遥测参数 (Telemetry Tags) -->
         <section class="glass-panel rounded-xl overflow-hidden border border-cyber-700/60 shadow-lg">
           <div class="p-2.5 bg-cyber-900/90 border-b border-cyber-700/50 flex items-center justify-between text-[11px]">
             <span class="text-slate-200 font-bold flex items-center space-x-1.5">
               <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyber-primary"></i>
-              <span>AirCloud 工业级 Tag 字典</span>
+              <span>设备遥测参数 (Telemetry Tags)</span>
             </span>
-            <span class="text-[9px] font-mono text-cyber-emerald">实时校验通过</span>
+            <span class="text-[9px] font-mono text-cyber-emerald">数据已同步</span>
           </div>
           <div class="font-mono text-[11px] divide-y divide-cyber-700/40">
             <div class="p-2.5 flex items-center justify-between bg-cyber-900/40">
+              <span class="text-cyber-primary font-bold">最后上报时间</span>
+              <span class="text-slate-200 font-bold" id="tel-tag-last-time">—</span>
+            </div>
+            <div class="p-2.5 flex items-center justify-between">
               <span class="text-cyber-primary font-bold">Tag 799 (电池供电)</span>
               <span class="text-cyber-emerald font-bold" id="tel-tag-batt">4080 mV (92%)</span>
             </div>
@@ -264,36 +294,36 @@
               <span class="text-cyber-emerald font-bold" id="tel-tag-speed">18.2 km/h</span>
             </div>
             <div class="p-2.5 flex items-center justify-between bg-cyber-900/40">
-              <span class="text-cyber-primary font-bold">Tag 1294 (差分轨迹包)</span>
-              <span class="text-slate-300">10s 稠密差分同步</span>
+              <span class="text-cyber-primary font-bold">Tag 1294 (补发轨迹包)</span>
+              <span class="text-slate-300">10秒高频定位上报</span>
             </div>
           </div>
         </section>
 
-        <!-- 模块 4 · 智能电子围栏控制 -->
+        <!-- 模块 4 · 电子围栏控制 -->
         <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 space-y-2.5 shadow-lg">
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-200 font-bold flex items-center space-x-1.5">
               <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-cyber-amber"></i>
-              <span>智能电子围栏防盗</span>
+              <span>电子围栏 (Geo-fence)</span>
             </span>
             <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1.5 py-0.5 rounded">围栏内 (安全)</span>
           </div>
-          <p class="text-[10px] text-slate-400">已根据当前驻留锚点设定半径 1000 米安全圈，越界将立即触发飞书与短信告警。</p>
+          <p class="text-[10px] text-slate-400">以当前驻留点为中心设置半径 1000 米监控围栏。</p>
           <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[10px] font-mono">
             <span class="text-slate-400">震动防盗灵敏度:</span>
             <span class="text-cyber-primary font-bold">中级 (0.5g)</span>
           </div>
         </section>
 
-        <!-- 模块 5 · 时空行程质检与数据画像 -->
+        <!-- 模块 5 · 行驶统计与驾驶评分 -->
         <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 space-y-2 shadow-lg">
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-200 font-bold flex items-center space-x-1.5">
               <i data-lucide="file-bar-chart" class="w-3.5 h-3.5 text-cyber-indigo"></i>
-              <span>行程质量与画像评分</span>
+              <span>行驶统计与驾驶评分</span>
             </span>
-            <span class="text-[9px] font-mono text-slate-400">全量加权</span>
+            <span class="text-[9px] font-mono text-slate-400">综合统计</span>
           </div>
           <div class="grid grid-cols-2 gap-2 text-xs font-mono">
             <div class="bg-cyber-900/80 p-2.5 rounded-lg border border-cyber-700/50">
@@ -301,7 +331,7 @@
               <div class="text-base font-black text-white mt-0.5">18.6 <span class="text-[10px] text-slate-400 font-normal">km</span></div>
             </div>
             <div class="bg-cyber-900/80 p-2.5 rounded-lg border border-cyber-700/50">
-              <div class="text-[10px] text-slate-400">巡航均速</div>
+              <div class="text-[10px] text-slate-400">平均移速</div>
               <div class="text-base font-black text-cyber-primary mt-0.5">22.4 <span class="text-[10px] text-slate-400 font-normal">km/h</span></div>
             </div>
             <div class="bg-cyber-900/80 p-2.5 rounded-lg border border-cyber-700/50">
@@ -328,7 +358,7 @@
         <div class="flex items-center justify-between pb-2 border-b border-white/10">
           <div class="flex items-center space-x-1.5 text-xs font-bold text-white">
             <i data-lucide="calendar-range" class="w-3.5 h-3.5 text-cyber-primary"></i>
-            <span>历史轨迹时空跨度 (AirCloud)</span>
+            <span>轨迹时间范围筛选</span>
           </div>
           <div role="button" @click="toggleDateRangePopover()" class="text-slate-400 hover:text-white p-1">
             <i data-lucide="x" class="w-4 h-4"></i>
@@ -342,8 +372,8 @@
             <div role="button" @click="selectMacroPreset('yesterday')" id="macro-btn-yesterday" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">昨日</div>
             <div role="button" @click="selectMacroPreset('3d')" id="macro-btn-3d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近3天</div>
             <div role="button" @click="selectMacroPreset('7d')" id="macro-btn-7d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近7天</div>
-            <div role="button" @click="selectMacroPreset('30d')" id="macro-btn-30d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近1月</div>
-            <div role="button" @click="selectMacroPreset('90d')" id="macro-btn-90d" class="macro-chip py-1 rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition">近1季</div>
+            <div role="button" @click="selectMacroPreset('30d')" id="macro-btn-30d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近30天</div>
+            <div role="button" @click="selectMacroPreset('90d')" id="macro-btn-90d" class="macro-chip py-1 rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition">近90天</div>
           </div>
         </div>
 
@@ -466,8 +496,8 @@
               <div role="button" @click="setPlaySpeed(5, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white">5x</div>
             </div>
 
-            <div role="button" @click="applyTimePreset('sprint')" class="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-cyber-rose font-bold text-[10px] sm:text-[11px] bg-rose-500/15 border border-rose-500/40 hover:bg-rose-500/25 shadow-glow-rose transition flex items-center gap-1">
-              <span>🏎️ 疾驰</span>
+            <div role="button" @click="applyTimePreset('sprint')" class="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-cyber-primary font-bold text-[10px] sm:text-[11px] bg-cyber-primary/15 border border-cyber-primary/40 hover:bg-cyber-primary/25 shadow-glow-cyan transition flex items-center gap-1" title="快速回放">
+              <span>快速回放</span>
             </div>
           </div>
 
@@ -477,7 +507,7 @@
             <div id="live-status-bar" class="flex items-center space-x-1 sm:space-x-2">
               <div class="flex items-center space-x-1">
                 <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
-                <span class="text-cyber-emerald font-bold hidden sm:inline">实时锁定</span>
+                <span class="text-cyber-emerald font-bold hidden sm:inline">视角跟随</span>
               </div>
               <div class="flex items-center space-x-1">
                 <span id="live-latest-time" class="text-white font-bold">14:00:00</span>
@@ -503,7 +533,7 @@
       </div>
     </div>
 
-    <!-- ==================== 7. IoT 工作空间与多账号管理抽屉 ==================== -->
+    <!-- ==================== 7. 账号管理弹窗 ==================== -->
     <div id="official-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden" @click.self="toggleOfficialModal()">
       <div class="glass-panel max-w-lg w-full p-4 sm:p-5 rounded-2xl border border-cyber-primary/40 shadow-glow-cyan relative max-h-[90vh] overflow-y-auto">
         <div role="button" @click="toggleOfficialModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1">
@@ -511,152 +541,239 @@
         </div>
 
         <div class="flex items-center space-x-3 mb-4 pb-3 border-b border-white/10">
-          <div class="w-10 h-10 rounded-xl bg-cyber-primary/20 border border-cyber-primary text-cyber-primary flex items-center justify-center shadow-glow-cyan shrink-0">
-            <i data-lucide="server" class="w-5 h-5"></i>
+          <div class="w-9 h-9 rounded-xl bg-cyber-primary/20 border border-cyber-primary text-cyber-primary flex items-center justify-center shadow-glow-cyan shrink-0">
+            <i data-lucide="user-check" class="w-4.5 h-4.5"></i>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-white tracking-wide">IoT 资产空间与账号管理</h3>
-            <p class="text-[11px] text-slate-400">支持自主接入合宙 IoT 账号，数据全链路本地缓存</p>
+            <h3 class="text-sm font-bold text-white tracking-wide">账号管理</h3>
+            <p class="text-[11px] text-slate-400">切换使用中的设备账号，或绑定新合宙账号</p>
           </div>
         </div>
 
-        <!-- 1. 当前激活工作空间卡片 -->
-        <div class="p-3.5 rounded-xl border border-cyber-primary/60 bg-gradient-to-r from-cyber-primary/10 via-cyber-900/60 to-cyber-950/80 mb-4 shadow-inner">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <span class="text-xs font-mono text-slate-400">当前激活空间:</span>
-              <span class="text-xs font-bold text-white tracking-wide font-mono">{{ activeAccountPhone }}</span>
-            </div>
-            <span :class="activeAccountHasAuth ? 'text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-2 py-0.5 rounded border border-cyber-emerald/30 font-bold' : 'text-[9px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30'">
-              {{ activeAccountHasAuth ? '● 已授权连接' : '● 会话已断开' }}
-            </span>
-          </div>
-          <div class="mt-2 text-[10px] font-mono text-slate-400 flex items-center justify-between">
-            <span>项目 Key: {{ activeProjectKeyShort }}</span>
-            <span>已载入: {{ deviceList.length }} 台设备</span>
-          </div>
-          <div class="mt-3 flex items-center space-x-2">
-            <div role="button" @click="redirectToOfficialOAuth()" class="flex-1 py-1.5 rounded-lg text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition text-center cursor-pointer flex items-center justify-center space-x-1 shadow-glow-cyan">
-              <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
-              <span>{{ activeAccountHasAuth ? '刷新授权' : '前往合宙安全授权' }}</span>
-            </div>
-            <div role="button" @click="syncOfficialData()" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-cyber-primary/40 text-slate-200 hover:bg-cyber-primary/10 transition text-center cursor-pointer flex items-center space-x-1">
-              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-              <span>同步最新</span>
-            </div>
-          </div>
-          <div v-if="authError" class="mt-2 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
-            {{ authError }}
-          </div>
-        </div>
+        <!-- 账号列表（单层平铺，当前账号高亮标出，去除重复嵌套） -->
+        <div class="space-y-2 mb-4">
+          <div v-for="s in accountStates" :key="s.account.phone"
+               @click="switchAccount(s.account.phone)"
+               :class="[
+                 'p-3 rounded-xl border transition-all cursor-pointer flex flex-col space-y-2',
+                 s.active
+                   ? 'border-cyber-primary/80 bg-gradient-to-r from-cyber-primary/15 via-cyber-900/80 to-cyber-950/90 shadow-glow-cyan'
+                   : 'border-cyber-700/60 bg-cyber-900/60 hover:border-slate-500'
+               ]">
+            <!-- 卡片顶行：账号标识、状态标签与设备数量 -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2 flex-1 min-w-0">
+                <div :class="s.active ? 'w-3.5 h-3.5 rounded-full border-2 border-cyber-primary flex items-center justify-center shrink-0' : 'w-3.5 h-3.5 rounded-full border border-slate-600 shrink-0'">
+                  <div v-if="s.active" class="w-1.5 h-1.5 rounded-full bg-cyber-primary"></div>
+                </div>
 
-        <!-- 2. 已连接空间列表 (支持切换) -->
-        <div class="mb-3">
-          <div class="text-xs font-bold text-slate-300 mb-2 flex items-center justify-between">
-            <span class="flex items-center space-x-1">
-              <i data-lucide="list" class="w-3.5 h-3.5 text-cyber-primary"></i>
-              <span>工作空间列表</span>
-            </span>
-            <span class="text-[10px] text-slate-400 font-mono">共 {{ accountStates.length }} 个</span>
-          </div>
-
-          <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-            <div v-for="s in accountStates" :key="s.account.phone"
-                 role="button"
-                 @click="switchAccount(s.account.phone)"
-                 :class="s.active ? 'p-2.5 rounded-xl border border-cyber-primary/70 bg-cyber-primary/15 cursor-pointer transition-all shadow-glow-cyan flex items-center justify-between' : 'p-2.5 rounded-xl border border-cyber-700/50 bg-cyber-900/50 cursor-pointer transition-all hover:border-slate-500 flex items-center justify-between'">
-              <div class="flex items-center space-x-2.5">
-                <span :class="s.active ? 'w-2 h-2 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-2 h-2 rounded-full bg-slate-600'"></span>
-                <div>
-                  <div class="flex items-center space-x-2">
-                    <span :class="s.active ? 'text-xs font-bold text-white' : 'text-xs font-bold text-slate-300'">{{ s.account.label }}</span>
-                    <span class="text-[11px] font-mono text-slate-400">{{ s.account.phone }}</span>
-                    <span v-if="s.account.isDemo" class="text-[8px] font-mono text-cyan-400 bg-cyan-950/80 px-1 py-0.2 rounded border border-cyan-500/30">演示</span>
+                <!-- 账号主体：支持点击小铅笔行内编辑备注名 -->
+                <div class="flex items-center space-x-1.5 flex-wrap min-w-0">
+                  <!-- 行内编辑状态 -->
+                  <div v-if="editingPhone === s.account.phone" class="flex items-center space-x-1" @click.stop>
+                    <input :id="'edit-alias-input-' + s.account.phone"
+                           v-model="editingAlias"
+                           @keyup.enter="saveAccountAlias(s.account.phone)"
+                           @blur="saveAccountAlias(s.account.phone)"
+                           placeholder="输入自定义备注..."
+                           class="bg-cyber-950 border border-cyber-primary text-xs text-white px-2 py-0.5 rounded outline-none w-32 font-sans" />
+                    <span role="button" @click.stop="saveAccountAlias(s.account.phone)" class="text-cyber-primary text-xs cursor-pointer font-bold px-1 hover:text-cyan-300">✓</span>
                   </div>
-                  <div class="text-[10px] text-slate-400 mt-0.5">{{ s.account.role }}</div>
+
+                  <!-- 常态显示 -->
+                  <template v-else>
+                    <!-- 1. 官方演示账号：显示空间名称与演示标签 -->
+                    <template v-if="s.account.isDemo">
+                      <span :class="s.active ? 'text-xs font-bold text-white' : 'text-xs font-medium text-slate-300'">{{ s.account.label }}</span>
+                      <span class="text-[8px] font-mono text-cyan-400 bg-cyan-950/80 px-1 py-0.2 rounded border border-cyan-500/30 shrink-0">演示</span>
+                    </template>
+                    <!-- 2. 普通自建账号：若有备注显示备注，若无备注直接大号显示格式化手机号 -->
+                    <template v-else>
+                      <span v-if="s.account.label" :class="s.active ? 'text-xs font-bold text-white' : 'text-xs font-medium text-slate-200'">{{ s.account.label }}</span>
+                      <span v-else :class="s.active ? 'text-xs font-bold font-mono text-white tracking-wide' : 'text-xs font-medium font-mono text-slate-200 tracking-wide'">{{ formatPhone(s.account.phone) }}</span>
+                      
+                      <!-- 改名微型按钮 -->
+                      <span role="button"
+                            @click.stop="startEditAccountAlias(s.account, $event)"
+                            :title="s.account.label ? '修改备注名' : '添加备注名（如：家用SUV）'"
+                            class="text-slate-500 hover:text-cyber-primary cursor-pointer transition p-0.5">
+                        <i data-lucide="pencil" class="w-2.5 h-2.5"></i>
+                      </span>
+                    </template>
+
+                    <!-- 使用中标签 -->
+                    <span v-if="s.active" class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 shrink-0">使用中</span>
+                  </template>
                 </div>
               </div>
 
-              <div class="flex items-center space-x-2">
-                <span :class="s.hasAuth ? 'text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30' : 'text-[9px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded'">
-                  {{ s.hasAuth ? '在线' : '离线' }}
+              <!-- 右上角：设备数量 -->
+              <div class="shrink-0 ml-2">
+                <span class="text-[10px] font-mono text-slate-300 bg-cyber-950 px-2 py-0.5 rounded border border-cyber-700/60 whitespace-nowrap">
+                  {{ s.deviceCount ? `${s.deviceCount} 台设备` : '暂无设备' }}
                 </span>
-                <div v-if="!s.account.isDemo" role="button" @click="removeUserAccount(s.account.phone, $event)" title="移除该账号" class="text-slate-500 hover:text-rose-400 p-1">
+              </div>
+            </div>
+
+            <!-- 卡片第二行（仅在演示账号或已设备注的自建账号展示，不含任何虚构词） -->
+            <div v-if="s.account.isDemo || s.account.label" class="text-[10px] font-mono text-slate-400 pl-5 flex items-center space-x-1.5 truncate">
+              <span class="text-slate-300">{{ formatPhone(s.account.phone) }}</span>
+              <template v-if="s.account.isDemo && s.account.role">
+                <span class="text-slate-600">·</span>
+                <span class="truncate">{{ s.account.role }}</span>
+              </template>
+            </div>
+
+            <!-- 卡片底行：状态显示与操作操作条 -->
+            <div class="pt-2 border-t border-white/5 flex items-center justify-between text-xs">
+              <!-- 状态标记 -->
+              <div class="flex items-center space-x-1.5">
+                <!-- 1. 登录已失效 -->
+                <template v-if="s.isExpired">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
+                  <span class="text-[10px] font-mono text-rose-400 font-bold">登录已失效</span>
+                </template>
+                <!-- 2. 正常连接 -->
+                <template v-else-if="s.hasAuth">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
+                  <span class="text-[10px] font-mono text-cyber-emerald">连接正常</span>
+                </template>
+                <!-- 3. 未登录 -->
+                <template v-else>
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+                  <span class="text-[10px] font-mono text-slate-400">未登录</span>
+                </template>
+              </div>
+
+              <!-- 右侧按钮群 -->
+              <div class="flex items-center space-x-2" @click.stop>
+                <!-- 刷新凭据按钮（带旋转反馈） -->
+                <div v-if="s.hasAuth && !s.isExpired"
+                     role="button"
+                     @click="refreshAccountCredential(s.account.phone)"
+                     :title="'检测并刷新 ' + s.account.phone + ' 凭据与设备数据'"
+                     class="px-2 py-1 rounded-lg text-[10px] font-mono text-slate-300 hover:text-cyber-primary hover:bg-cyber-primary/10 border border-white/5 transition flex items-center space-x-1 cursor-pointer">
+                  <i data-lucide="refresh-cw" :class="['w-3 h-3', checkingPhone === s.account.phone ? 'animate-spin text-cyber-primary' : '']"></i>
+                  <span>{{ checkingPhone === s.account.phone ? '检测中...' : '刷新凭据' }}</span>
+                </div>
+
+                <!-- 重新登录/授权按钮（失效时高亮） -->
+                <div v-if="s.isExpired || !s.hasAuth"
+                     role="button"
+                     @click="openOAuthAuthorization(s.account.phone)"
+                     class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan flex items-center space-x-1 cursor-pointer">
+                  <i data-lucide="shield-check" class="w-3 h-3"></i>
+                  <span>{{ s.isExpired ? '重新登录' : '授权登录' }}</span>
+                </div>
+
+                <!-- 切换为当前账号 -->
+                <div v-if="!s.active"
+                     role="button"
+                     @click="switchAccount(s.account.phone)"
+                     class="px-2 py-1 rounded-lg text-[10px] font-medium text-slate-300 hover:text-white hover:bg-white/10 border border-white/10 transition cursor-pointer">
+                  切换使用
+                </div>
+
+                <!-- 删除非当前已保存账号 -->
+                <div v-if="!s.account.isDemo && !s.active"
+                     role="button"
+                     @click="removeAccountItem(s.account.phone, $event)"
+                     title="移除该账号"
+                     class="p-1 text-slate-500 hover:text-rose-400 transition cursor-pointer">
                   <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                 </div>
               </div>
             </div>
+
           </div>
         </div>
 
-        <!-- 3. 添加新合宙账号 (表单) -->
-        <div class="mt-3 pt-3 border-t border-white/10">
+        <!-- 底部：添加新账号入口（极简单行输入） -->
+        <div class="pt-3 border-t border-white/10">
           <div role="button" @click="isAddingAccount = !isAddingAccount" class="text-xs font-bold text-cyber-primary flex items-center justify-between py-1 cursor-pointer">
             <span class="flex items-center space-x-1.5">
               <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
-              <span>添加新合宙账号 (用户自主接入)</span>
+              <span>绑定新合宙账号</span>
             </span>
             <i :data-lucide="isAddingAccount ? 'chevron-up' : 'chevron-down'" class="w-3.5 h-3.5 text-slate-400"></i>
           </div>
 
           <div v-if="isAddingAccount" class="mt-2.5 p-3 rounded-xl bg-cyber-950/80 border border-cyber-700/60 space-y-2.5">
             <div>
-              <label class="text-[10px] font-mono text-slate-400 block mb-1">合宙 IoT 注册手机号码:</label>
+              <label class="text-[10px] font-mono text-slate-400 block mb-1">合宙 IoT 手机号码:</label>
               <div class="flex items-center space-x-2">
-                <input v-model="newAccountInputPhone" type="tel" placeholder="请输入您的合宙手机号" class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:border-cyber-primary focus:outline-none font-mono">
+                <input v-model="newAccountInputPhone" type="tel" placeholder="请输入合宙账号手机号" class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:border-cyber-primary focus:outline-none font-mono">
                 <div role="button" @click="startOAuthForPhone()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shrink-0 cursor-pointer shadow-glow-cyan">
-                  官方安全授权
+                  去授权登录
                 </div>
               </div>
-              <p class="text-[9px] text-slate-400 mt-1">点击将前往合宙官方页面完成密码与验证码校验，成功后自动回跳接入</p>
             </div>
 
-            <!-- 手机端/外部浏览器便捷换票通道 -->
-            <div class="pt-2 border-t border-white/5 space-y-1.5">
-              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                <span>在手机/PC浏览器完成授权后，粘贴 Token 换票:</span>
-              </div>
+            <!-- 便捷外部授权 Token 粘贴通道（紧凑收纳） -->
+            <div class="pt-2 border-t border-white/5 space-y-1">
               <div class="flex items-center space-x-2">
-                <input v-model="pastedOAuthTokenOrUrl" placeholder="粘贴 Token 字符串或完整回调链接" class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 focus:border-cyber-primary focus:outline-none font-mono">
-                <div role="button" @click="submitPastedOAuthToken()" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-800 transition shrink-0 cursor-pointer">
-                  {{ isExchangingPastedToken ? '换票中...' : '提取换票' }}
-                </div>
-              </div>
-            </div>
-
-            <!-- 开发者凭据直接录入 -->
-            <div class="pt-2 border-t border-white/5">
-              <div role="button" @click="showManualCreds = !showManualCreds" class="text-[10px] font-mono text-slate-400 hover:text-slate-200 flex items-center space-x-1 cursor-pointer">
-                <span>{{ showManualCreds ? '收起开发者直接导入' : '开发者通道: 直接输入 Token / Salt / Sid 凭据' }}</span>
-                <i :data-lucide="showManualCreds ? 'chevron-up' : 'chevron-down'" class="w-3 h-3"></i>
-              </div>
-
-              <div v-if="showManualCreds" class="mt-2 space-y-1.5 text-[11px] font-mono">
-                <input v-model="manualToken" placeholder="Authorization Token" class="w-full bg-cyber-900 border border-cyber-700 rounded px-2 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none">
-                <div class="grid grid-cols-2 gap-1.5">
-                  <input v-model="manualSalt" placeholder="Salt 盐值" class="bg-cyber-900 border border-cyber-700 rounded px-2 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none">
-                  <input v-model="manualSid" placeholder="SID (默认 336677)" class="bg-cyber-900 border border-cyber-700 rounded px-2 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none">
-                </div>
-                <input v-model="manualProjectKey" placeholder="Project Key (选填，留空自动拉取)" class="w-full bg-cyber-900 border border-cyber-700 rounded px-2 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none">
-                <div role="button" @click="submitManualCreds()" class="w-full py-1.5 rounded bg-cyber-primary/20 border border-cyber-primary/40 text-cyber-primary font-bold text-xs hover:bg-cyber-primary/30 transition text-center cursor-pointer">
-                  保存并接入
+                <input v-model="pastedOAuthTokenOrUrl" placeholder="若在外部浏览器授权，可在此粘贴回调链接或 Token" class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-2 py-1 text-[11px] text-white placeholder-slate-500 focus:border-cyber-primary focus:outline-none font-mono">
+                <div role="button" @click="submitPastedOAuthToken()" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-800 transition shrink-0 cursor-pointer">
+                  {{ isExchangingPastedToken ? '绑定中...' : '绑定' }}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 4. 原生多端分发：Android 原生客户端下载 -->
-        <div class="mt-3 pt-3 border-t border-white/10">
-          <a href="https://github.com/ocean1798/Air8202G-AirTrack-Pro/releases/download/v1.0.0/airtrack-pro.apk" target="_blank" class="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-xl border border-cyber-primary/50 bg-gradient-to-r from-cyber-primary/20 via-cyber-900/60 to-cyber-primary/10 text-cyber-primary hover:bg-cyber-primary/25 text-xs font-bold transition shadow-glow-cyan text-center no-underline cursor-pointer">
-            <i data-lucide="smartphone" class="w-4 h-4"></i>
-            <span>下载 Android 原生安装包 (airtrack-pro.apk)</span>
-          </a>
-          <p class="text-[10px] text-slate-400 text-center mt-1">支持 Android 8.0+ 手机、平板与车载车机中控直接安装运行</p>
-        </div>
-
       </div>
     </div>
+
+    <!-- ==================== 8. 站内沉浸式官方安全授权浮层 (零跳转闭环) ==================== -->
+    <div v-if="showInPageOAuthModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-2 sm:p-4 animate-fade-in" @click.self="closeInPageOAuth()">
+      <div class="glass-panel w-full max-w-md rounded-2xl border border-cyber-primary/50 shadow-2xl shadow-cyan-950/60 overflow-hidden flex flex-col bg-cyber-950">
+        <!-- 浮层顶栏 -->
+        <div class="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-cyber-900/80">
+          <div class="flex items-center space-x-2">
+            <div class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+            <span class="text-xs font-bold tracking-wider text-slate-100">合宙官方安全授权通道</span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-500/40 text-cyan-300 font-mono">应用内登录</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <a :href="inPageOAuthUrl" target="_blank" title="在外部独立浏览器标签页打开" class="text-slate-400 hover:text-cyan-400 text-xs flex items-center space-x-0.5 no-underline">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            </a>
+            <div role="button" @click="closeInPageOAuth()" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- 提示小副条 -->
+        <div class="px-4 py-1.5 bg-cyber-900/40 border-b border-white/5 text-[10px] text-slate-400 flex items-center justify-between">
+          <span>输入账号密码与验证码后将自动收起，当前页面不刷新</span>
+          <span class="font-mono text-cyan-400">OAuth v2</span>
+        </div>
+
+        <!-- iframe 嵌入容器 -->
+        <div class="relative w-full h-[540px] bg-white">
+          <div v-if="isIframeLoading" class="absolute inset-0 bg-cyber-950 flex flex-col items-center justify-center space-y-3 z-10">
+            <div class="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin"></div>
+            <div class="text-xs text-slate-400 font-mono">正在载入合宙安全授权通道...</div>
+          </div>
+          <iframe
+            :src="inPageOAuthUrl"
+            class="w-full h-full border-0"
+            @load="isIframeLoading = false; refreshIcons();"
+            sandbox="allow-forms allow-scripts allow-same-origin allow-popups"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 9. 全局悬浮通知 Toast ==================== -->
+    <transition name="fade">
+      <div v-if="toastMessage" class="fixed top-16 left-1/2 -translate-x-1/2 z-[110] px-4 py-2 rounded-xl backdrop-blur-md shadow-2xl flex items-center space-x-2 text-xs font-mono border"
+        :class="toastType === 'success' ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300' : (toastType === 'info' ? 'bg-cyan-950/90 border-cyan-500/50 text-cyan-300' : 'bg-rose-950/90 border-rose-500/50 text-rose-300')">
+        <i :data-lucide="toastType === 'success' ? 'check-circle' : (toastType === 'info' ? 'info' : 'alert-triangle')" class="w-4 h-4 shrink-0"></i>
+        <span>{{ toastMessage }}</span>
+      </div>
+    </transition>
 
   </div>
 </template>
@@ -725,6 +842,11 @@ const authError = ref('');
 const accountStates = ref<any[]>([]);
 const activeAccountPhone = ref(apiClient.getActivePhone());
 const activeAccountLabel = ref(apiClient.getActiveAccount().label);
+const displayAccountLabel = computed(() => {
+  const lbl = activeAccountLabel.value?.trim();
+  if (!lbl || /^账号\s*\d+$/.test(lbl)) return '';
+  return lbl;
+});
 const activeAccountHasAuth = ref(apiClient.hasAuth());
 const activeProjectKey = ref('');
 const activeDeviceId = ref('');
@@ -747,7 +869,7 @@ function rebuildDeviceDb(list: any[]) {
       battMv: d.voltageMv ? `${d.voltageMv} mV` : '未上报',
       csq: d.csq ? `CSQ ${d.csq}` : '无信号',
       speed: `${d.speed ?? 0} km/h`,
-      status: d.online ? '在线' : '无定位',
+      status: d.online ? '在线' : '离线',
       address: d.address || '未上报物理定位',
       lastActiveTime: d.lastActiveTime,
       online: d.online
@@ -755,12 +877,96 @@ function rebuildDeviceDb(list: any[]) {
   });
 }
 
-function refreshAccountStates() {
-  accountStates.value = apiClient.getAccountStates();
+function formatPhone(phone: string): string {
+  if (!phone) return '';
+  const clean = String(phone).replace(/\s+/g, '');
+  if (clean.length === 11) {
+    return `${clean.slice(0, 3)} ${clean.slice(3, 7)} ${clean.slice(7)}`;
+  }
+  return clean;
+}
+
+const editingPhone = ref('');
+const editingAlias = ref('');
+
+const editingDevImei = ref('');
+const editingDevName = ref('');
+
+function startEditDeviceName(imei: string, currentName: string, e: Event) {
+  e.stopPropagation();
+  editingDevImei.value = imei;
+  editingDevName.value = currentName;
+  nextTick(() => {
+    const inp = document.getElementById('edit-dev-input-' + imei);
+    if (inp) inp.focus();
+  });
+}
+
+function saveDeviceName(imei: string) {
+  apiClient.setCustomDeviceName(imei, editingDevName.value.trim());
+  editingDevImei.value = '';
+  loadRealDevices();
+}
+
+function startEditAccountAlias(account: any, e: Event) {
+  e.stopPropagation();
+  editingPhone.value = account.phone;
+  editingAlias.value = account.label || '';
+  nextTick(() => {
+    const inp = document.getElementById('edit-alias-input-' + account.phone);
+    if (inp) inp.focus();
+  });
+}
+
+function saveAccountAlias(phone: string) {
+  apiClient.updateAccountLabel(phone, editingAlias.value.trim());
+  editingPhone.value = '';
+  refreshAccountStates();
+}
+
+const checkingPhone = ref('');
+
+async function refreshAccountStates() {
+  const states = apiClient.getAccountStates();
+  for (const s of states) {
+    try {
+      const cached = await db.getDeviceProfiles(s.account.phone);
+      s.deviceCount = cached.length;
+    } catch {
+      s.deviceCount = 0;
+    }
+    if (s.active && deviceList.value.length > 0) {
+      s.deviceCount = deviceList.value.length;
+    }
+  }
+  accountStates.value = states;
   activeAccountPhone.value = apiClient.getActivePhone();
   activeAccountLabel.value = apiClient.getActiveAccount().label;
   activeAccountHasAuth.value = apiClient.hasAuth();
   activeProjectKey.value = (apiClient as any).projectKey || '';
+  nextTick(refreshIcons);
+}
+
+async function refreshAccountCredential(phone: string) {
+  checkingPhone.value = phone;
+  try {
+    const res = await apiClient.checkAccountHealth(phone);
+    if (res.ok) {
+      showToast(`✓ ${res.message}`, 'success', 3000);
+      await refreshAccountStates();
+      if (phone === activeAccountPhone.value) {
+        await loadRealDevices();
+      }
+    } else {
+      showToast(res.message, 'error', 4000);
+      await refreshAccountStates();
+    }
+  } catch (e: any) {
+    showToast('检测失败，请稍后重试', 'error');
+  } finally {
+    checkingPhone.value = '';
+    nextTick(refreshIcons);
+  }
 }
 
 const isAddingAccount = ref(false);
@@ -774,12 +980,37 @@ const manualProjectKey = ref('');
 const pastedOAuthTokenOrUrl = ref('');
 const isExchangingPastedToken = ref(false);
 
+// 站内沉浸式官方授权浮层状态（零跳转）
+const showInPageOAuthModal = ref(false);
+const inPageOAuthUrl = ref('');
+const isIframeLoading = ref(true);
+
+function closeInPageOAuth() {
+  showInPageOAuthModal.value = false;
+  inPageOAuthUrl.value = '';
+}
+
+// 全局悬浮 Toast 通知状态
+const toastMessage = ref('');
+const toastType = ref<'success' | 'info' | 'error'>('info');
+let toastTimer: any = null;
+
+function showToast(msg: string, type: 'success' | 'info' | 'error' = 'info', duration = 3500) {
+  toastMessage.value = msg;
+  toastType.value = type;
+  nextTick(refreshIcons);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastMessage.value = '';
+  }, duration);
+}
+
 async function submitPastedOAuthToken() {
   const raw = pastedOAuthTokenOrUrl.value.trim();
   if (!raw) return;
   const token = apiClient.extractToken(raw);
   if (!token) {
-    alert('未在输入内容中识别到有效的 token 参数');
+    showToast('未在输入内容中识别到有效的 token 参数', 'error');
     return;
   }
   const target = (newAccountInputPhone.value || activeAccountPhone.value).trim();
@@ -791,16 +1022,16 @@ async function submitPastedOAuthToken() {
       isAddingAccount.value = false;
       refreshAccountStates();
       await loadRealDevices();
-      alert(`账号 ${target} 授权换票成功！设备列表已更新。`);
+      showToast(`✓ 账号 ${target} 授权连接成功！`, 'success');
       const modal = document.getElementById('official-modal');
       if (modal && !modal.classList.contains('hidden')) {
         modal.classList.add('hidden');
       }
     } else {
-      alert('Token 换票失败，请检查凭据是否有效或已过期。');
+      showToast('授权绑定失败，请检查凭据是否有效或已过期', 'error');
     }
   } catch (e) {
-    alert('换票网络异常，请重试');
+    showToast('网络连接异常，请重试', 'error');
   } finally {
     isExchangingPastedToken.value = false;
   }
@@ -811,6 +1042,8 @@ async function openOAuthAuthorization(phone?: string) {
   if (!target) return;
   const url = apiClient.buildOAuthUrl(target, window.location.href);
   console.info('[AirTrack] 打开合宙官方 OAuth 授权:', url);
+
+  // 1. Android 原生环境：优先调用系统内嵌 Custom Tab
   if (Capacitor.isNativePlatform()) {
     try {
       await CapBrowser.open({
@@ -819,14 +1052,20 @@ async function openOAuthAuthorization(phone?: string) {
       });
       return;
     } catch (e) {
-      console.warn('[AirTrack] CapBrowser.open 异常，回退至系统跳转', e);
+      console.warn('[AirTrack] CapBrowser.open 异常，回退至站内浮层', e);
     }
   }
-  window.location.href = url;
+
+  // 2. 网页端（Web/H5）：直接打开站内内嵌安全浮层（iframe 零跳转闭环）！
+  inPageOAuthUrl.value = url;
+  isIframeLoading.value = true;
+  showInPageOAuthModal.value = true;
+  nextTick(refreshIcons);
 }
 
 function startOAuthForPhone(phone?: string) {
-  openOAuthAuthorization(phone);
+  const target = phone || newAccountInputPhone.value.trim();
+  openOAuthAuthorization(target);
 }
 
 function submitManualCreds() {
@@ -842,11 +1081,19 @@ function submitManualCreds() {
   loadRealDevices();
 }
 
-function removeUserAccount(phone: string, event: Event) {
+function removeAccountItem(phone: string, event: Event) {
   event.stopPropagation();
+  if (phone === activeAccountPhone.value) {
+    showToast('不能删除当前正在使用的账号', 'error');
+    return;
+  }
   apiClient.removeAccount(phone);
+  showToast(`已解绑并移除账号 ${phone}`, 'info');
   refreshAccountStates();
-  loadRealDevices();
+}
+
+function removeUserAccount(phone: string, event: Event) {
+  removeAccountItem(phone, event);
 }
 
 function mobileTabClass(d: any) {
@@ -872,7 +1119,7 @@ function signalBadgeClass(d: any) {
 }
 
 function signalBadgeText(d: any) {
-  return d.online && d.csq ? `CSQ ${d.csq}` : '无定位';
+  return d.online ? (d.csq ? `CSQ ${d.csq}` : '在线') : '离线';
 }
 
 /** 从合宙云端同步当前账号的真实设备清单 */
@@ -898,10 +1145,8 @@ async function loadRealDevices() {
     activeDeviceId.value = '';
     TRACK_POINTS = [];
     if (e && e.name === 'AuthExpiredError') {
-      authError.value = '合宙云端登录态已失效（可能在其他设备重复登录），请重新授权当前账号。';
-      // 会话被顶号时立即弹出账号面板，给出可见的重登入口
-      const modal = document.getElementById('official-modal');
-      if (modal) modal.classList.remove('hidden');
+      authError.value = '合宙云端登录态已失效（在其他终端重复登录被顶线），请重新授权当前账号。';
+      showToast('当前账号在其他终端登录，登录态已失效，请点击重新授权', 'warn', 4000);
     } else {
       authError.value = e?.message || '云端设备资产清单同步失败';
     }
@@ -984,6 +1229,8 @@ function selectDeviceTab(imei: string) {
 
   const elName = document.getElementById('drawer-vehicle-name');
   if (elName) elName.innerText = dev.name;
+  const elLastTime = document.getElementById('tel-tag-last-time');
+  if (elLastTime) elLastTime.innerText = dev.lastActiveTime || '未上报';
   const elBatt = document.getElementById('tel-tag-batt');
   if (elBatt) elBatt.innerText = dev.battMv;
   const elCsq = document.getElementById('tel-tag-csq');
@@ -1121,17 +1368,24 @@ function updateTimelineScaleTicks(isMultiDay: boolean) {
   const pMid3 = TRACK_POINTS[Math.floor(numPoints * 0.75)];
   const pEnd = TRACK_POINTS[numPoints - 1];
 
+  // 自适应判断：若首尾时间处于同一天，中间刻度采用清晰的 HH:mm 时分格式，杜绝纯日期重复
+  const sDay = pStart.timeStr ? pStart.timeStr.slice(0, 10) : '';
+  const eDay = pEnd.timeStr ? pEnd.timeStr.slice(0, 10) : '';
+  const isSameDay = sDay === eDay;
+
   const fmt = (p: any, label = '') => {
     if (!p || !p.timeStr) return '';
-    if (isMultiDay) {
-      return `${p.timeStr.slice(5, 10)}${label}`;
-    } else {
+    if (isSameDay) {
       return `${p.timeStr.slice(11, 16)}${label}`;
+    } else {
+      return `${p.timeStr.slice(5, 10)} ${p.timeStr.slice(11, 16)}${label}`;
     }
   };
 
   const tStart = document.getElementById('scale-tick-start');
-  if (tStart) tStart.innerText = fmt(pStart);
+  if (tStart) {
+    tStart.innerText = pStart.timeStr ? (isSameDay ? `${pStart.timeStr.slice(5, 10)} ${pStart.timeStr.slice(11, 16)}` : fmt(pStart)) : '';
+  }
   const t1 = document.getElementById('scale-tick-1');
   if (t1) t1.innerText = fmt(pMid1);
   const t2 = document.getElementById('scale-tick-2');
@@ -1139,15 +1393,17 @@ function updateTimelineScaleTicks(isMultiDay: boolean) {
   const t3 = document.getElementById('scale-tick-3');
   if (t3) t3.innerText = fmt(pMid3);
   const tEnd = document.getElementById('scale-tick-end');
-  if (tEnd) tEnd.innerHTML = `<span>${fmt(pEnd)}</span><span class="w-1 h-1 rounded-full bg-cyber-primary animate-pulse-cyan"></span>`;
+  if (tEnd) {
+    const endText = pEnd.timeStr ? (isSameDay ? pEnd.timeStr.slice(11, 16) : `${pEnd.timeStr.slice(5, 10)} ${pEnd.timeStr.slice(11, 16)}`) : '';
+    tEnd.innerHTML = `<span>${endText}</span><span class="w-1 h-1 rounded-full bg-cyber-primary animate-pulse-cyan"></span>`;
+  }
 }
 
 const CHROMA_STOPS = [
-  { v: 0,  r: 59,  g: 130, b: 246, hex: '#3b82f6', name: '静止' },
-  { v: 12, r: 0,   g: 240, b: 255, hex: '#00f0ff', name: '起步' },
-  { v: 24, r: 16,  g: 185, b: 129, hex: '#10b981', name: '巡航' },
-  { v: 38, r: 234, g: 179, b: 8,   hex: '#eab308', name: '畅行' },
-  { v: 50, r: 249, g: 115, b: 22,  hex: '#f97316', name: '飞驰' },
+  { v: 0,  r: 51,  g: 65,  b: 85,   hex: '#334155', name: '静止' },
+  { v: 12, r: 16,  g: 185, b: 129, hex: '#10b981', name: '缓行' },
+  { v: 28, r: 0,   g: 240, b: 255, hex: '#00f0ff', name: '巡航' },
+  { v: 45, r: 245, g: 158, b: 11,  hex: '#f59e0b', name: '畅行' },
   { v: 65, r: 244, g: 63,  b: 94,  hex: '#f43f5e', name: '极速' }
 ];
 
@@ -1203,33 +1459,85 @@ function drawSpeedWaveCanvas() {
   const w = rect.width;
   const h = rect.height;
 
-  ctx.fillStyle = '#060a17';
-  ctx.fillRect(0, 0, w, h);
-
-  if (!TRACK_POINTS.length) return;
+  if (!TRACK_POINTS.length) {
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 0, w, h);
+    return;
+  }
 
   const numPoints = TRACK_POINTS.length;
+
+  // 1. 底层高饱和度连续速度能量色带填充（横向 100% 铺满胶囊轨道高度，再现 v3.5 Chroma Pro 原型质感）
+  const grad = ctx.createLinearGradient(0, 0, w, 0);
+  for (let i = 0; i < numPoints; i++) {
+    const stop = numPoints > 1 ? i / (numPoints - 1) : 0;
+    const col = getContinuousSpeedColor(TRACK_POINTS[i].speed).rgb;
+    grad.addColorStop(stop, col);
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  // 2. 识别离线盲区，在盲区区间上绘制克制的 45度半透明警示斜纹（不破坏整体色带连续感）
+  for (let i = 0; i < numPoints - 1; i++) {
+    const cur = TRACK_POINTS[i];
+    const next = TRACK_POINTS[i + 1];
+    const dt = (next.timestamp - cur.timestamp) / 1000;
+    const radLat = (next.lat * Math.PI) / 180;
+    const dLat = (next.lat - cur.lat) * 111000;
+    const dLng = (next.lng - cur.lng) * 111000 * Math.cos(radLat);
+    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+    const hasSpeed = (cur.speed && cur.speed > 3) || (next.speed && next.speed > 3);
+
+    if (!hasSpeed && dt > 600 && dist > 100) {
+      const x1 = (i / (numPoints - 1)) * w;
+      const x2 = ((i + 1) / (numPoints - 1)) * w;
+      const segW = x2 - x1;
+      if (segW > 2) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(225, 29, 72, 0.35)';
+        ctx.fillRect(x1, 0, segW, h);
+        ctx.strokeStyle = 'rgba(251, 113, 133, 0.45)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let sx = x1 - h; sx < x2 + h; sx += 10) {
+          const px1 = Math.max(x1, sx);
+          const py1 = Math.max(0, sx < x1 ? (x1 - sx) : 0);
+          const px2 = Math.min(x2, sx + h);
+          const py2 = Math.min(h, h - (sx + h > x2 ? (sx + h - x2) : 0));
+          if (px1 < px2 && py1 < py2) {
+            ctx.moveTo(px1, py1);
+            ctx.lineTo(px2, py2);
+          }
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
+  // 3. 计算平滑波峰点集合 (以速度为波高，模拟音频能量流体波形)
+  let maxSp = 0;
+  for (let i = 0; i < numPoints; i++) {
+    if (TRACK_POINTS[i].speed > maxSp) maxSp = TRACK_POINTS[i].speed;
+  }
+  const peakSpeed = Math.max(30, maxSp);
+
   const pts: any[] = [];
-  const BASELINE_H = 3;
-  const MAX_WAVE_H = h - 5;
   for (let i = 0; i < numPoints; i++) {
     const x = numPoints > 1 ? (i / (numPoints - 1)) * w : 0;
     const sp = TRACK_POINTS[i].speed;
-    const waveH = BASELINE_H + (sp / 65) * (MAX_WAVE_H - BASELINE_H);
+    // 速度归一化到波高 (高度占比：静止时基线 3px，最高速占据 65% 高度)
+    const waveH = Math.min(h * 0.68, (sp / peakSpeed) * (h * 0.62) + 3);
     const y = h - waveH;
     pts.push({ x, y, speed: sp });
   }
 
-  const speedGradient = ctx.createLinearGradient(0, 0, w, 0);
-  for (let i = 0; i < numPoints; i++) {
-    const stop = numPoints > 1 ? i / (numPoints - 1) : 0;
-    speedGradient.addColorStop(stop, getContinuousSpeedColor(TRACK_POINTS[i].speed).rgb);
-  }
-
+  // 4. 贝塞尔平滑半透明流体波形填充 (模拟专业音频能量波与流体质感)
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(0, h);
   ctx.lineTo(pts[0].x, pts[0].y);
+
   for (let i = 0; i < pts.length - 1; i++) {
     const xc = (pts[i].x + pts[i + 1].x) / 2;
     const yc = (pts[i].y + pts[i + 1].y) / 2;
@@ -1239,19 +1547,12 @@ function drawSpeedWaveCanvas() {
   ctx.lineTo(w, h);
   ctx.closePath();
 
-  ctx.fillStyle = speedGradient;
-  ctx.globalAlpha = 0.88;
-  ctx.fill();
-
-  const verticalLight = ctx.createLinearGradient(0, 0, 0, h);
-  verticalLight.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
-  verticalLight.addColorStop(0.4, 'rgba(255, 255, 255, 0.1)');
-  verticalLight.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
-  ctx.fillStyle = verticalLight;
-  ctx.globalCompositeOperation = 'overlay';
+  // 柔和半透明流体高光覆盖
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
   ctx.fill();
   ctx.restore();
 
+  // 5. 顶部微光平滑流体波形发光轮廓线
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pts[0].y);
@@ -1261,15 +1562,12 @@ function drawSpeedWaveCanvas() {
     ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
   }
   ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-  ctx.strokeStyle = '#ffffff';
-  ctx.shadowColor = '#00f0ff';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.shadowColor = 'rgba(0, 240, 255, 0.45)';
   ctx.shadowBlur = 4;
   ctx.lineWidth = 1.5;
   ctx.stroke();
   ctx.restore();
-
-  ctx.fillStyle = speedGradient;
-  ctx.fillRect(0, h - 2, w, 2);
 }
 
 let masterMode = 'live';
@@ -1313,8 +1611,8 @@ function selectMacroPreset(preset: string) {
     else if (preset === 'yesterday') label.innerText = '昨日';
     else if (preset === '3d') label.innerText = '近3天';
     else if (preset === '7d') label.innerText = '近7天';
-    else if (preset === '30d') label.innerText = '近1月';
-    else if (preset === '90d') label.innerText = '近1季';
+    else if (preset === '30d') label.innerText = '近30天';
+    else if (preset === '90d') label.innerText = '近90天';
   }
 
   loadTrackDataForScope(preset);
@@ -1417,6 +1715,36 @@ function switchMasterMode(mode: string) {
   setTimeout(refreshIcons, 50);
 }
 
+function getPointStateInfo(idx: number) {
+  if (!TRACK_POINTS.length || idx < 0 || idx >= TRACK_POINTS.length) {
+    return { type: 'dwell', label: '⏱️ 原地静止', color: '#38bdf8', isOffline: false };
+  }
+  const pt = TRACK_POINTS[idx];
+
+  // 1. 判断是否处于异常长跨度离线盲区 (必须两端均无速度且跨大距离才是盲区)
+  if (idx > 0) {
+    const prev = TRACK_POINTS[idx - 1];
+    const dt = (pt.timestamp - prev.timestamp) / 1000;
+    const radLat = (pt.lat * Math.PI) / 180;
+    const dLat = (pt.lat - prev.lat) * 111000;
+    const dLng = (pt.lng - prev.lng) * 111000 * Math.cos(radLat);
+    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+    const hasSpeed = (pt.speed && pt.speed > 3) || (prev.speed && prev.speed > 3);
+    if (!hasSpeed && dt > 600 && dist > 80) {
+      return { type: 'offline', label: '📡 信号中断', color: '#f43f5e', isOffline: true };
+    }
+  }
+
+  // 2. 正常静止停留
+  if (pt.speed === 0) {
+    return { type: 'dwell', label: '⏱️ 原地静止', color: '#38bdf8', isOffline: false };
+  }
+
+  // 3. 正常位移移动
+  const sColor = getContinuousSpeedColor(pt.speed);
+  return { type: 'moving', label: `${pt.speed} km/h`, color: sColor.hex, isOffline: false };
+}
+
 function renderStateAtPosition(percent: number, isPreview = false) {
   if (!TRACK_POINTS.length) return;
   const numPoints = TRACK_POINTS.length;
@@ -1424,24 +1752,25 @@ function renderStateAtPosition(percent: number, isPreview = false) {
   const pt = TRACK_POINTS[idx];
   if (!pt) return;
   const sColor = getContinuousSpeedColor(pt.speed);
+  const stInfo = getPointStateInfo(idx);
 
   if (!isPreview) {
     const playheadNeedle = document.getElementById('playhead-needle');
     if (playheadNeedle) playheadNeedle.style.left = percent + '%';
     const dot = document.getElementById('playhead-inner-dot');
-    if (dot) dot.style.backgroundColor = sColor.hex;
+    if (dot) dot.style.backgroundColor = stInfo.color;
 
     const liveTime = document.getElementById('live-latest-time');
     if (liveTime && pt.timeStr) liveTime.innerText = pt.timeStr.slice(11, 19);
     const liveSpeed = document.getElementById('live-latest-speed');
     if (liveSpeed) {
-      liveSpeed.innerText = `${pt.speed} km/h`;
-      liveSpeed.style.color = sColor.hex;
+      liveSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
+      liveSpeed.style.color = stInfo.color;
     }
 
     const drawerSpeed = document.getElementById('drawer-speed-badge');
     if (drawerSpeed) {
-      drawerSpeed.innerText = `${pt.speed} km/h`;
+      drawerSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
     }
 
     const timeBox = document.getElementById('current-point-time');
@@ -1449,10 +1778,22 @@ function renderStateAtPosition(percent: number, isPreview = false) {
 
     const speedTag = document.getElementById('current-speed-tag');
     if (speedTag) {
-      speedTag.style.backgroundColor = sColor.rgba(0.2);
-      speedTag.style.borderColor = sColor.rgba(0.5);
-      speedTag.style.color = sColor.hex;
-      speedTag.innerText = `${pt.speed} km/h`;
+      if (stInfo.type === 'offline') {
+        speedTag.style.backgroundColor = 'rgba(225, 29, 72, 0.25)';
+        speedTag.style.borderColor = 'rgba(244, 63, 94, 0.7)';
+        speedTag.style.color = '#fda4af';
+        speedTag.innerText = '📡 信号中断 · 盲区';
+      } else if (stInfo.type === 'dwell') {
+        speedTag.style.backgroundColor = 'rgba(14, 116, 144, 0.28)';
+        speedTag.style.borderColor = 'rgba(56, 189, 248, 0.6)';
+        speedTag.style.color = '#38bdf8';
+        speedTag.innerText = '⏱️ 原地静止 · 0 km/h';
+      } else {
+        speedTag.style.backgroundColor = sColor.rgba(0.25);
+        speedTag.style.borderColor = sColor.rgba(0.65);
+        speedTag.style.color = sColor.hex;
+        speedTag.innerText = `🧭 移动中 · ${pt.speed} km/h`;
+      }
     }
 
     // 同步地图上车辆标点位置，实现滑块拖拽平滑跟跑
@@ -1477,13 +1818,13 @@ function renderStateAtPosition(percent: number, isPreview = false) {
   const drawerSpeed = document.getElementById('drawer-speed-badge');
   if (drawerSpeed) {
     drawerSpeed.style.backgroundColor = sColor.rgba(0.2);
-    drawerSpeed.style.color = sColor.hex;
-    drawerSpeed.innerText = `${pt.speed} km/h`;
+    drawerSpeed.style.color = stInfo.color;
+    drawerSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
   }
   const telSpeed = document.getElementById('tel-tag-speed');
   if (telSpeed) {
-    telSpeed.style.color = sColor.hex;
-    telSpeed.innerText = `${pt.speed} km/h`;
+    telSpeed.style.color = stInfo.color;
+    telSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
   }
 
   if ((window as any).__vehicleMarker) {
@@ -1518,14 +1859,15 @@ function onTimelineMouseMove(e: MouseEvent) {
   const pt = TRACK_POINTS[idx];
   if (!pt) return;
   const sColor = getContinuousSpeedColor(pt.speed);
+  const stInfo = getPointStateInfo(idx);
 
   const bubbleTime = pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 19);
   const elBTime = document.getElementById('hover-bubble-time');
   if (elBTime) elBTime.innerText = bubbleTime;
   const speedBubble = document.getElementById('hover-bubble-speed');
   if (speedBubble) {
-    speedBubble.innerText = `${pt.speed} km/h`;
-    speedBubble.style.color = sColor.hex;
+    speedBubble.innerText = stInfo.label;
+    speedBubble.style.color = stInfo.color;
   }
 
   renderStateAtPosition(p, true);
@@ -2092,6 +2434,44 @@ onMounted(() => {
   setTimeout(refreshIcons, 100);
   setTimeout(refreshIcons, 500);
 
+  if (typeof window !== 'undefined') {
+    (window as any).__loadTrackPoints = (pts: any[]) => {
+      TRACK_POINTS = pts;
+      updateTimelineScaleTicks(pts[0]?.isMultiDay || false);
+      drawSpeedWaveCanvas();
+      renderStateAtPosition(committedPlayhead, false);
+      if (masterMode === 'range') {
+        renderRangeTrackOnMap();
+      } else {
+        renderFullColoredTrackOnMap();
+      }
+    };
+  }
+
+  // 注册 postMessage 监听器，接收内嵌 iframe 或弹出窗的 OAuth 回调 token（真正零跳转）
+  if (typeof window !== 'undefined') {
+    window.addEventListener('message', async (event) => {
+      if (event.data && event.data.type === 'LUAT_OAUTH_TOKEN' && event.data.token) {
+        console.info('[AirTrack] 收到站内 postMessage 授权凭据:', event.data.token);
+        closeInPageOAuth();
+        const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
+        showToast(`已获取授权，正在连接账号 ${pending}...`, 'info', 2000);
+        const ok = await apiClient.exchangeOAuthToken(event.data.token, pending);
+        if (ok) {
+          showToast(`✓ 账号 ${pending} 授权连接成功！`, 'success');
+          refreshAccountStates();
+          await loadRealDevices();
+          const modal = document.getElementById('official-modal');
+          if (modal && !modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+          }
+        } else {
+          showToast('授权连接失败，请重试', 'error');
+        }
+      }
+    });
+  }
+
   // 捕获合宙官方 OAuth 回调 token，并写入「发起登录的那个账号」
   if (typeof window !== 'undefined') {
     const searchStr = window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
@@ -2102,7 +2482,7 @@ onMounted(() => {
       const cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
       apiClient.exchangeOAuthToken(oauthToken, pending).then(ok => {
-        console.info(ok ? `[AirTrack] 账号 ${pending} OAuth 换票成功` : `[AirTrack] 账号 ${pending} 换票失败`);
+        console.info(ok ? `[AirTrack] 账号 ${pending} OAuth 授权成功` : `[AirTrack] 账号 ${pending} 授权失败`);
         refreshAccountStates();
         loadRealDevices();
       });
@@ -2126,7 +2506,7 @@ onMounted(() => {
             if (oauthToken) {
               const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
               const ok = await apiClient.exchangeOAuthToken(oauthToken, pending);
-              console.info(ok ? `[AirTrack] DeepLink 账号 ${pending} OAuth 换票成功` : `[AirTrack] DeepLink 换票失败`);
+              console.info(ok ? `[AirTrack] DeepLink 账号 ${pending} OAuth 授权成功` : `[AirTrack] DeepLink 授权失败`);
               refreshAccountStates();
               await loadRealDevices();
               const modal = document.getElementById('official-modal');
@@ -2188,7 +2568,7 @@ onMounted(() => {
               src: generateCarMarkerIcon()
             })
           },
-          geometries: [{ id: 'v1', styleId: 'car_icon', position: center, properties: { title: '8202G·开封旗舰机' } }]
+          geometries: [{ id: 'v1', styleId: 'car_icon', position: center, properties: { title: '待连接设备' } }]
         });
 
         (window as any).__fenceCircle = new TMap.MultiCircle({

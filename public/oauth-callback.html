@@ -110,6 +110,21 @@
         return;
       }
 
+      // 尝试向父级页面或弹窗源发送 postMessage，实现零跳转静默握手
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'LUAT_OAUTH_TOKEN', token: token }, '*');
+        }
+      } catch (e) {}
+      try {
+        if (window.opener) {
+          window.opener.postMessage({ type: 'LUAT_OAUTH_TOKEN', token: token }, '*');
+          setTimeout(function () {
+            window.close();
+          }, 800);
+        }
+      } catch (e) {}
+
       // 展示 Token
       tokenBox.classList.remove('hidden');
       tokenText.textContent = token;
