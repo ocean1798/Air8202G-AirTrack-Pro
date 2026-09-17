@@ -111,6 +111,19 @@ class DesktopStationClient {
     return null;
   }
 
+  public async fetchDevices(): Promise<any[]> {
+    if (!this.isConnected) return [];
+    try {
+      const resp = await fetch(`${STATION_BASE_URL}/api/devices`);
+      if (resp.ok) {
+        return await resp.json();
+      }
+    } catch (e) {
+      console.warn('[Station] fetchDevices failed', e);
+    }
+    return [];
+  }
+
   public async fetchFences(): Promise<StationFence[]> {
     if (!this.isConnected) return [];
     try {

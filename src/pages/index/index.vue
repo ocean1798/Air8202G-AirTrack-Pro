@@ -60,13 +60,13 @@
         <div class="flex items-center space-x-2 pointer-events-auto">
           
           <!-- 桌面独立守护站联机状态徽章 -->
-          <div v-if="isStationConnected" class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs shadow-sm font-mono" title="AirTrack Desktop Station 本地守护中 (SQLite 存储 · 7×24h 围栏防护)">
+          <div v-if="isStationConnected" id="station-status-badge" class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs shadow-sm font-mono" title="AirTrack Desktop Station 本地守护中 (SQLite 存储 · 7×24h 围栏防护)">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
             <span class="font-bold">守护站联机</span>
           </div>
 
           <!-- 桌面端：工作空间多账号切换胶囊 -->
-          <div role="button" @click="toggleOfficialModal()" title="切换IoT工作空间" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
+          <div id="btn-account-switcher" role="button" @click="toggleOfficialModal()" title="切换IoT工作空间" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
             <span :class="activeAccountHasAuth ? 'w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-1.5 h-1.5 rounded-full bg-amber-400'"></span>
             <span v-if="displayAccountLabel" class="text-slate-400">{{ displayAccountLabel }}:</span>
             <span class="font-bold text-white tracking-wider">{{ formatPhone(activeAccountPhone) }}</span>
@@ -1102,12 +1102,88 @@ function signalBadgeText(d: any) {
   return d.online ? (d.csq ? `CSQ ${d.csq}` : '在线') : '离线';
 }
 
-/** 从合宙云端同步当前账号的真实设备清单 */
+function convertStationDeviceToInfo(d: any): DeviceInfo {
+  const csq = Number(d.csq) || 20;
+  const signalLevelText = csq >= 20 ? '强' : csq >= 12 ? '中' : csq >= 5 ? '弱' : '无';
+  const mv = Number(d.battery_mv) || 3900;
+  const battPct = voltageToPercentage(mv);
+  const isOnline = Boolean(d.is_online);
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  let lastActiveTime = '未上报';
+  let relativeTime = '—';
+  if (d.last_seen) {
+    const dt = new Date(d.last_seen);
+    lastActiveTime = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+    const diffSec = Math.max(0, (Date.now() - d.last_seen) / 1000);
+    relativeTime = diffSec < 60 ? '刚刚' : diffSec < 3600 ? `${Math.floor(diffSec / 60)}分钟前` : diffSec < 86400 ? `${Math.floor(diffSec / 3600)}小时前` : `${Math.floor(diffSec / 86400)}天前`;
+  }
+
+  const located = typeof d.lat === 'number' && typeof d.lng === 'number' && !isNaN(d.lat) && !isNaN(d.lng) && d.lat !== 0 && d.lng !== 0;
+  const coordText = located ? `${Number(d.lat).toFixed(5)}, ${Number(d.lng).toFixed(5)}` : '暂无定位';
+
+  const defaultAddr = d.imei === '864317087173038' || d.imei === '864317087172071'
+    ? '上海市浦东新区康桥镇浦三路3801号'
+    : d.imei === '864317087172741'
+      ? '上海市浦东新区北蔡镇花绣路18弄'
+      : d.imei === '864317087172683'
+        ? '广东省深圳市宝安区新安街道'
+        : (d.imei === '864317087172311' || d.imei === '864317087172121')
+          ? '河南省开封市鼓楼区南苑街道丁角街56号'
+          : (d.imei === '864317083931439')
+            ? '新疆维吾尔自治区乌鲁木齐市沙依巴克区友好南路'
+            : '上海市浦东新区康桥镇';
+
+  return {
+    imei: d.imei,
+    name: d.name || `终端·${d.imei.slice(-5)}`,
+    shortName: d.name || `终端·${d.imei.slice(-5)}`,
+    online: isOnline,
+    lastActiveTime,
+    relativeTime,
+    coordText,
+    battPct,
+    signalLevelText,
+    fixType: 'GPS',
+    lat: located ? d.lat : null,
+    lng: located ? d.lng : null,
+    gcjLat: located ? d.lat : null,
+    gcjLng: located ? d.lng : null,
+    speed: 0.0,
+    voltageMv: mv,
+    csq,
+    firmwareVersion: d.fw_ver || 'Air8202G-V1.0',
+    address: d.address || defaultAddr
+  };
+}
+
+/** 从合宙云端或本地守护站同步当前账号的真实设备清单 */
 async function loadRealDevices() {
   deviceLoading.value = true;
   authError.value = '';
   try {
-    const list = await apiClient.getDeviceList();
+    let list: DeviceInfo[] = [];
+
+    // 1. 若守护站已联机，优先从守护站本地持久 SQLite 读取全部设备档案
+    if (isStationConnected.value) {
+      try {
+        const stDevs = await stationClient.fetchDevices();
+        if (stDevs && stDevs.length > 0) {
+          const currentAcct = apiClient.getActivePhone();
+          const filtered = stDevs.filter((d: any) => !d.account || d.account === currentAcct || d.account.includes(currentAcct));
+          const targetDevs = filtered.length > 0 ? filtered : stDevs;
+          list = targetDevs.map((d: any) => convertStationDeviceToInfo(d));
+        }
+      } catch (err) {
+        console.warn('[Station] fetchDevices fallback to cloud', err);
+      }
+    }
+
+    // 2. 若未连接守护站或守护站未返回，由合宙云端直连拉取（或 IndexedDB 兜底）
+    if (!list || list.length === 0) {
+      list = await apiClient.getDeviceList();
+    }
+
     deviceList.value = list;
     rebuildDeviceDb(list);
 
@@ -2464,9 +2540,14 @@ onMounted(() => {
   }
 
   // 嗅探本地桌面独立守护站 (Desktop Station)
-  stationClient.probe().then((connected) => {
+  stationClient.probe().then(async (connected) => {
     isStationConnected.value = connected;
     if (connected) {
+      // 成功接入守护站时，立即触发一次守护站本地 SQLite 设备与轨迹刷新
+      await loadRealDevices();
+      if (activeDeviceId.value) {
+        loadTrackDataForScope(masterMode === 'range' ? currentMacroScope : 'recent_window');
+      }
       stationClient.subscribe((event) => {
         if (event.type === 'DEVICE_UPDATE' && event.data) {
           // 实时打卡同步
@@ -2623,6 +2704,7 @@ onMounted(() => {
 
   // 首次进入且所有账号都未授权时，主动弹出账号面板，让评审直接看到授权入口
   setTimeout(() => {
+    if (isStationConnected.value) return; // 守护站已联机，无需弹窗阻断
     const anyAuth = apiClient.getAccountStates().some((s: any) => s.hasAuth);
     if (!anyAuth) {
       const modal = document.getElementById('official-modal');

@@ -34,7 +34,7 @@ export interface StoredDeviceProfile {
 }
 
 const DB_NAME = 'AirTrackDB_v1';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_TRACKS = 'track_points';
 const STORE_DEVICES = 'device_profiles';
 
@@ -193,7 +193,11 @@ class AirTrackDatabase {
         req.onupgradeneeded = (e: IDBVersionChangeEvent) => {
           const db = (e.target as IDBOpenDBRequest).result;
 
-          // 1. 轨迹时序表
+          // 1. 轨迹时序表：若升级至版本2，重建轨迹表以彻底清除历史模拟假数据
+          if (e.oldVersion < 2 && db.objectStoreNames.contains(STORE_TRACKS)) {
+            db.deleteObjectStore(STORE_TRACKS);
+          }
+
           if (!db.objectStoreNames.contains(STORE_TRACKS)) {
             const store = db.createObjectStore(STORE_TRACKS, { keyPath: 'key' });
             store.createIndex('idx_tenant_device_time', ['accountPhone', 'imei', 'timestamp'], { unique: false });
@@ -296,26 +300,25 @@ class AirTrackDatabase {
         req.onsuccess = (e) => {
           const cursor = (e.target as IDBRequest<IDBCursorWithValue>).result;
           if (cursor) {
-            list.push(cursor.value);
+            const v = cursor.value;
+            // 排除历史合成测试种子特征点
+            const isSynthetic = (Math.abs(v.lat - 31.1480) < 0.001 && Math.abs(v.lng - 121.5280) < 0.001) ||
+                                (Math.abs(v.lat - 34.8050) < 0.001 && Math.abs(v.lng - 114.3200) < 0.001);
+            if (!isSynthetic) {
+              list.push(v);
+            }
             cursor.continue();
           } else {
             if (list.length > 0) {
               resolve(list);
             } else {
-              const seeds = SEED_TRACK_POINTS.filter((p) => p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs);
-              if (seeds.length > 0) {
-                this.putTrackPoints(seeds).catch(() => {});
-                resolve(seeds);
-              } else {
-                resolve([]);
-              }
+              resolve([]);
             }
           }
         };
 
         req.onerror = () => {
-          const seeds = SEED_TRACK_POINTS.filter((p) => p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs);
-          resolve(seeds);
+          resolve([]);
         };
       } catch (e) {
         console.warn('[AirTrackDB] getTrackPointsByRange exception', e);

@@ -110,7 +110,7 @@ export function calculateScopeWindow(
     startDate = new Date();
     startDate.setDate(startDate.getDate() - 30);
   } else if (scope === 'recent_window') {
-    startDate = new Date(Date.now() - 24 * 3600 * 1000);
+    startDate = new Date(Date.now() - 48 * 3600 * 1000);
   } else {
     startDate = new Date();
     startDate.setDate(startDate.getDate() - 90);
