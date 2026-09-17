@@ -12,6 +12,8 @@ export interface AccountDef {
   phone: string;
   password?: string;
   label?: string;
+  role?: string;
+  isDemo?: boolean;
   projectKey?: string;
   nameHints?: Record<string, DeviceNameHint>;
 }
@@ -21,7 +23,9 @@ export const EVAL_ACCOUNTS: AccountDef[] = [
   {
     phone: '18101796680',
     password: 'Hz8202',
-    label: '',
+    label: '运营保障专号',
+    role: '合宙上海研发中心 · 内部实车长测',
+    isDemo: true,
     projectKey: 'q0eilWQpyjZGFZFS6PFmREsRjUXoButr',
     nameHints: {
       '864317087173038': { name: '设备 73038', shortName: '73038' },
@@ -34,7 +38,9 @@ export const EVAL_ACCOUNTS: AccountDef[] = [
   {
     phone: '19036766195',
     password: 'Hz8202',
-    label: '',
+    label: '仓储监控专号',
+    role: '上海浦东仓储环境 · 静态驻留监测',
+    isDemo: true,
     projectKey: 'ggV1VA89GUTQBMgqKszpSN6E2ZuQG5va',
     nameHints: {
       '864317087172071': { name: '设备 72071', shortName: '72071' },
@@ -44,7 +50,9 @@ export const EVAL_ACCOUNTS: AccountDef[] = [
   {
     phone: '15938684042',
     password: 'Hz8202',
-    label: '',
+    label: '行车定位专号',
+    role: '河南开封车载终端 · 连续运动路测',
+    isDemo: true,
     projectKey: 'zmdfxP8TTUk6jBZoguWeQgSaEK6fiZu9',
     nameHints: {
       '864317087172741': { name: '设备 72741', shortName: '72741' }
@@ -53,7 +61,9 @@ export const EVAL_ACCOUNTS: AccountDef[] = [
   {
     phone: '13384022744',
     password: 'Hz8202',
-    label: '',
+    label: '资产巡检专号',
+    role: '深圳物联网测试中心 · 固定基站节点',
+    isDemo: true,
     projectKey: 'c3SeanQXjxiBvHYHZIDgi9FM6yBZj09s',
     nameHints: {
       '864317087172683': { name: '设备 72683', shortName: '72683' }
@@ -162,7 +172,15 @@ export function getAllRegisteredAccounts(): AccountDef[] {
 
   const list = [...userAccounts];
   for (const evalAcct of EVAL_ACCOUNTS) {
-    if (!list.some(a => a.phone === evalAcct.phone)) {
+    const existingIdx = list.findIndex(a => a.phone === evalAcct.phone);
+    if (existingIdx >= 0) {
+      list[existingIdx] = {
+        ...evalAcct,
+        ...list[existingIdx],
+        label: list[existingIdx].label || evalAcct.label,
+        role: list[existingIdx].role || evalAcct.role
+      };
+    } else {
       list.push(evalAcct);
     }
   }

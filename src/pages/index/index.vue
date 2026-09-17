@@ -32,6 +32,15 @@
         <!-- 移动端专享：分隔竖线 -->
         <div class="w-px h-5 bg-white/10 mx-1.5 shrink-0"></div>
 
+        <!-- 移动端专享：设备刷新圆钮（常驻外侧，不随滑轨滚动，不被遮罩虚化） -->
+        <div id="btn-refresh-devices-mobile"
+             role="button"
+             @click.stop="manualRefreshDevices"
+             title="刷新设备状态"
+             class="shrink-0 p-1.5 rounded-full border border-cyber-700/60 hover:border-cyber-primary text-slate-300 hover:text-cyber-primary bg-cyber-950/80 transition cursor-pointer mr-1">
+          <i data-lucide="refresh-cw" :class="['w-3.5 h-3.5', isDeviceRefreshing ? 'animate-spin text-cyber-primary' : '']"></i>
+        </div>
+
         <!-- 移动端专享：纯用户头像 (不带电话号码) -->
         <div role="button" @click="toggleOfficialModal()" title="IoT工作空间与账号管理" class="shrink-0 relative group p-0.5 rounded-full border border-cyber-primary/50 shadow-glow-cyan hover:border-cyber-primary active:scale-95 transition-all bg-cyber-950/80">
           <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-600/40 via-cyber-800 to-blue-600/50 flex items-center justify-center overflow-hidden border border-white/20">
@@ -73,10 +82,60 @@
             <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
           </div>
 
-          <!-- 桌面端 Android APK 下载快捷键 -->
-          <a href="https://github.com/ocean1798/Air8202G-AirTrack-Pro/releases/download/v1.0.0/airtrack-pro.apk" target="_blank" title="下载 Android 原生客户端 (APK)" class="glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition shadow-lg flex items-center justify-center active:scale-90">
-            <i data-lucide="smartphone" class="w-4 h-4"></i>
-          </a>
+          <!-- 桌面端 Android 手机 APP 下载引导入口 (双通道：扫码 + 电脑直下) -->
+          <div class="relative">
+            <div id="btn-app-download"
+                 role="button"
+                 @click.stop="toggleDownloadPopover()"
+                 title="下载 Android 手机客户端"
+                 class="glass-panel px-2.5 py-1.5 rounded-2xl text-xs font-medium text-slate-300 border border-cyber-700/60 hover:text-cyber-primary hover:border-cyber-primary transition flex items-center space-x-1.5 shadow-sm cursor-pointer">
+              <i data-lucide="smartphone" class="w-3.5 h-3.5 text-cyber-primary"></i>
+              <span class="font-sans">手机 App</span>
+              <i data-lucide="download" class="w-3 h-3 text-slate-400"></i>
+            </div>
+
+            <!-- 呼出的 Popover 引导卡片 -->
+            <div v-show="showDownloadPopover"
+                 @click.stop
+                 class="absolute top-11 right-0 w-64 glass-panel p-4 rounded-2xl border border-cyber-primary/50 shadow-glow-cyan z-50 flex flex-col space-y-3 bg-cyber-950/95 backdrop-blur-2xl">
+              <div class="flex items-center justify-between pb-2 border-b border-white/10">
+                <div class="flex items-center space-x-1.5">
+                  <i data-lucide="smartphone" class="w-4 h-4 text-cyber-primary"></i>
+                  <span class="text-xs font-bold text-white">Android 原生客户端</span>
+                </div>
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1 py-0.2 rounded">v1.0.0</span>
+                  <div role="button" @click="showDownloadPopover = false" class="text-slate-400 hover:text-white p-0.5 cursor-pointer">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 通道一：手机扫码即刻安装 (100% 离线预生成内联 SVG 二维码) -->
+              <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-cyber-900/90 border border-cyber-700/50">
+                <div class="w-32 h-32 rounded-lg bg-white p-1.5 shadow flex items-center justify-center">
+                  <div v-html="OFFLINE_APK_QR_SVG" class="w-full h-full"></div>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-2 font-mono flex items-center space-x-1">
+                  <i data-lucide="scan" class="w-3 h-3 text-cyber-primary"></i>
+                  <span>手机扫码直接安装 (4.2 MB)</span>
+                </span>
+              </div>
+
+              <!-- 通道二：电脑直接下载文件 -->
+              <a :href="APK_DOWNLOAD_URL"
+                 download="airtrack-pro.apk"
+                 target="_blank"
+                 class="w-full py-2 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan text-center flex items-center justify-center space-x-1.5 no-underline">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>电脑直接下载 APK</span>
+              </a>
+
+              <div class="text-[9px] text-slate-400 text-center font-mono">
+                基于 Capacitor 8 原生打包 · 独立免守护站运行
+              </div>
+            </div>
+          </div>
 
         </div>
 
@@ -101,8 +160,19 @@
           <span class="text-xs font-bold text-slate-200">监控设备列表</span>
           <span class="text-[10px] font-mono text-slate-400 bg-cyber-900 px-1.5 py-0.2 rounded border border-cyber-700">共 {{ deviceList.length }} 台</span>
         </div>
-        <div role="button" @click="toggleDeviceDock()" id="btn-collapse-dock" title="收起设备列表" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer">
-          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        <div class="flex items-center space-x-1">
+          <!-- 手动刷新按钮（统一使用 div role="button"，避免原生 button 样式污染） -->
+          <div id="btn-refresh-devices"
+               role="button"
+               @click.stop="manualRefreshDevices"
+               title="刷新设备列表与状态"
+               class="p-1 rounded-lg text-slate-400 hover:text-cyber-primary hover:bg-cyber-primary/10 transition cursor-pointer">
+            <i data-lucide="refresh-cw" :class="['w-3.5 h-3.5', isDeviceRefreshing ? 'animate-spin text-cyber-primary' : '']"></i>
+          </div>
+          <!-- 折叠收起按钮 -->
+          <div role="button" @click="toggleDeviceDock()" id="btn-collapse-dock" title="收起设备列表" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </div>
         </div>
       </div>
 
@@ -322,7 +392,19 @@
     </aside>
 
     <!-- ==================== 6. 底部核心：【双端自适应时间轴控制台】 ==================== -->
-    <div id="timeline-hud-wrapper" class="fixed bottom-[82px] left-2 right-2 z-20 flex flex-col items-center pointer-events-none transition-all duration-300 md:fixed md:bottom-3 md:left-3 md:right-3 md:max-w-5xl md:mx-auto md:z-20">
+    <div id="timeline-hud-wrapper" class="fixed bottom-[82px] left-2 right-2 z-20 flex flex-col items-center pointer-events-none transition-all duration-300 md:fixed md:bottom-3 md:left-3 md:right-3 md:max-w-5xl md:mx-auto md:z-20 relative">
+      
+      <!-- 6.A 桌面端独占：外置悬浮车辆定位按钮（右上角外挂，不挤压时间轴内部空间，保持地图穿透） -->
+      <div class="hidden md:flex absolute -top-10 right-0 pointer-events-auto z-20">
+        <div id="btn-recenter-float"
+             role="button"
+             @click="recenterVehicle()"
+             title="视口居中到当前设备"
+             class="glass-panel px-3 py-1.5 rounded-xl text-xs font-medium text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/20 hover:border-cyber-primary active:scale-95 transition flex items-center space-x-1.5 shadow-glow-cyan backdrop-blur-md cursor-pointer bg-cyber-950/90">
+          <i data-lucide="crosshair" class="w-3.5 h-3.5 text-cyber-primary"></i>
+          <span class="tracking-wide font-sans">车辆定位</span>
+        </div>
+      </div>
       
       <!-- 6.0 宏观历史跨度配置弹层 -->
       <div id="date-range-popover" class="w-full max-w-xl glass-panel p-3.5 sm:p-4 rounded-2xl border border-cyber-primary/40 shadow-popover-shadow mb-2 hidden pointer-events-auto transition-all backdrop-blur-2xl">
@@ -437,12 +519,6 @@
         <div class="flex items-center justify-between flex-wrap gap-1.5 pt-1 border-t border-white/5 text-xs font-mono">
           
           <div class="flex items-center space-x-1.5">
-            <!-- 视角回正/定位按钮 (移到底部控制台，符合操作动线) -->
-            <div role="button" @click="recenterVehicle()" title="定位至当前设备视角" class="px-2 py-0.5 sm:py-1 rounded-xl glass-panel text-slate-300 hover:text-cyber-primary hover:border-cyber-primary transition border border-white/10 flex items-center space-x-1 text-[10px] sm:text-[11px] shadow-sm cursor-pointer active:scale-95 bg-cyber-950/80">
-              <i data-lucide="crosshair" class="w-3.5 h-3.5 text-cyber-primary"></i>
-              <span class="font-bold">定位</span>
-            </div>
-
             <!-- 模式切换器 -->
             <div class="flex items-center bg-cyber-950/90 rounded-xl border border-white/10 p-0.5 shadow-inner">
               <div role="button" @click="switchMasterMode('live')" id="btn-mode-live" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan">
@@ -510,167 +586,55 @@
       </div>
     </div>
 
-    <!-- ==================== 7. 账号管理弹窗 ==================== -->
+    <!-- ==================== 7. 账号管理弹窗（100% 还原合宙官方评测 4 账号一键切换） ==================== -->
     <div id="official-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden" @click.self="toggleOfficialModal()">
-      <div class="glass-panel max-w-lg w-full p-4 sm:p-5 rounded-2xl border border-cyber-primary/40 shadow-glow-cyan relative max-h-[90vh] overflow-y-auto">
-        <div role="button" @click="toggleOfficialModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1">
+      <div class="glass-panel max-w-md w-full p-4 sm:p-5 rounded-2xl border border-cyber-primary/40 shadow-glow-cyan relative max-h-[88vh] overflow-y-auto">
+        <div role="button" @click="toggleOfficialModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
         </div>
 
-        <div class="flex items-center space-x-3 mb-4 pb-3 border-b border-white/10">
-          <div class="w-9 h-9 rounded-xl bg-cyber-primary/20 border border-cyber-primary text-cyber-primary flex items-center justify-center shadow-glow-cyan shrink-0">
-            <i data-lucide="user-check" class="w-4.5 h-4.5"></i>
+        <div class="text-center mb-4">
+          <div class="w-10 h-10 rounded-xl bg-cyber-primary/20 border border-cyber-primary text-cyber-primary flex items-center justify-center mx-auto mb-2.5 shadow-glow-cyan">
+            <i data-lucide="users" class="w-5 h-5"></i>
           </div>
-          <div>
-            <h3 class="text-sm font-bold text-white tracking-wide">账号管理</h3>
-            <p class="text-[11px] text-slate-400">管理当前合宙 IoT 账号，或登录新账号</p>
-          </div>
+          <h3 class="text-sm font-bold text-white tracking-wide">合宙官方评测账号切换</h3>
+          <p class="text-[11px] text-slate-400 mt-1">4 个账号共用密码 Hz8202 · 100% 真实网关对接</p>
         </div>
 
-        <!-- 1. 当前活跃账号（重点呈现） -->
-        <div class="mb-4">
-          <div class="text-[10px] font-mono text-slate-400 mb-1.5 uppercase tracking-wider">当前登录账号</div>
-          <template v-for="s in accountStates" :key="s.account.phone">
-            <div v-if="s.active"
-                 class="p-3.5 rounded-xl border border-cyber-primary/80 bg-gradient-to-r from-cyber-primary/15 via-cyber-900/80 to-cyber-950/90 shadow-glow-cyan flex flex-col space-y-2.5">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                  <div class="w-3.5 h-3.5 rounded-full border-2 border-cyber-primary flex items-center justify-center shrink-0">
-                    <div class="w-1.5 h-1.5 rounded-full bg-cyber-primary"></div>
-                  </div>
-                  <!-- 行内编辑备注名 -->
-                  <div v-if="editingPhone === s.account.phone" class="flex items-center space-x-1" @click.stop>
-                    <input :id="'edit-alias-input-' + s.account.phone"
-                           v-model="editingAlias"
-                           @keyup.enter="saveAccountAlias(s.account.phone)"
-                           @blur="saveAccountAlias(s.account.phone)"
-                           placeholder="输入自定义备注..."
-                           class="bg-cyber-950 border border-cyber-primary text-xs text-white px-2 py-0.5 rounded outline-none w-36 font-sans" />
-                    <span role="button" @click.stop="saveAccountAlias(s.account.phone)" class="text-cyber-primary text-xs cursor-pointer font-bold px-1 hover:text-cyan-300">✓</span>
-                  </div>
-                  <div v-else class="flex items-center space-x-1.5">
-                    <span class="text-xs font-bold font-mono text-white tracking-wide">{{ formatPhone(s.account.phone) }}</span>
-                    <span v-if="s.account.label" class="text-[11px] text-slate-300 font-medium">({{ s.account.label }})</span>
-                    <span role="button"
-                          @click.stop="startEditAccountAlias(s.account, $event)"
-                          title="修改备注名"
-                          class="text-slate-500 hover:text-cyber-primary cursor-pointer transition p-0.5">
-                      <i data-lucide="pencil" class="w-3 h-3"></i>
-                    </span>
-                  </div>
-                </div>
-
-                <div class="shrink-0">
-                  <span class="text-[10px] font-mono text-slate-300 bg-cyber-950 px-2 py-0.5 rounded border border-cyber-700/60 whitespace-nowrap">
-                    {{ s.deviceCount ? `${s.deviceCount} 台设备` : '暂无设备' }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- 状态与控制条 -->
-              <div class="pt-2 border-t border-white/5 flex items-center justify-between text-xs">
-                <div class="flex items-center space-x-1.5">
-                  <template v-if="s.isExpired">
-                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
-                    <span class="text-[10px] font-mono text-rose-400 font-bold">登录已失效</span>
-                  </template>
-                  <template v-else-if="s.hasAuth">
-                    <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
-                    <span class="text-[10px] font-mono text-cyber-emerald">连接正常</span>
-                  </template>
-                  <template v-else>
-                    <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
-                    <span class="text-[10px] font-mono text-slate-400">未登录</span>
-                  </template>
-                </div>
-
-                <div class="flex items-center space-x-2" @click.stop>
-                  <div v-if="s.hasAuth && !s.isExpired"
-                       role="button"
-                       @click="refreshAccountCredential(s.account.phone)"
-                       title="检测凭据健康状态"
-                       class="px-2 py-1 rounded-lg text-[10px] font-mono text-slate-300 hover:text-cyber-primary hover:bg-cyber-primary/10 border border-white/5 transition flex items-center space-x-1 cursor-pointer">
-                    <i data-lucide="refresh-cw" :class="['w-3 h-3', checkingPhone === s.account.phone ? 'animate-spin text-cyber-primary' : '']"></i>
-                    <span>{{ checkingPhone === s.account.phone ? '检测中...' : '检测凭据' }}</span>
-                  </div>
-
-                  <div v-if="s.isExpired || !s.hasAuth"
-                       role="button"
-                       @click="openOAuthAuthorization(s.account.phone)"
-                       class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan flex items-center space-x-1 cursor-pointer">
-                    <i data-lucide="shield-check" class="w-3 h-3"></i>
-                    <span>{{ s.isExpired ? '重新登录' : '去授权登录' }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- 2. 已保存的其他账号列表（极简单行切换） -->
-        <div v-if="accountStates.filter(s => !s.active).length > 0" class="mb-4">
-          <div class="text-[10px] font-mono text-slate-400 mb-1.5 uppercase tracking-wider">切换其他账号</div>
-          <div class="space-y-1.5">
-            <div v-for="s in accountStates.filter(s => !s.active)" :key="s.account.phone"
-                 @click="switchAccount(s.account.phone)"
-                 class="px-3 py-2 rounded-xl border border-cyber-700/60 bg-cyber-900/60 hover:border-slate-500 transition flex items-center justify-between cursor-pointer">
-              <div class="flex items-center space-x-2 min-w-0">
-                <span class="text-xs font-mono font-medium text-slate-200">{{ formatPhone(s.account.phone) }}</span>
-                <span v-if="s.account.label" class="text-[11px] text-slate-400 truncate">({{ s.account.label }})</span>
-                <span class="text-[9px] font-mono text-slate-500">· {{ s.deviceCount || 0 }}台</span>
-              </div>
-              <div class="flex items-center space-x-2 shrink-0" @click.stop>
-                <div role="button"
-                     @click="switchAccount(s.account.phone)"
-                     class="px-2 py-0.5 rounded-lg text-[10px] text-slate-300 hover:text-white hover:bg-white/10 border border-white/10 transition cursor-pointer">
-                  切换
-                </div>
-                <div role="button"
-                     @click="removeAccountItem(s.account.phone, $event)"
-                     title="移除该账号"
-                     class="p-1 text-slate-500 hover:text-rose-400 transition cursor-pointer">
-                  <i data-lucide="trash-2" class="w-3 h-3"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 3. 登录与绑定新账号入口 -->
-        <div class="pt-3 border-t border-white/10 space-y-2.5">
-          <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">登录/绑定新合宙账号</div>
-          
-          <div class="p-3 rounded-xl bg-cyber-950/80 border border-cyber-700/60 space-y-2.5">
-            <div>
-              <label class="text-[10px] font-mono text-slate-400 block mb-1">合宙 IoT 手机号码:</label>
+        <!-- 4 个官方评测账号单层平铺卡片（一键快速切换） -->
+        <div class="space-y-2">
+          <div v-for="s in accountStates" :key="s.account.phone"
+               role="button"
+               @click="switchAccount(s.account.phone)"
+               :class="s.active ? 'p-3 rounded-xl border border-cyber-primary/80 bg-cyber-primary/15 shadow-glow-cyan cursor-pointer transition-all' : 'p-3 rounded-xl border border-cyber-700/60 bg-cyber-900/50 hover:border-slate-500 cursor-pointer transition-all'">
+            <div class="flex items-center justify-between">
               <div class="flex items-center space-x-2">
-                <input v-model="newAccountInputPhone" type="tel" placeholder="输入合宙账号手机号" class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:border-cyber-primary focus:outline-none font-mono">
-                <div role="button" @click="startOAuthForPhone()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shrink-0 cursor-pointer shadow-glow-cyan">
-                  去授权登录
-                </div>
+                <span :class="s.active ? 'w-2 h-2 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-2 h-2 rounded-full bg-slate-600'"></span>
+                <span :class="s.active ? 'text-xs font-bold text-white' : 'text-xs font-bold text-slate-300'">{{ s.account.label }}</span>
+                <span class="text-xs font-mono text-slate-400">{{ formatPhone(s.account.phone) }}</span>
               </div>
+              <span :class="s.hasAuth ? 'text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30' : 'text-[9px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30'">
+                {{ s.hasAuth ? '已登录' : '未登录' }}
+              </span>
             </div>
-
-            <!-- 便捷外部授权 Token 粘贴通道 -->
-            <div class="pt-2 border-t border-white/5 space-y-1">
-              <div class="flex items-center space-x-2">
-                <input v-model="pastedOAuthTokenOrUrl" placeholder="若在外部浏览器授权，可在此粘贴回调链接或 Token" class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-2 py-1 text-[11px] text-white placeholder-slate-500 focus:border-cyber-primary focus:outline-none font-mono">
-                <div role="button" @click="submitPastedOAuthToken()" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-800 transition shrink-0 cursor-pointer">
-                  {{ isExchangingPastedToken ? '绑定中...' : '绑定' }}
-                </div>
-              </div>
+            <div class="text-[10px] text-slate-400 mt-1.5 flex items-center justify-between">
+              <span>{{ s.account.role || '合宙官方实测节点' }}</span>
+              <span class="font-mono text-slate-500">{{ s.active && deviceList.length ? deviceList.length + ' 台设备' : (s.hasAuth ? '点击切换查看' : '需先授权') }}</span>
             </div>
           </div>
         </div>
 
-        <!-- 4. 官方评测账号快捷辅助（极简底部辅助行，绝不反客为主） -->
-        <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-slate-500">
-          <span>评测调试？快捷填入官方评测账号:</span>
-          <div class="flex items-center space-x-1.5">
-            <span role="button" @click="newAccountInputPhone = '18101796680'" class="px-1.5 py-0.5 rounded bg-white/5 hover:bg-cyber-primary/20 hover:text-cyber-primary border border-white/10 cursor-pointer transition">181</span>
-            <span role="button" @click="newAccountInputPhone = '19036766195'" class="px-1.5 py-0.5 rounded bg-white/5 hover:bg-cyber-primary/20 hover:text-cyber-primary border border-white/10 cursor-pointer transition">190</span>
-            <span role="button" @click="newAccountInputPhone = '15938684042'" class="px-1.5 py-0.5 rounded bg-white/5 hover:bg-cyber-primary/20 hover:text-cyber-primary border border-white/10 cursor-pointer transition">159</span>
-            <span role="button" @click="newAccountInputPhone = '13384022744'" class="px-1.5 py-0.5 rounded bg-white/5 hover:bg-cyber-primary/20 hover:text-cyber-primary border border-white/10 cursor-pointer transition">133</span>
+        <!-- 底部控制条 -->
+        <div class="mt-4 pt-3.5 border-t border-white/10 space-y-2">
+          <div class="text-[10px] text-slate-500 font-mono break-all text-center">
+            当前激活：{{ activeAccountPhone }}
+          </div>
+          <div role="button" @click="openOAuthAuthorization(activeAccountPhone)" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan text-center cursor-pointer flex items-center justify-center space-x-1.5">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+            <span>授权 / 重登当前账号</span>
+          </div>
+          <div role="button" @click="syncOfficialData()" class="w-full py-2 rounded-xl text-xs font-medium border border-cyber-primary/40 text-slate-200 hover:bg-cyber-primary/10 transition text-center cursor-pointer">
+            立即同步刷新云端最新遥测
           </div>
         </div>
 
@@ -740,6 +704,7 @@ import { AirCloudClient, calculateScopeWindow } from '../../api/client';
 import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-model';
 import { wgs84ToGcj02 } from '../../utils/coord-transform';
 import { stationClient } from '../../utils/station-client';
+import { APK_DOWNLOAD_URL, OFFLINE_APK_QR_SVG } from '../../utils/apk-qr';
 
 declare const TMap: any;
 declare const lucide: any;
@@ -747,6 +712,40 @@ declare const echarts: any;
 
 const apiClient = AirCloudClient.getInstance();
 const isStationConnected = ref(false);
+
+// 手机 APP 引导弹层状态
+const showDownloadPopover = ref(false);
+
+function toggleDownloadPopover() {
+  showDownloadPopover.value = !showDownloadPopover.value;
+  if (showDownloadPopover.value) {
+    nextTick(refreshIcons);
+  }
+}
+
+// 设备手动刷新状态
+const isDeviceRefreshing = ref(false);
+
+async function manualRefreshDevices() {
+  if (isDeviceRefreshing.value) return;
+  isDeviceRefreshing.value = true;
+  try {
+    // 若守护站已联机，先请求后台调度器同步最新设备
+    if (isStationConnected.value) {
+      await stationClient.fetchDevices();
+    }
+    await loadRealDevices();
+    showToast('已同步最新设备与状态', 'success', 2500);
+  } catch (err) {
+    console.warn('[AirTrack] 手动刷新设备失败:', err);
+    showToast('设备同步失败，请检查网络', 'error');
+  } finally {
+    setTimeout(() => {
+      isDeviceRefreshing.value = false;
+      nextTick(refreshIcons);
+    }, 600);
+  }
+}
 
 function refreshIcons() {
   if (typeof lucide !== 'undefined') {
@@ -949,17 +948,6 @@ async function refreshAccountCredential(phone: string) {
   }
 }
 
-const isAddingAccount = ref(false);
-const newAccountInputPhone = ref('');
-const showManualCreds = ref(false);
-const manualToken = ref('');
-const manualSalt = ref('');
-const manualSid = ref('336677');
-const manualProjectKey = ref('');
-
-const pastedOAuthTokenOrUrl = ref('');
-const isExchangingPastedToken = ref(false);
-
 // 站内沉浸式官方授权浮层状态（零跳转）
 const showInPageOAuthModal = ref(false);
 const inPageOAuthUrl = ref('');
@@ -985,40 +973,8 @@ function showToast(msg: string, type: 'success' | 'info' | 'error' = 'info', dur
   }, duration);
 }
 
-async function submitPastedOAuthToken() {
-  const raw = pastedOAuthTokenOrUrl.value.trim();
-  if (!raw) return;
-  const token = apiClient.extractToken(raw);
-  if (!token) {
-    showToast('未在输入内容中识别到有效的 token 参数', 'error');
-    return;
-  }
-  const target = (newAccountInputPhone.value || activeAccountPhone.value).trim();
-  isExchangingPastedToken.value = true;
-  try {
-    const ok = await apiClient.exchangeOAuthToken(token, target);
-    if (ok) {
-      pastedOAuthTokenOrUrl.value = '';
-      isAddingAccount.value = false;
-      refreshAccountStates();
-      await loadRealDevices();
-      showToast(`✓ 账号 ${target} 授权连接成功！`, 'success');
-      const modal = document.getElementById('official-modal');
-      if (modal && !modal.classList.contains('hidden')) {
-        modal.classList.add('hidden');
-      }
-    } else {
-      showToast('授权绑定失败，请检查凭据是否有效或已过期', 'error');
-    }
-  } catch (e) {
-    showToast('网络连接异常，请重试', 'error');
-  } finally {
-    isExchangingPastedToken.value = false;
-  }
-}
-
 async function openOAuthAuthorization(phone?: string) {
-  const target = (phone || newAccountInputPhone.value || activeAccountPhone.value).trim();
+  const target = (phone || activeAccountPhone.value).trim();
   if (!target) return;
   const url = apiClient.buildOAuthUrl(target, window.location.href);
   console.info('[AirTrack] 打开合宙官方 OAuth 授权:', url);
@@ -1041,39 +997,6 @@ async function openOAuthAuthorization(phone?: string) {
   isIframeLoading.value = true;
   showInPageOAuthModal.value = true;
   nextTick(refreshIcons);
-}
-
-function startOAuthForPhone(phone?: string) {
-  const target = phone || newAccountInputPhone.value.trim();
-  openOAuthAuthorization(target);
-}
-
-function submitManualCreds() {
-  const p = (newAccountInputPhone.value || activeAccountPhone.value).trim();
-  if (!p || !manualToken.value.trim() || !manualSalt.value.trim()) return;
-  apiClient.manualImportAuth(p, manualToken.value.trim(), manualSalt.value.trim(), manualSid.value.trim() || '336677', manualProjectKey.value.trim());
-  showManualCreds.value = false;
-  isAddingAccount.value = false;
-  newAccountInputPhone.value = '';
-  manualToken.value = '';
-  manualSalt.value = '';
-  refreshAccountStates();
-  loadRealDevices();
-}
-
-function removeAccountItem(phone: string, event: Event) {
-  event.stopPropagation();
-  if (phone === activeAccountPhone.value) {
-    showToast('不能删除当前正在使用的账号', 'error');
-    return;
-  }
-  apiClient.removeAccount(phone);
-  showToast(`已解绑并移除账号 ${phone}`, 'info');
-  refreshAccountStates();
-}
-
-function removeUserAccount(phone: string, event: Event) {
-  removeAccountItem(phone, event);
 }
 
 function mobileTabClass(d: any) {
@@ -1717,18 +1640,6 @@ function drawSpeedWaveCanvas() {
   // 7. 贴底极细 2px 彩色基线（物理基准，避免底部完全空白脱节）
   ctx.fillStyle = speedGradient;
   ctx.fillRect(0, h - 2, w, 2);
-
-  // 8. 若当前跨度内全段均处于静止驻留 (maxSpeed < 1.0)，在波形正中绘制微光科技文字提示
-  const maxSpeed = pts.reduce((m, p) => Math.max(m, p.speed), 0);
-  if (maxSpeed < 1.0 && numPoints > 0) {
-    ctx.save();
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
-    ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('全时段原地驻留 · 速度 0.0 km/h', w / 2, h / 2);
-    ctx.restore();
-  }
 }
 
 let masterMode = 'live';
@@ -2716,6 +2627,14 @@ onMounted(() => {
   setupSilkyTimelineInteractions();
   setupMobileSheetTouchGestures();
   switchMasterMode('live');
+
+  // 全局点击空白处自动收起手机 APP 引导气泡
+  const onGlobalClick = () => {
+    if (showDownloadPopover.value) {
+      showDownloadPopover.value = false;
+    }
+  };
+  window.addEventListener('click', onGlobalClick);
 
   setTimeout(() => {
     drawSpeedWaveCanvas();
