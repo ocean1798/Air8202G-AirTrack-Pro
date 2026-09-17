@@ -59,6 +59,12 @@
         <!-- 桌面端右侧控制簇：完整工作空间号码 + Android客户端快捷下载 (移除错位按钮) -->
         <div class="flex items-center space-x-2 pointer-events-auto">
           
+          <!-- 桌面独立守护站联机状态徽章 -->
+          <div v-if="isStationConnected" class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs shadow-sm font-mono" title="AirTrack Desktop Station 本地守护中 (SQLite 存储 · 7×24h 围栏防护)">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="font-bold">守护站联机</span>
+          </div>
+
           <!-- 桌面端：工作空间多账号切换胶囊 -->
           <div role="button" @click="toggleOfficialModal()" title="切换IoT工作空间" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
             <span :class="activeAccountHasAuth ? 'w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-1.5 h-1.5 rounded-full bg-amber-400'"></span>
@@ -757,12 +763,14 @@ import { Capacitor } from '@capacitor/core';
 import { AirCloudClient } from '../../api/client';
 import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-model';
 import { wgs84ToGcj02 } from '../../utils/coord-transform';
+import { stationClient } from '../../utils/station-client';
 
 declare const TMap: any;
 declare const lucide: any;
 declare const echarts: any;
 
 const apiClient = AirCloudClient.getInstance();
+const isStationConnected = ref(false);
 
 function refreshIcons() {
   if (typeof lucide !== 'undefined') {
@@ -2442,6 +2450,25 @@ onMounted(() => {
       }
     };
   }
+
+  // 嗅探本地桌面独立守护站 (Desktop Station)
+  stationClient.probe().then((connected) => {
+    isStationConnected.value = connected;
+    if (connected) {
+      stationClient.subscribe((event) => {
+        if (event.type === 'DEVICE_UPDATE' && event.data) {
+          // 实时打卡同步
+          const d = event.data;
+          const idx = accountDevices.value.findIndex(item => item.imei === d.imei);
+          if (idx !== -1) {
+            accountDevices.value[idx].lat = d.lat;
+            accountDevices.value[idx].lng = d.lng;
+            accountDevices.value[idx].status = d.is_online ? '在线' : '离线';
+          }
+        }
+      });
+    }
+  });
 
   // 注册 postMessage 监听器，接收内嵌 iframe 或弹出窗的 OAuth 回调 token（真正零跳转）
   if (typeof window !== 'undefined') {
