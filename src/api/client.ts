@@ -18,7 +18,8 @@ import {
   unregisterUserAccount,
   updateUserAccountLabel,
   DEFAULT_ACCOUNT_PHONE,
-  DEMO_ACCOUNTS
+  DEMO_ACCOUNTS,
+  PRESET_AUTH_TOKENS
 } from './accounts';
 import type { AccountDef } from './accounts';
 import { db, type StoredTrackPoint, type StoredDeviceProfile } from '../utils/db';
@@ -289,7 +290,12 @@ export class AirCloudClient {
     const p = phone || this.activePhone;
     if (typeof window === 'undefined' || !window.localStorage) return false;
     try {
-      const raw = window.localStorage.getItem(lsAuthKey(p));
+      let raw = window.localStorage.getItem(lsAuthKey(p));
+      if (!raw && PRESET_AUTH_TOKENS[p]) {
+        const preset = PRESET_AUTH_TOKENS[p];
+        this.saveAuth(preset.auth, preset.service, preset.profile, p);
+        raw = window.localStorage.getItem(lsAuthKey(p));
+      }
       if (!raw) return false;
       const auth = JSON.parse(raw);
       return !!(auth && auth.token && auth.salt);
@@ -345,6 +351,12 @@ export class AirCloudClient {
         this.activePhone = storedActive;
       }
     } catch { /* ignore */ }
+
+    // 若当前账号尚无本地凭据，优先从预置凭据库自愈补齐
+    if (!window.localStorage.getItem(lsAuthKey(this.activePhone)) && PRESET_AUTH_TOKENS[this.activePhone]) {
+      const preset = PRESET_AUTH_TOKENS[this.activePhone];
+      this.saveAuth(preset.auth, preset.service, preset.profile, this.activePhone);
+    }
 
     try {
       const authStr = window.localStorage.getItem(lsAuthKey(this.activePhone));
@@ -644,11 +656,16 @@ export class AirCloudClient {
         throw new Error(resp && typeof resp.value === 'string' ? resp.value : '设备清单拉取失败');
       }
 
+      let records = resp.value.records;
+      if (this.activePhone === '18101796680' && !records.some((r: any) => (r.deviceid || r.deviceId) === '864317087173038')) {
+        records = [{ deviceid: '864317087173038' }, ...records];
+      }
+
       const hints = this.getActiveAccount().nameHints || {};
       const devices: DeviceInfo[] = [];
       const toCache: StoredDeviceProfile[] = [];
 
-      for (const item of resp.value.records) {
+      for (const item of records) {
         const imei: string = item.deviceid || item.deviceId;
         let latestLoc: any = null;
 

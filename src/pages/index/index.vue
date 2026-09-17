@@ -736,7 +736,7 @@ import { onMounted, onUnmounted, nextTick, ref, computed } from 'vue';
 import { App as CapApp } from '@capacitor/app';
 import { Browser as CapBrowser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
-import { AirCloudClient } from '../../api/client';
+import { AirCloudClient, calculateScopeWindow } from '../../api/client';
 import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-model';
 import { wgs84ToGcj02 } from '../../utils/coord-transform';
 import { stationClient } from '../../utils/station-client';
@@ -1297,6 +1297,42 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
   isTrackLoading = true;
 
   try {
+    // 0. 若已连接独立守护站 (AirTrack Station)，优先向守护站本地高持久 SQLite 获取
+    if (isStationConnected.value) {
+      const { startMs, endMs, isMultiDay } = calculateScopeWindow(scope, startDate || undefined, endDate || undefined);
+      const stPoints = await stationClient.fetchHistory(imei, startMs, endMs, 2000);
+      if (stPoints && stPoints.length > 0) {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const points = stPoints.map((p: any, idx: number) => {
+          const d = new Date(p.timestamp);
+          const timeStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+          return {
+            index: idx,
+            lat: p.lat,
+            lng: p.lng,
+            gcjLat: p.lat,
+            gcjLng: p.lng,
+            speed: p.speed || 0.0,
+            timeStr,
+            timestamp: p.timestamp,
+            isMultiDay
+          };
+        });
+        TRACK_POINTS = points;
+        updateTimelineScaleTicks(isMultiDay);
+        drawSpeedWaveCanvas();
+        updateLiveStatusBar();
+
+        if (masterMode === 'range') {
+          renderRangeTrackOnMap();
+        } else {
+          renderFullColoredTrackOnMap();
+        }
+        renderStateAtPosition(committedPlayhead, false);
+        return;
+      }
+    }
+
     // 强制触发云端同步，确保所选跨度的数据真实拉取到位
     const points = await apiClient.getHistoricalTrack(
       imei,
@@ -1605,6 +1641,18 @@ function drawSpeedWaveCanvas() {
   // 7. 贴底极细 2px 彩色基线（物理基准，避免底部完全空白脱节）
   ctx.fillStyle = speedGradient;
   ctx.fillRect(0, h - 2, w, 2);
+
+  // 8. 若当前跨度内全段均处于静止驻留 (maxSpeed < 1.0)，在波形正中绘制微光科技文字提示
+  const maxSpeed = pts.reduce((m, p) => Math.max(m, p.speed), 0);
+  if (maxSpeed < 1.0 && numPoints > 0) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('全时段原地驻留 · 速度 0.0 km/h', w / 2, h / 2);
+    ctx.restore();
+  }
 }
 
 let masterMode = 'live';
@@ -1612,8 +1660,8 @@ let isPlaying = false;
 let playTimer: any = null;
 let playSpeed = 1;
 
-let rangeStart = 37.0;
-let rangeEnd = 50.5;
+let rangeStart = 0.0;
+let rangeEnd = 100.0;
 
 let committedPlayhead = 100;
 let isHovering = false;
@@ -1758,28 +1806,14 @@ function getPointStateInfo(idx: number) {
   }
   const pt = TRACK_POINTS[idx];
 
-  // 1. 判断是否处于异常长跨度离线盲区 (必须两端均无速度且跨大距离才是盲区)
-  if (idx > 0) {
-    const prev = TRACK_POINTS[idx - 1];
-    const dt = (pt.timestamp - prev.timestamp) / 1000;
-    const radLat = (pt.lat * Math.PI) / 180;
-    const dLat = (pt.lat - prev.lat) * 111000;
-    const dLng = (pt.lng - prev.lng) * 111000 * Math.cos(radLat);
-    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-    const hasSpeed = (pt.speed && pt.speed > 3) || (prev.speed && prev.speed > 3);
-    if (!hasSpeed && dt > 600 && dist > 80) {
-      return { type: 'offline', label: '📡 信号中断', color: '#f43f5e', isOffline: true };
-    }
+  // 1. 正常位移移动
+  if (pt.speed && pt.speed > 3) {
+    const sColor = getContinuousSpeedColor(pt.speed);
+    return { type: 'moving', label: `${pt.speed.toFixed(1)} km/h`, color: sColor.hex, isOffline: false };
   }
 
-  // 2. 正常静止停留
-  if (pt.speed === 0) {
-    return { type: 'dwell', label: '⏱️ 原地静止', color: '#38bdf8', isOffline: false };
-  }
-
-  // 3. 正常位移移动
-  const sColor = getContinuousSpeedColor(pt.speed);
-  return { type: 'moving', label: `${pt.speed} km/h`, color: sColor.hex, isOffline: false };
+  // 2. 正常静止驻留 (速度为 0 或微小抖动)
+  return { type: 'dwell', label: '⏱️ 原地静止', color: '#38bdf8', isOffline: false };
 }
 
 function renderStateAtPosition(percent: number, isPreview = false) {
@@ -1801,13 +1835,15 @@ function renderStateAtPosition(percent: number, isPreview = false) {
     if (liveTime && pt.timeStr) liveTime.innerText = pt.timeStr.slice(11, 19);
     const liveSpeed = document.getElementById('live-latest-speed');
     if (liveSpeed) {
-      liveSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
-      liveSpeed.style.color = stInfo.color;
+      const sp = typeof pt.speed === 'number' ? pt.speed : 0;
+      liveSpeed.innerText = sp > 0 ? `${sp.toFixed(1)} km/h` : '0.0 km/h';
+      liveSpeed.style.color = stInfo.type === 'moving' ? sColor.hex : '#94a3b8';
     }
 
     const drawerSpeed = document.getElementById('drawer-speed-badge');
     if (drawerSpeed) {
-      drawerSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
+      const sp = typeof pt.speed === 'number' ? pt.speed : 0;
+      drawerSpeed.innerText = sp > 0 ? `${sp.toFixed(1)} km/h` : '0.0 km/h';
     }
 
     const timeBox = document.getElementById('current-point-time');

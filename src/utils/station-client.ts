@@ -163,6 +163,22 @@ class DesktopStationClient {
     return [];
   }
 
+  public async fetchHistory(imei: string, start?: number, end?: number, limit: number = 2000): Promise<any[]> {
+    if (!this.isConnected) return [];
+    try {
+      const q = new URLSearchParams({ imei, limit: String(limit) });
+      if (start) q.append('start', String(start));
+      if (end) q.append('end', String(end));
+      const resp = await fetch(`${STATION_BASE_URL}/api/history?${q.toString()}`);
+      if (resp.ok) {
+        return await resp.json();
+      }
+    } catch (e) {
+      console.warn('[Station] fetchHistory error', e);
+    }
+    return [];
+  }
+
   public async triggerSync(): Promise<boolean> {
     if (!this.isConnected) return false;
     try {
