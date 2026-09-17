@@ -1547,85 +1547,37 @@ function drawSpeedWaveCanvas() {
   const w = rect.width;
   const h = rect.height;
 
-  if (!TRACK_POINTS.length) {
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(0, 0, w, h);
-    return;
-  }
-
-  const numPoints = TRACK_POINTS.length;
-
-  // 1. 底层高饱和度连续速度能量色带填充（横向 100% 铺满胶囊轨道高度，再现 v3.5 Chroma Pro 原型质感）
-  const grad = ctx.createLinearGradient(0, 0, w, 0);
-  for (let i = 0; i < numPoints; i++) {
-    const stop = numPoints > 1 ? i / (numPoints - 1) : 0;
-    const col = getContinuousSpeedColor(TRACK_POINTS[i].speed).rgb;
-    grad.addColorStop(stop, col);
-  }
-  ctx.fillStyle = grad;
+  // 1. 底板纯净深黑填充，提供夜空呼吸感
+  ctx.fillStyle = '#060a17';
   ctx.fillRect(0, 0, w, h);
 
-  // 2. 识别离线盲区，在盲区区间上绘制克制的 45度半透明警示斜纹（不破坏整体色带连续感）
-  for (let i = 0; i < numPoints - 1; i++) {
-    const cur = TRACK_POINTS[i];
-    const next = TRACK_POINTS[i + 1];
-    const dt = (next.timestamp - cur.timestamp) / 1000;
-    const radLat = (next.lat * Math.PI) / 180;
-    const dLat = (next.lat - cur.lat) * 111000;
-    const dLng = (next.lng - cur.lng) * 111000 * Math.cos(radLat);
-    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-    const hasSpeed = (cur.speed && cur.speed > 3) || (next.speed && next.speed > 3);
+  if (!TRACK_POINTS.length) return;
+  const numPoints = TRACK_POINTS.length;
 
-    if (!hasSpeed && dt > 600 && dist > 100) {
-      const x1 = (i / (numPoints - 1)) * w;
-      const x2 = ((i + 1) / (numPoints - 1)) * w;
-      const segW = x2 - x1;
-      if (segW > 2) {
-        ctx.save();
-        ctx.fillStyle = 'rgba(225, 29, 72, 0.35)';
-        ctx.fillRect(x1, 0, segW, h);
-        ctx.strokeStyle = 'rgba(251, 113, 133, 0.45)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        for (let sx = x1 - h; sx < x2 + h; sx += 10) {
-          const px1 = Math.max(x1, sx);
-          const py1 = Math.max(0, sx < x1 ? (x1 - sx) : 0);
-          const px2 = Math.min(x2, sx + h);
-          const py2 = Math.min(h, h - (sx + h > x2 ? (sx + h - x2) : 0));
-          if (px1 < px2 && py1 < py2) {
-            ctx.moveTo(px1, py1);
-            ctx.lineTo(px2, py2);
-          }
-        }
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
-  }
-
-  // 3. 计算平滑波峰点集合 (以速度为波高，模拟音频能量流体波形)
-  let maxSp = 0;
+  // 2. 点位波高归一化（静止 3px 微芒，飞驰最高占据 (h - 5)）
+  const pts: { x: number; y: number; speed: number }[] = [];
+  const BASELINE_H = 3;
+  const MAX_WAVE_H = h - 5;
   for (let i = 0; i < numPoints; i++) {
-    if (TRACK_POINTS[i].speed > maxSp) maxSp = TRACK_POINTS[i].speed;
-  }
-  const peakSpeed = Math.max(30, maxSp);
-
-  const pts: any[] = [];
-  for (let i = 0; i < numPoints; i++) {
-    const x = numPoints > 1 ? (i / (numPoints - 1)) * w : 0;
-    const sp = TRACK_POINTS[i].speed;
-    // 速度归一化到波高 (高度占比：静止时基线 3px，最高速占据 65% 高度)
-    const waveH = Math.min(h * 0.68, (sp / peakSpeed) * (h * 0.62) + 3);
+    const x = numPoints > 1 ? (i / (numPoints - 1)) * w : w / 2;
+    const sp = TRACK_POINTS[i].speed || 0;
+    const waveH = BASELINE_H + Math.min(1, sp / 65) * (MAX_WAVE_H - BASELINE_H);
     const y = h - waveH;
     pts.push({ x, y, speed: sp });
   }
 
-  // 4. 贝塞尔平滑半透明流体波形填充 (模拟专业音频能量波与流体质感)
+  // 3. 全局横向速度色谱渐变
+  const speedGradient = ctx.createLinearGradient(0, 0, w, 0);
+  for (let i = 0; i < numPoints; i++) {
+    const stop = numPoints > 1 ? i / (numPoints - 1) : 0;
+    speedGradient.addColorStop(stop, getContinuousSpeedColor(TRACK_POINTS[i].speed).rgb);
+  }
+
+  // 4. 贝塞尔速度山脉实体填充（仅填充在波峰下方闭合区域，上方全透黑底）
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(0, h);
   ctx.lineTo(pts[0].x, pts[0].y);
-
   for (let i = 0; i < pts.length - 1; i++) {
     const xc = (pts[i].x + pts[i + 1].x) / 2;
     const yc = (pts[i].y + pts[i + 1].y) / 2;
@@ -1635,12 +1587,21 @@ function drawSpeedWaveCanvas() {
   ctx.lineTo(w, h);
   ctx.closePath();
 
-  // 柔和半透明流体高光覆盖
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+  ctx.fillStyle = speedGradient;
+  ctx.globalAlpha = 0.88;
+  ctx.fill();
+
+  // 5. 纵向玻璃微光叠加 (Overlay)，消除死板色块，呈现液态通透质感
+  const verticalLight = ctx.createLinearGradient(0, 0, 0, h);
+  verticalLight.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+  verticalLight.addColorStop(0.4, 'rgba(255, 255, 255, 0.1)');
+  verticalLight.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+  ctx.fillStyle = verticalLight;
+  ctx.globalCompositeOperation = 'overlay';
   ctx.fill();
   ctx.restore();
 
-  // 5. 顶部微光平滑流体波形发光轮廓线
+  // 6. 纯白带青色霓虹发光的波峰脊线 (Crest Line)
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pts[0].y);
@@ -1650,12 +1611,16 @@ function drawSpeedWaveCanvas() {
     ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
   }
   ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-  ctx.shadowColor = 'rgba(0, 240, 255, 0.45)';
+  ctx.strokeStyle = '#ffffff';
+  ctx.shadowColor = '#00f0ff';
   ctx.shadowBlur = 4;
   ctx.lineWidth = 1.5;
   ctx.stroke();
   ctx.restore();
+
+  // 7. 贴底极细 2px 彩色基线（物理基准，避免底部完全空白脱节）
+  ctx.fillStyle = speedGradient;
+  ctx.fillRect(0, h - 2, w, 2);
 }
 
 let masterMode = 'live';
