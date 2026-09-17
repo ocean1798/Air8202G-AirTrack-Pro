@@ -2427,6 +2427,9 @@ onMounted(() => {
   setTimeout(refreshIcons, 500);
 
   if (typeof window !== 'undefined') {
+    (window as any).apiClient = apiClient;
+    (window as any).switchAccount = switchAccount;
+    (window as any).recenterVehicle = recenterVehicle;
     (window as any).__loadTrackPoints = (pts: any[]) => {
       TRACK_POINTS = pts;
       updateTimelineScaleTicks(pts[0]?.isMultiDay || false);
