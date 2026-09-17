@@ -523,170 +523,135 @@
           </div>
           <div>
             <h3 class="text-sm font-bold text-white tracking-wide">账号管理</h3>
-            <p class="text-[11px] text-slate-400">切换使用中的设备账号，或绑定新合宙账号</p>
+            <p class="text-[11px] text-slate-400">管理当前合宙 IoT 账号，或登录新账号</p>
           </div>
         </div>
 
-        <!-- 账号列表（单层平铺，当前账号高亮标出，去除重复嵌套） -->
-        <div class="space-y-2 mb-4">
-          <div v-for="s in accountStates" :key="s.account.phone"
-               @click="switchAccount(s.account.phone)"
-               :class="[
-                 'p-3 rounded-xl border transition-all cursor-pointer flex flex-col space-y-2',
-                 s.active
-                   ? 'border-cyber-primary/80 bg-gradient-to-r from-cyber-primary/15 via-cyber-900/80 to-cyber-950/90 shadow-glow-cyan'
-                   : 'border-cyber-700/60 bg-cyber-900/60 hover:border-slate-500'
-               ]">
-            <!-- 卡片顶行：账号标识、状态标签与设备数量 -->
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-2 flex-1 min-w-0">
-                <div :class="s.active ? 'w-3.5 h-3.5 rounded-full border-2 border-cyber-primary flex items-center justify-center shrink-0' : 'w-3.5 h-3.5 rounded-full border border-slate-600 shrink-0'">
-                  <div v-if="s.active" class="w-1.5 h-1.5 rounded-full bg-cyber-primary"></div>
-                </div>
-
-                <!-- 账号主体：支持点击小铅笔行内编辑备注名 -->
-                <div class="flex items-center space-x-1.5 flex-wrap min-w-0">
-                  <!-- 行内编辑状态 -->
+        <!-- 1. 当前活跃账号（重点呈现） -->
+        <div class="mb-4">
+          <div class="text-[10px] font-mono text-slate-400 mb-1.5 uppercase tracking-wider">当前登录账号</div>
+          <template v-for="s in accountStates" :key="s.account.phone">
+            <div v-if="s.active"
+                 class="p-3.5 rounded-xl border border-cyber-primary/80 bg-gradient-to-r from-cyber-primary/15 via-cyber-900/80 to-cyber-950/90 shadow-glow-cyan flex flex-col space-y-2.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                  <div class="w-3.5 h-3.5 rounded-full border-2 border-cyber-primary flex items-center justify-center shrink-0">
+                    <div class="w-1.5 h-1.5 rounded-full bg-cyber-primary"></div>
+                  </div>
+                  <!-- 行内编辑备注名 -->
                   <div v-if="editingPhone === s.account.phone" class="flex items-center space-x-1" @click.stop>
                     <input :id="'edit-alias-input-' + s.account.phone"
                            v-model="editingAlias"
                            @keyup.enter="saveAccountAlias(s.account.phone)"
                            @blur="saveAccountAlias(s.account.phone)"
                            placeholder="输入自定义备注..."
-                           class="bg-cyber-950 border border-cyber-primary text-xs text-white px-2 py-0.5 rounded outline-none w-32 font-sans" />
+                           class="bg-cyber-950 border border-cyber-primary text-xs text-white px-2 py-0.5 rounded outline-none w-36 font-sans" />
                     <span role="button" @click.stop="saveAccountAlias(s.account.phone)" class="text-cyber-primary text-xs cursor-pointer font-bold px-1 hover:text-cyan-300">✓</span>
                   </div>
+                  <div v-else class="flex items-center space-x-1.5">
+                    <span class="text-xs font-bold font-mono text-white tracking-wide">{{ formatPhone(s.account.phone) }}</span>
+                    <span v-if="s.account.label" class="text-[11px] text-slate-300 font-medium">({{ s.account.label }})</span>
+                    <span role="button"
+                          @click.stop="startEditAccountAlias(s.account, $event)"
+                          title="修改备注名"
+                          class="text-slate-500 hover:text-cyber-primary cursor-pointer transition p-0.5">
+                      <i data-lucide="pencil" class="w-3 h-3"></i>
+                    </span>
+                  </div>
+                </div>
 
-                  <!-- 常态显示 -->
+                <div class="shrink-0">
+                  <span class="text-[10px] font-mono text-slate-300 bg-cyber-950 px-2 py-0.5 rounded border border-cyber-700/60 whitespace-nowrap">
+                    {{ s.deviceCount ? `${s.deviceCount} 台设备` : '暂无设备' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- 状态与控制条 -->
+              <div class="pt-2 border-t border-white/5 flex items-center justify-between text-xs">
+                <div class="flex items-center space-x-1.5">
+                  <template v-if="s.isExpired">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
+                    <span class="text-[10px] font-mono text-rose-400 font-bold">登录已失效</span>
+                  </template>
+                  <template v-else-if="s.hasAuth">
+                    <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
+                    <span class="text-[10px] font-mono text-cyber-emerald">连接正常</span>
+                  </template>
                   <template v-else>
-                    <!-- 1. 官方演示账号：显示空间名称与演示标签 -->
-                    <template v-if="s.account.isDemo">
-                      <span :class="s.active ? 'text-xs font-bold text-white' : 'text-xs font-medium text-slate-300'">{{ s.account.label }}</span>
-                      <span class="text-[8px] font-mono text-cyan-400 bg-cyan-950/80 px-1 py-0.2 rounded border border-cyan-500/30 shrink-0">演示</span>
-                    </template>
-                    <!-- 2. 普通自建账号：若有备注显示备注，若无备注直接大号显示格式化手机号 -->
-                    <template v-else>
-                      <span v-if="s.account.label" :class="s.active ? 'text-xs font-bold text-white' : 'text-xs font-medium text-slate-200'">{{ s.account.label }}</span>
-                      <span v-else :class="s.active ? 'text-xs font-bold font-mono text-white tracking-wide' : 'text-xs font-medium font-mono text-slate-200 tracking-wide'">{{ formatPhone(s.account.phone) }}</span>
-                      
-                      <!-- 改名微型按钮 -->
-                      <span role="button"
-                            @click.stop="startEditAccountAlias(s.account, $event)"
-                            :title="s.account.label ? '修改备注名' : '添加备注名（如：家用SUV）'"
-                            class="text-slate-500 hover:text-cyber-primary cursor-pointer transition p-0.5">
-                        <i data-lucide="pencil" class="w-2.5 h-2.5"></i>
-                      </span>
-                    </template>
-
-                    <!-- 使用中标签 -->
-                    <span v-if="s.active" class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 shrink-0">使用中</span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+                    <span class="text-[10px] font-mono text-slate-400">未登录</span>
                   </template>
                 </div>
-              </div>
 
-              <!-- 右上角：设备数量 -->
-              <div class="shrink-0 ml-2">
-                <span class="text-[10px] font-mono text-slate-300 bg-cyber-950 px-2 py-0.5 rounded border border-cyber-700/60 whitespace-nowrap">
-                  {{ s.deviceCount ? `${s.deviceCount} 台设备` : '暂无设备' }}
-                </span>
+                <div class="flex items-center space-x-2" @click.stop>
+                  <div v-if="s.hasAuth && !s.isExpired"
+                       role="button"
+                       @click="refreshAccountCredential(s.account.phone)"
+                       title="检测凭据健康状态"
+                       class="px-2 py-1 rounded-lg text-[10px] font-mono text-slate-300 hover:text-cyber-primary hover:bg-cyber-primary/10 border border-white/5 transition flex items-center space-x-1 cursor-pointer">
+                    <i data-lucide="refresh-cw" :class="['w-3 h-3', checkingPhone === s.account.phone ? 'animate-spin text-cyber-primary' : '']"></i>
+                    <span>{{ checkingPhone === s.account.phone ? '检测中...' : '检测凭据' }}</span>
+                  </div>
+
+                  <div v-if="s.isExpired || !s.hasAuth"
+                       role="button"
+                       @click="openOAuthAuthorization(s.account.phone)"
+                       class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan flex items-center space-x-1 cursor-pointer">
+                    <i data-lucide="shield-check" class="w-3 h-3"></i>
+                    <span>{{ s.isExpired ? '重新登录' : '去授权登录' }}</span>
+                  </div>
+                </div>
               </div>
             </div>
+          </template>
+        </div>
 
-            <!-- 卡片第二行（仅在演示账号或已设备注的自建账号展示，不含任何虚构词） -->
-            <div v-if="s.account.isDemo || s.account.label" class="text-[10px] font-mono text-slate-400 pl-5 flex items-center space-x-1.5 truncate">
-              <span class="text-slate-300">{{ formatPhone(s.account.phone) }}</span>
-              <template v-if="s.account.isDemo && s.account.role">
-                <span class="text-slate-600">·</span>
-                <span class="truncate">{{ s.account.role }}</span>
-              </template>
-            </div>
-
-            <!-- 卡片底行：状态显示与操作操作条 -->
-            <div class="pt-2 border-t border-white/5 flex items-center justify-between text-xs">
-              <!-- 状态标记 -->
-              <div class="flex items-center space-x-1.5">
-                <!-- 1. 登录已失效 -->
-                <template v-if="s.isExpired">
-                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
-                  <span class="text-[10px] font-mono text-rose-400 font-bold">登录已失效</span>
-                </template>
-                <!-- 2. 正常连接 -->
-                <template v-else-if="s.hasAuth">
-                  <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span>
-                  <span class="text-[10px] font-mono text-cyber-emerald">连接正常</span>
-                </template>
-                <!-- 3. 未登录 -->
-                <template v-else>
-                  <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
-                  <span class="text-[10px] font-mono text-slate-400">未登录</span>
-                </template>
+        <!-- 2. 已保存的其他账号列表（极简单行切换） -->
+        <div v-if="accountStates.filter(s => !s.active).length > 0" class="mb-4">
+          <div class="text-[10px] font-mono text-slate-400 mb-1.5 uppercase tracking-wider">切换其他账号</div>
+          <div class="space-y-1.5">
+            <div v-for="s in accountStates.filter(s => !s.active)" :key="s.account.phone"
+                 @click="switchAccount(s.account.phone)"
+                 class="px-3 py-2 rounded-xl border border-cyber-700/60 bg-cyber-900/60 hover:border-slate-500 transition flex items-center justify-between cursor-pointer">
+              <div class="flex items-center space-x-2 min-w-0">
+                <span class="text-xs font-mono font-medium text-slate-200">{{ formatPhone(s.account.phone) }}</span>
+                <span v-if="s.account.label" class="text-[11px] text-slate-400 truncate">({{ s.account.label }})</span>
+                <span class="text-[9px] font-mono text-slate-500">· {{ s.deviceCount || 0 }}台</span>
               </div>
-
-              <!-- 右侧按钮群 -->
-              <div class="flex items-center space-x-2" @click.stop>
-                <!-- 刷新凭据按钮（带旋转反馈） -->
-                <div v-if="s.hasAuth && !s.isExpired"
-                     role="button"
-                     @click="refreshAccountCredential(s.account.phone)"
-                     :title="'检测并刷新 ' + s.account.phone + ' 凭据与设备数据'"
-                     class="px-2 py-1 rounded-lg text-[10px] font-mono text-slate-300 hover:text-cyber-primary hover:bg-cyber-primary/10 border border-white/5 transition flex items-center space-x-1 cursor-pointer">
-                  <i data-lucide="refresh-cw" :class="['w-3 h-3', checkingPhone === s.account.phone ? 'animate-spin text-cyber-primary' : '']"></i>
-                  <span>{{ checkingPhone === s.account.phone ? '检测中...' : '刷新凭据' }}</span>
-                </div>
-
-                <!-- 重新登录/授权按钮（失效时高亮） -->
-                <div v-if="s.isExpired || !s.hasAuth"
-                     role="button"
-                     @click="openOAuthAuthorization(s.account.phone)"
-                     class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan flex items-center space-x-1 cursor-pointer">
-                  <i data-lucide="shield-check" class="w-3 h-3"></i>
-                  <span>{{ s.isExpired ? '重新登录' : '授权登录' }}</span>
-                </div>
-
-                <!-- 切换为当前账号 -->
-                <div v-if="!s.active"
-                     role="button"
+              <div class="flex items-center space-x-2 shrink-0" @click.stop>
+                <div role="button"
                      @click="switchAccount(s.account.phone)"
-                     class="px-2 py-1 rounded-lg text-[10px] font-medium text-slate-300 hover:text-white hover:bg-white/10 border border-white/10 transition cursor-pointer">
-                  切换使用
+                     class="px-2 py-0.5 rounded-lg text-[10px] text-slate-300 hover:text-white hover:bg-white/10 border border-white/10 transition cursor-pointer">
+                  切换
                 </div>
-
-                <!-- 删除非当前已保存账号 -->
-                <div v-if="!s.account.isDemo && !s.active"
-                     role="button"
+                <div role="button"
                      @click="removeAccountItem(s.account.phone, $event)"
                      title="移除该账号"
                      class="p-1 text-slate-500 hover:text-rose-400 transition cursor-pointer">
-                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <i data-lucide="trash-2" class="w-3 h-3"></i>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
-        <!-- 底部：添加新账号入口（极简单行输入） -->
-        <div class="pt-3 border-t border-white/10">
-          <div role="button" @click="isAddingAccount = !isAddingAccount" class="text-xs font-bold text-cyber-primary flex items-center justify-between py-1 cursor-pointer">
-            <span class="flex items-center space-x-1.5">
-              <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
-              <span>绑定新合宙账号</span>
-            </span>
-            <i :data-lucide="isAddingAccount ? 'chevron-up' : 'chevron-down'" class="w-3.5 h-3.5 text-slate-400"></i>
-          </div>
-
-          <div v-if="isAddingAccount" class="mt-2.5 p-3 rounded-xl bg-cyber-950/80 border border-cyber-700/60 space-y-2.5">
+        <!-- 3. 登录与绑定新账号入口 -->
+        <div class="pt-3 border-t border-white/10 space-y-2.5">
+          <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">登录/绑定新合宙账号</div>
+          
+          <div class="p-3 rounded-xl bg-cyber-950/80 border border-cyber-700/60 space-y-2.5">
             <div>
               <label class="text-[10px] font-mono text-slate-400 block mb-1">合宙 IoT 手机号码:</label>
               <div class="flex items-center space-x-2">
-                <input v-model="newAccountInputPhone" type="tel" placeholder="请输入合宙账号手机号" class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:border-cyber-primary focus:outline-none font-mono">
+                <input v-model="newAccountInputPhone" type="tel" placeholder="输入合宙账号手机号" class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:border-cyber-primary focus:outline-none font-mono">
                 <div role="button" @click="startOAuthForPhone()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shrink-0 cursor-pointer shadow-glow-cyan">
                   去授权登录
                 </div>
               </div>
             </div>
 
-            <!-- 便捷外部授权 Token 粘贴通道（紧凑收纳） -->
+            <!-- 便捷外部授权 Token 粘贴通道 -->
             <div class="pt-2 border-t border-white/5 space-y-1">
               <div class="flex items-center space-x-2">
                 <input v-model="pastedOAuthTokenOrUrl" placeholder="若在外部浏览器授权，可在此粘贴回调链接或 Token" class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-2 py-1 text-[11px] text-white placeholder-slate-500 focus:border-cyber-primary focus:outline-none font-mono">
@@ -695,6 +660,17 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- 4. 官方评测账号快捷辅助（极简底部辅助行，绝不反客为主） -->
+        <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-slate-500">
+          <span>评测调试？快捷填入官方评测账号:</span>
+          <div class="flex items-center space-x-1.5">
+            <span role="button" @click="newAccountInputPhone = '18101796680'" class="px-1.5 py-0.5 rounded bg-white/5 hover:bg-cyber-primary/20 hover:text-cyber-primary border border-white/10 cursor-pointer transition">181</span>
+            <span role="button" @click="newAccountInputPhone = '19036766195'" class="px-1.5 py-0.5 rounded bg-white/5 hover:bg-cyber-primary/20 hover:text-cyber-primary border border-white/10 cursor-pointer transition">190</span>
+            <span role="button" @click="newAccountInputPhone = '15938684042'" class="px-1.5 py-0.5 rounded bg-white/5 hover:bg-cyber-primary/20 hover:text-cyber-primary border border-white/10 cursor-pointer transition">159</span>
+            <span role="button" @click="newAccountInputPhone = '13384022744'" class="px-1.5 py-0.5 rounded bg-white/5 hover:bg-cyber-primary/20 hover:text-cyber-primary border border-white/10 cursor-pointer transition">133</span>
           </div>
         </div>
 

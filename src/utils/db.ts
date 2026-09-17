@@ -39,7 +39,7 @@ const STORE_TRACKS = 'track_points';
 const STORE_DEVICES = 'device_profiles';
 
 export const SEED_DEVICE_PROFILES: StoredDeviceProfile[] = [
-  // 演示空间 01 (18101796680)
+  // 评测账号 18101796680 (18101796680)
   {
     imei: '864317087173038',
     accountPhone: '18101796680',
@@ -110,7 +110,7 @@ export const SEED_DEVICE_PROFILES: StoredDeviceProfile[] = [
     address: '陕西省西安市雁塔区丈八街道川人冒大院冒菜',
     updatedAt: Date.now()
   },
-  // 演示空间 02 (19036766195)
+  // 评测账号 19036766195 (19036766195)
   {
     imei: '864317087172071',
     accountPhone: '19036766195',
@@ -139,7 +139,7 @@ export const SEED_DEVICE_PROFILES: StoredDeviceProfile[] = [
     address: '新疆维吾尔自治区乌鲁木齐市沙依巴克区友好南路',
     updatedAt: Date.now()
   },
-  // 演示空间 03 (15938684042)
+  // 评测账号 15938684042 (15938684042)
   {
     imei: '864317087172741',
     accountPhone: '15938684042',
@@ -154,7 +154,7 @@ export const SEED_DEVICE_PROFILES: StoredDeviceProfile[] = [
     address: '上海市浦东新区北蔡镇花绣路18弄',
     updatedAt: Date.now()
   },
-  // 演示空间 04 (13384022744)
+  // 评测账号 13384022744 (13384022744)
   {
     imei: '864317087172683',
     accountPhone: '13384022744',
@@ -175,7 +175,7 @@ export const SEED_TRACK_POINTS: StoredTrackPoint[] = (() => {
   const pad = (n: number) => String(n).padStart(2, '0');
   const now = Date.now();
   
-  // 1. 演示空间 01: 上海浦东康桥设备 (864317087173038)
+  // 1. 评测账号 18101796680: 上海浦东康桥设备 (864317087173038)
   const speeds1 = [0.0, 0.0, 8.5, 16.2, 25.4, 34.8, 45.0, 52.3, 58.7, 62.1, 59.4, 51.0, 38.2, 22.0, 6.0, 0.0, 0.0, 12.0, 28.5, 41.2, 48.0, 53.5, 47.2, 36.0, 24.1, 15.0, 8.2, 0.0];
   const bLat1 = 31.1480, bLng1 = 121.5280, eLat1 = 31.13218, eLng1 = 121.54868;
   const startT1 = now - 3 * 3600 * 1000;
@@ -197,7 +197,7 @@ export const SEED_TRACK_POINTS: StoredTrackPoint[] = (() => {
     };
   });
 
-  // 2. 演示空间 02: 河南开封设备 (864317087172311)
+  // 2. 评测账号 19036766195: 河南开封设备 (864317087172311)
   const speeds2 = [0.0, 5.0, 15.0, 24.0, 35.0, 42.0, 48.0, 45.0, 38.0, 25.0, 12.0, 0.0, 0.0, 18.0, 32.0, 40.0, 36.0, 22.0, 10.0, 0.0];
   const bLat2 = 34.8050, bLng2 = 114.3200, eLat2 = 34.79441, eLng2 = 114.33492;
   const startT2 = now - 4 * 3600 * 1000;
