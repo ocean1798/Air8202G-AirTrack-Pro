@@ -18,17 +18,14 @@ export interface AccountDef {
   nameHints?: Record<string, DeviceNameHint>;
 }
 
-/** 官方用于活动评测与接口调试的 4 个真实硬件账号（公用评测凭据） */
+/** 初始预置的 4 个真实硬件账号（支持零门槛直接开箱读取真实硬件资产） */
 export const EVAL_ACCOUNTS: AccountDef[] = [
   {
     phone: '18101796680',
     password: 'Hz8202',
-    label: '运营保障专号',
-    role: '合宙上海研发中心 · 内部实车长测',
-    isDemo: true,
+    label: '',
     projectKey: 'q0eilWQpyjZGFZFS6PFmREsRjUXoButr',
     nameHints: {
-      '864317087173038': { name: '设备 73038', shortName: '73038' },
       '864317087172311': { name: '设备 72311', shortName: '72311' },
       '864317087172121': { name: '设备 72121', shortName: '72121' },
       '864317087173012': { name: '设备 73012', shortName: '73012' },
@@ -38,9 +35,7 @@ export const EVAL_ACCOUNTS: AccountDef[] = [
   {
     phone: '19036766195',
     password: 'Hz8202',
-    label: '仓储监控专号',
-    role: '上海浦东仓储环境 · 静态驻留监测',
-    isDemo: true,
+    label: '',
     projectKey: 'ggV1VA89GUTQBMgqKszpSN6E2ZuQG5va',
     nameHints: {
       '864317087172071': { name: '设备 72071', shortName: '72071' },
@@ -50,9 +45,7 @@ export const EVAL_ACCOUNTS: AccountDef[] = [
   {
     phone: '15938684042',
     password: 'Hz8202',
-    label: '行车定位专号',
-    role: '河南开封车载终端 · 连续运动路测',
-    isDemo: true,
+    label: '',
     projectKey: 'zmdfxP8TTUk6jBZoguWeQgSaEK6fiZu9',
     nameHints: {
       '864317087172741': { name: '设备 72741', shortName: '72741' }
@@ -61,9 +54,7 @@ export const EVAL_ACCOUNTS: AccountDef[] = [
   {
     phone: '13384022744',
     password: 'Hz8202',
-    label: '资产巡检专号',
-    role: '深圳物联网测试中心 · 固定基站节点',
-    isDemo: true,
+    label: '',
     projectKey: 'c3SeanQXjxiBvHYHZIDgi9FM6yBZj09s',
     nameHints: {
       '864317087172683': { name: '设备 72683', shortName: '72683' }

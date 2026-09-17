@@ -206,6 +206,36 @@ export class AirCloudClient {
   }
 
   /**
+   * 串行检测多个账号的健康状态与设备数（严格避免并发单例状态踩踏）
+   */
+  public async probeAccountsSequential(
+    phones?: string[],
+    onProgress?: (phone: string, result: { ok: boolean; message: string; deviceCount: number }) => void
+  ): Promise<Record<string, { ok: boolean; message: string; deviceCount: number }>> {
+    const list = phones && phones.length > 0 
+      ? phones 
+      : getAllRegisteredAccounts().map(a => a.phone);
+    const results: Record<string, { ok: boolean; message: string; deviceCount: number }> = {};
+    for (const p of list) {
+      try {
+        const res = await this.checkAccountHealth(p);
+        results[p] = res;
+        if (onProgress) {
+          onProgress(p, res);
+        }
+      } catch (err: any) {
+        results[p] = { ok: false, message: err?.message || '检测异常', deviceCount: 0 };
+        if (onProgress) {
+          onProgress(p, results[p]);
+        }
+      }
+      // 间隔 100ms 避免网络请求触发云端频控
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return results;
+  }
+
+  /**
    * 切换激活账号
    */
   public setActiveAccount(phone: string): void {
@@ -533,9 +563,14 @@ export class AirCloudClient {
       });
       const data = await res.json();
       if (data && data.code === 0 && data.value) {
-        this.saveAuth(data.value.auth, data.value.service, data.value.profile, target);
-        if (target !== this.activePhone) {
-          this.setActiveAccount(target);
+        const profile = data.value.profile || {};
+        const realMobile = String(profile.mobile || profile.phone || profile.user || target || '').trim();
+        const finalPhone = realMobile && /^\d{11}$/.test(realMobile) ? realMobile : target;
+        registerUserAccount({ phone: finalPhone });
+        this.saveAuth(data.value.auth, data.value.service, data.value.profile, finalPhone);
+        this.markAuthExpired(finalPhone, false);
+        if (finalPhone !== this.activePhone) {
+          this.setActiveAccount(finalPhone);
         }
         await this.ensureProjectKey();
         return true;
@@ -656,10 +691,7 @@ export class AirCloudClient {
         throw new Error(resp && typeof resp.value === 'string' ? resp.value : '设备清单拉取失败');
       }
 
-      let records = resp.value.records;
-      if (this.activePhone === '18101796680' && !records.some((r: any) => (r.deviceid || r.deviceId) === '864317087173038')) {
-        records = [{ deviceid: '864317087173038' }, ...records];
-      }
+      const records = resp.value.records;
 
       const hints = this.getActiveAccount().nameHints || {};
       const devices: DeviceInfo[] = [];

@@ -34,26 +34,12 @@ export interface StoredDeviceProfile {
 }
 
 const DB_NAME = 'AirTrackDB_v1';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_TRACKS = 'track_points';
 const STORE_DEVICES = 'device_profiles';
 
 export const SEED_DEVICE_PROFILES: StoredDeviceProfile[] = [
-  // 评测账号 18101796680 (18101796680)
-  {
-    imei: '864317087173038',
-    accountPhone: '18101796680',
-    name: '终端·73038',
-    status: '在线',
-    csq: 'CSQ 31',
-    battMv: '3940 mV',
-    battPct: 78,
-    lat: 31.13218,
-    lng: 121.54868,
-    latestTime: '2026-09-16 20:45:12',
-    address: '上海市浦东新区康桥镇浦三路3801号',
-    updatedAt: Date.now()
-  },
+  // 评测账号 18101796680 (合宙官方真实在网 4 台设备)
   {
     imei: '864317087172311',
     accountPhone: '18101796680',
@@ -209,6 +195,17 @@ class AirTrackDatabase {
           if (!db.objectStoreNames.contains(STORE_DEVICES)) {
             const devStore = db.createObjectStore(STORE_DEVICES, { keyPath: 'imei' });
             devStore.createIndex('idx_account', 'accountPhone', { unique: false });
+          }
+
+          // 3. 升级清理：自动剔除已下线的历史硬编码设备 864317087173038
+          if (e.oldVersion < 3 && db.objectStoreNames.contains(STORE_DEVICES)) {
+            try {
+              const tx = (e.target as IDBOpenDBRequest).transaction;
+              if (tx) {
+                const devStore = tx.objectStore(STORE_DEVICES);
+                devStore.delete('864317087173038');
+              }
+            } catch (_) {}
           }
         };
 
@@ -384,7 +381,9 @@ class AirTrackDatabase {
         const req = index.getAll(IDBKeyRange.only(accountPhone));
 
         req.onsuccess = () => {
-          const res = req.result || [];
+          let res = req.result || [];
+          // 彻底过滤已下线的 864317087173038
+          res = res.filter((d: any) => d.imei !== '864317087173038');
           if (res.length > 0) {
             resolve(res);
           } else {

@@ -42,7 +42,7 @@
         </div>
 
         <!-- 移动端专享：纯用户头像 (不带电话号码) -->
-        <div role="button" @click="toggleOfficialModal()" title="IoT工作空间与账号管理" class="shrink-0 relative group p-0.5 rounded-full border border-cyber-primary/50 shadow-glow-cyan hover:border-cyber-primary active:scale-95 transition-all bg-cyber-950/80">
+        <div id="btn-mobile-account" role="button" @click="toggleOfficialModal()" title="账号管理" class="shrink-0 relative group p-0.5 rounded-full border border-cyber-primary/50 shadow-glow-cyan hover:border-cyber-primary active:scale-95 transition-all bg-cyber-950/80">
           <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-600/40 via-cyber-800 to-blue-600/50 flex items-center justify-center overflow-hidden border border-white/20">
             <i data-lucide="user" class="w-3.5 h-3.5 text-cyber-primary"></i>
           </div>
@@ -586,56 +586,90 @@
       </div>
     </div>
 
-    <!-- ==================== 7. 账号管理弹窗（100% 还原合宙官方评测 4 账号一键切换） ==================== -->
+    <!-- ==================== 7. 账号管理弹窗 (规范锁定版本：极简纯净 / Radio单选 / 串行探活) ==================== -->
     <div id="official-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden" @click.self="toggleOfficialModal()">
-      <div class="glass-panel max-w-md w-full p-4 sm:p-5 rounded-2xl border border-cyber-primary/40 shadow-glow-cyan relative max-h-[88vh] overflow-y-auto">
-        <div role="button" @click="toggleOfficialModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 cursor-pointer">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </div>
-
-        <div class="text-center mb-4">
-          <div class="w-10 h-10 rounded-xl bg-cyber-primary/20 border border-cyber-primary text-cyber-primary flex items-center justify-center mx-auto mb-2.5 shadow-glow-cyan">
-            <i data-lucide="users" class="w-5 h-5"></i>
+      <div class="glass-panel max-w-md w-full rounded-2xl shadow-2xl relative flex flex-col max-h-[85vh] overflow-hidden border border-white/10 bg-[#0b1426]/95">
+        
+        <!-- 1. 顶部 Header (固定吸顶) -->
+        <div class="p-5 pb-3 border-b border-white/10 shrink-0 relative bg-[#070d1d]/60">
+          <div role="button" @click="toggleOfficialModal()" title="关闭" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
           </div>
-          <h3 class="text-sm font-bold text-white tracking-wide">合宙官方评测账号切换</h3>
-          <p class="text-[11px] text-slate-400 mt-1">4 个账号共用密码 Hz8202 · 100% 真实网关对接</p>
+
+          <div class="flex items-center space-x-2">
+            <h3 class="text-base font-bold text-white tracking-wide">账号管理</h3>
+            <span :class="isProbing ? 'opacity-100' : 'opacity-0'" class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-950 border border-cyan-500/40 text-cyan-300 flex items-center space-x-1 transition-opacity">
+              <i data-lucide="loader" class="w-2.5 h-2.5 animate-spin"></i>
+              <span>探针同步中...</span>
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">切换已登录账号，或登录新账号接入设备</p>
         </div>
 
-        <!-- 4 个官方评测账号单层平铺卡片（一键快速切换） -->
-        <div class="space-y-2">
+        <!-- 2. 中部账号平铺列表 (滚动容器) -->
+        <div class="p-5 py-3 overflow-y-auto space-y-2.5 custom-scrollbar flex-1">
+          <!-- 零账号空状态 -->
+          <div v-if="accountStates.length === 0" class="py-12 text-center text-slate-500 text-xs font-mono">
+            <i data-lucide="user-x" class="w-8 h-8 mx-auto mb-2 text-slate-600"></i>
+            暂无已登录账号，请点击下方登录
+          </div>
+
+          <!-- 账号卡片循环 -->
           <div v-for="s in accountStates" :key="s.account.phone"
                role="button"
                @click="switchAccount(s.account.phone)"
-               :class="s.active ? 'p-3 rounded-xl border border-cyber-primary/80 bg-cyber-primary/15 shadow-glow-cyan cursor-pointer transition-all' : 'p-3 rounded-xl border border-cyber-700/60 bg-cyber-900/50 hover:border-slate-500 cursor-pointer transition-all'">
+               :class="s.active
+                 ? 'p-3.5 rounded-xl border border-cyan-400/70 bg-cyan-500/10 shadow-[0_0_20px_-2px_rgba(0,240,255,0.35)] cursor-pointer transition-all'
+                 : (s.isExpired
+                     ? 'p-3.5 rounded-xl border border-rose-500/30 bg-rose-500/5 hover:border-rose-500/50 cursor-pointer transition-all'
+                     : 'p-3.5 rounded-xl border border-white/5 bg-[#070d1d]/40 hover:border-white/20 cursor-pointer transition-all')">
+            
+            <!-- 上行：单选圈 + 手机号 + 当前账号标 + 设备数 -->
             <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-2">
-                <span :class="s.active ? 'w-2 h-2 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-2 h-2 rounded-full bg-slate-600'"></span>
-                <span :class="s.active ? 'text-xs font-bold text-white' : 'text-xs font-bold text-slate-300'">{{ s.account.label }}</span>
-                <span class="text-xs font-mono text-slate-400">{{ formatPhone(s.account.phone) }}</span>
+              <div class="flex items-center space-x-2.5">
+                <div :class="s.active ? 'w-4 h-4 rounded-full border-2 border-cyan-400 flex items-center justify-center shrink-0' : 'w-4 h-4 rounded-full border border-slate-600 shrink-0'">
+                  <div v-if="s.active" class="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
+                </div>
+                <span class="text-sm font-bold font-mono text-white tracking-wide">{{ formatPhone(s.account.phone) }}</span>
+                <span v-if="s.active" class="text-[10px] px-1.5 py-0.2 rounded bg-cyan-400/20 text-cyan-300 font-mono font-medium border border-cyan-400/30">
+                  当前账号
+                </span>
               </div>
-              <span :class="s.hasAuth ? 'text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/15 px-1.5 py-0.5 rounded border border-cyber-emerald/30' : 'text-[9px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30'">
-                {{ s.hasAuth ? '已登录' : '未登录' }}
+              <span class="text-xs font-mono text-slate-300 bg-[#030712] px-2 py-0.5 rounded border border-white/5">
+                {{ s.deviceCount || 0 }} 台设备
               </span>
             </div>
-            <div class="text-[10px] text-slate-400 mt-1.5 flex items-center justify-between">
-              <span>{{ s.account.role || '合宙官方实测节点' }}</span>
-              <span class="font-mono text-slate-500">{{ s.active && deviceList.length ? deviceList.length + ' 台设备' : (s.hasAuth ? '点击切换查看' : '需先授权') }}</span>
+
+            <!-- 下行：凭据状态 + 刷新凭据/移除 -->
+            <div class="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-xs font-mono">
+              <span :class="s.isExpired ? 'text-rose-400 font-bold flex items-center space-x-1.5' : 'text-emerald-400 flex items-center space-x-1.5'">
+                <span :class="s.isExpired ? 'w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse' : 'w-1.5 h-1.5 rounded-full bg-emerald-400'"></span>
+                <span class="text-[11px]">{{ checkingPhone === s.account.phone ? '检测中...' : (s.isExpired ? '凭据过期' : '正常') }}</span>
+              </span>
+
+              <div class="flex items-center space-x-1.5" @click.stop>
+                <button @click="onRefreshAccountCredential(s.account.phone, s.isExpired)"
+                        :class="s.isExpired
+                          ? 'px-2.5 py-1 rounded-lg text-xs font-sans font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition shadow-[0_0_10px_-1px_rgba(0,240,255,0.45)] flex items-center space-x-1 cursor-pointer'
+                          : 'px-2.5 py-1 rounded-lg text-xs font-sans text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition flex items-center space-x-1 cursor-pointer'">
+                  <i data-lucide="refresh-cw" :class="checkingPhone === s.account.phone ? 'w-3 h-3 animate-spin text-cyan-400' : 'w-3 h-3'"></i>
+                  <span>{{ checkingPhone === s.account.phone ? '刷新中' : '刷新凭据' }}</span>
+                </button>
+                <button v-if="!s.active" @click="onRemoveAccount(s.account.phone)" title="从本机移除此账号" class="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
             </div>
+
           </div>
         </div>
 
-        <!-- 底部控制条 -->
-        <div class="mt-4 pt-3.5 border-t border-white/10 space-y-2">
-          <div class="text-[10px] text-slate-500 font-mono break-all text-center">
-            当前激活：{{ activeAccountPhone }}
-          </div>
-          <div role="button" @click="openOAuthAuthorization(activeAccountPhone)" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyber-primary text-cyber-950 hover:bg-cyan-300 transition shadow-glow-cyan text-center cursor-pointer flex items-center justify-center space-x-1.5">
-            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
-            <span>授权 / 重登当前账号</span>
-          </div>
-          <div role="button" @click="syncOfficialData()" class="w-full py-2 rounded-xl text-xs font-medium border border-cyber-primary/40 text-slate-200 hover:bg-cyber-primary/10 transition text-center cursor-pointer">
-            立即同步刷新云端最新遥测
-          </div>
+        <!-- 3. 底部通栏主操作 (固定吸底 Sticky Footer) -->
+        <div class="p-4 pt-3 border-t border-white/10 shrink-0 bg-[#070d1d]/60">
+          <button id="btn-login-new-account" @click="openOAuthAuthorization()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition flex items-center justify-center space-x-1.5 shadow-[0_0_20px_-2px_rgba(0,240,255,0.35)] cursor-pointer active:scale-98">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>登录新账号</span>
+          </button>
         </div>
 
       </div>
@@ -904,6 +938,7 @@ function saveAccountAlias(phone: string) {
 }
 
 const checkingPhone = ref('');
+const isProbing = ref(false);
 
 async function refreshAccountStates() {
   const states = apiClient.getAccountStates();
@@ -926,12 +961,56 @@ async function refreshAccountStates() {
   nextTick(refreshIcons);
 }
 
+/** 串行探针检测（严格避免并发单例状态踩踏） */
+async function runSequentialHealthProbe() {
+  if (isProbing.value) return;
+  isProbing.value = true;
+  try {
+    await apiClient.probeAccountsSequential(undefined, (phone, res) => {
+      const item = accountStates.value.find(s => s.account.phone === phone);
+      if (item) {
+        item.isExpired = !res.ok;
+        if (res.ok) {
+          item.deviceCount = res.deviceCount;
+        }
+      }
+      nextTick(refreshIcons);
+    });
+  } catch (err) {
+    console.warn('[AirTrack] 串行探活异常', err);
+  } finally {
+    isProbing.value = false;
+    nextTick(refreshIcons);
+  }
+}
+
+function onRefreshAccountCredential(phone: string, isExpired: boolean) {
+  if (isExpired) {
+    openOAuthAuthorization(phone);
+  } else {
+    refreshAccountCredential(phone);
+  }
+}
+
+function onRemoveAccount(phone: string) {
+  if (phone === apiClient.getActivePhone()) {
+    showToast('无法移除当前激活账号', 'warn');
+    return;
+  }
+  if (typeof window !== 'undefined' && window.confirm) {
+    if (!window.confirm(`确认从本机移除账号 [${formatPhone(phone)}]？`)) return;
+  }
+  apiClient.removeAccount(phone);
+  refreshAccountStates();
+  showToast(`已从本机移除账号 [${formatPhone(phone)}]`, 'info', 2500);
+}
+
 async function refreshAccountCredential(phone: string) {
   checkingPhone.value = phone;
   try {
     const res = await apiClient.checkAccountHealth(phone);
     if (res.ok) {
-      showToast(`✓ ${res.message}`, 'success', 3000);
+      showToast(`✓ [${formatPhone(phone)}] 凭据有效性验证通过 · 状态正常`, 'success', 3000);
       await refreshAccountStates();
       if (phone === activeAccountPhone.value) {
         await loadRealDevices();
@@ -974,8 +1053,7 @@ function showToast(msg: string, type: 'success' | 'info' | 'error' = 'info', dur
 }
 
 async function openOAuthAuthorization(phone?: string) {
-  const target = (phone || activeAccountPhone.value).trim();
-  if (!target) return;
+  const target = (phone || '').trim();
   const url = apiClient.buildOAuthUrl(target, window.location.href);
   console.info('[AirTrack] 打开合宙官方 OAuth 授权:', url);
 
@@ -1045,7 +1123,7 @@ function convertStationDeviceToInfo(d: any): DeviceInfo {
   const located = typeof d.lat === 'number' && typeof d.lng === 'number' && !isNaN(d.lat) && !isNaN(d.lng) && d.lat !== 0 && d.lng !== 0;
   const coordText = located ? `${Number(d.lat).toFixed(5)}, ${Number(d.lng).toFixed(5)}` : '暂无定位';
 
-  const defaultAddr = d.imei === '864317087173038' || d.imei === '864317087172071'
+  const defaultAddr = d.imei === '864317087172071'
     ? '上海市浦东新区康桥镇浦三路3801号'
     : d.imei === '864317087172741'
       ? '上海市浦东新区北蔡镇花绣路18弄'
@@ -1140,17 +1218,33 @@ async function loadRealDevices() {
   }
 }
 
-/** 切换合宙工作空间账号 */
+/** 切换合宙工作空间账号 (Cache-First 本地优先秒开) */
 async function switchAccount(phone: string) {
   if (phone === apiClient.getActivePhone()) {
-    syncOfficialData();
+    showToast(`当前账号已是 [${formatPhone(phone)}]`, 'info', 2000);
     return;
   }
   apiClient.setActiveAccount(phone);
   activeDeviceId.value = '';
-  deviceList.value = [];
-  rebuildDeviceDb([]);
   TRACK_POINTS = [];
+
+  // 1. Cache-First: 先从本地 IndexedDB 立即载入已缓存设备快照（0ms 响应，绝不白屏）
+  try {
+    const cached = await db.getDeviceProfiles(phone);
+    if (cached && cached.length > 0) {
+      deviceList.value = cached;
+      rebuildDeviceDb(cached);
+      selectDeviceTab(cached[0].imei);
+    } else {
+      deviceList.value = [];
+      rebuildDeviceDb([]);
+    }
+  } catch (_) {
+    deviceList.value = [];
+    rebuildDeviceDb([]);
+  }
+
+  showToast(`✓ 已成功切换至账号 [${formatPhone(phone)}]`, 'success', 2500);
   refreshAccountStates();
   await loadRealDevices();
 }
@@ -2416,7 +2510,14 @@ function toggleInspectorDrawer() {
 
 function toggleOfficialModal() {
   const modal = document.getElementById('official-modal');
-  if (modal) modal.classList.toggle('hidden');
+  if (modal) {
+    const willOpen = modal.classList.contains('hidden');
+    modal.classList.toggle('hidden');
+    if (willOpen) {
+      refreshAccountStates();
+      runSequentialHealthProbe();
+    }
+  }
 }
 
 function redirectToOfficialOAuth() {
