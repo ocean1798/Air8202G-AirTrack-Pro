@@ -4,11 +4,11 @@
     <!-- ==================== 1. 全景腾讯 WebGL 地图底座 ==================== -->
     <div id="main-map" class="absolute inset-0 w-full h-full z-0 bg-cyber-950"></div>
 
-    <!-- 地图时空轨迹加载胶囊 (L3 悬浮态，声明 pointer-events-none 严禁阻断地图交互，top-24 与 top-16 的 Toast 错开) -->
+    <!-- 地图时空轨迹加载胶囊 (L3 悬浮态，声明 pointer-events-none 严禁阻断地图交互，与 Toast 及顶部状态栏错开) -->
     <transition name="fade">
       <div v-if="isTrackLoading"
            id="map-track-loading-capsule"
-           class="fixed top-24 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3.5 py-1.5 rounded-full glass-panel border border-cyan-400/40 bg-[#070d1d]/85 backdrop-blur-md shadow-[0_0_20px_rgba(0,240,255,0.25)] flex items-center space-x-2 text-xs font-mono text-cyan-300 animate-pulse">
+           class="fixed map-capsule-safe left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3.5 py-1.5 rounded-full glass-panel border border-cyan-400/40 bg-[#070d1d]/85 backdrop-blur-md shadow-[0_0_20px_rgba(0,240,255,0.25)] flex items-center space-x-2 text-xs font-mono text-cyan-300 animate-pulse">
         <svg class="w-3.5 h-3.5 animate-spin text-cyan-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
         </svg>
@@ -16,8 +16,8 @@
       </div>
     </transition>
 
-    <!-- ==================== 2. 顶部轻量浮动 Bar (响应式双模严格隔离) ==================== -->
-    <header class="absolute top-2 left-2 right-2 md:top-3 md:left-3 md:right-3 z-30 pointer-events-none">
+    <!-- ==================== 2. 顶部轻量浮动 Bar (响应式双模严格隔离，移动端预留状态栏安全区) ==================== -->
+    <header class="absolute mobile-safe-header left-2 right-2 md:left-3 md:right-3 z-30 pointer-events-none">
       
       <!-- 2.1 移动端独占顶部 Bar (< md 严格呈现，>= md 彻底隐藏) -->
       <div class="md:hidden glass-panel w-full p-1.5 rounded-2xl flex items-center shadow-xl border border-white/10 pointer-events-auto backdrop-blur-2xl bg-cyber-900/90">
@@ -307,8 +307,8 @@
       </div>
     </aside>
 
-    <!-- ==================== 4. 移动端独占：右下角悬浮回正 FAB (< md) ==================== -->
-    <div class="md:hidden fixed right-3 z-30 transition-all duration-300 bottom-[205px] pointer-events-auto">
+    <!-- ==================== 4. 移动端独占：右下角悬浮回正 FAB (< md，自适应底部安全区) ==================== -->
+    <div class="md:hidden fixed right-3 z-30 transition-all duration-300 mobile-fab-safe pointer-events-auto">
       <div role="button" @click="recenterVehicle()" title="定位至当前设备" class="w-10 h-10 rounded-2xl glass-panel border border-cyber-primary/60 text-cyber-primary flex items-center justify-center shadow-fab-shadow hover:bg-cyber-primary/20 hover:scale-105 active:scale-90 transition-all backdrop-blur-xl group bg-cyber-900/90">
         <i data-lucide="crosshair" class="w-5 h-5 text-cyber-primary group-hover:rotate-45 transition-transform"></i>
       </div>
@@ -322,7 +322,7 @@
         <div class="w-10 h-1 bg-slate-400/50 rounded-full hover:bg-cyber-primary transition-colors"></div>
       </div>
 
-      <!-- 顶部固定车况头 -->
+      <!-- 顶部固定设备概览头 -->
       <div id="sheet-header-bar" class="px-3.5 py-2 border-b border-cyber-700/60 bg-cyber-900/95 flex items-center justify-between shrink-0 cursor-pointer md:cursor-default select-none">
         <div class="flex-1">
           <div class="flex items-center space-x-2">
@@ -440,9 +440,9 @@
     </aside>
 
     <!-- ==================== 6. 底部核心：【双端自适应时间轴控制台】 ==================== -->
-    <div id="timeline-hud-wrapper" class="fixed bottom-[82px] left-2 right-2 z-20 flex flex-col items-center pointer-events-none transition-all duration-300 md:fixed md:bottom-3 md:left-3 md:right-3 md:max-w-5xl md:mx-auto md:z-20 relative">
+    <div id="timeline-hud-wrapper" class="timeline-hud-safe left-2 right-2 z-20 flex flex-col items-center pointer-events-none transition-all duration-300 md:left-3 md:right-3 md:max-w-5xl md:mx-auto">
       
-      <!-- 6.A 桌面端独占：外置悬浮车辆定位按钮（右上角外挂，不挤压时间轴内部空间，保持地图穿透） -->
+      <!-- 6.A 桌面端独占：外置悬浮设备定位按钮（右上角外挂，不挤压时间轴内部空间，保持地图穿透） -->
       <div class="hidden md:flex absolute -top-10 right-0 pointer-events-auto z-20">
         <div id="btn-recenter-float"
              role="button"
@@ -450,43 +450,42 @@
              title="视口居中到当前设备"
              class="glass-panel px-3 py-1.5 rounded-xl text-xs font-medium text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/20 hover:border-cyber-primary active:scale-95 transition flex items-center space-x-1.5 shadow-glow-cyan backdrop-blur-md cursor-pointer bg-cyber-950/90">
           <i data-lucide="crosshair" class="w-3.5 h-3.5 text-cyber-primary"></i>
-          <span class="tracking-wide font-sans">车辆定位</span>
+          <span class="tracking-wide font-sans">设备定位</span>
         </div>
       </div>
       
-      <!-- 6.0 宏观历史跨度配置弹层 -->
-      <div id="date-range-popover" class="w-full max-w-xl glass-panel p-3.5 sm:p-4 rounded-2xl border border-cyber-primary/40 shadow-popover-shadow mb-2 hidden pointer-events-auto transition-all backdrop-blur-2xl">
+      <!-- 6.0 宏观历史跨度配置弹层 (0018 极简轻量直达面板) -->
+      <div id="date-range-popover" class="w-full max-w-md glass-panel p-3 sm:p-3.5 rounded-2xl border border-cyber-primary/40 shadow-popover-shadow mb-2 hidden pointer-events-auto transition-all backdrop-blur-2xl bg-cyber-950/95">
         <div class="flex items-center justify-between pb-2 border-b border-white/10">
           <div class="flex items-center space-x-1.5 text-xs font-bold text-white">
             <i data-lucide="calendar-range" class="w-3.5 h-3.5 text-cyber-primary"></i>
-            <span>轨迹时间范围筛选</span>
+            <span>时间段筛选 (点选即生效)</span>
           </div>
-          <div role="button" @click="toggleDateRangePopover()" class="text-slate-400 hover:text-white p-1">
+          <div role="button" @click="toggleDateRangePopover()" class="text-slate-400 hover:text-white p-1 cursor-pointer">
             <i data-lucide="x" class="w-4 h-4"></i>
           </div>
         </div>
 
-        <div class="mt-2.5">
-          <div class="text-[10px] font-mono text-slate-400 mb-1">快速跨度:</div>
+        <div class="mt-2">
           <div class="grid grid-cols-3 sm:grid-cols-6 gap-1 text-[11px] font-mono">
-            <div role="button" @click="selectMacroPreset('today')" id="macro-btn-today" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">今日</div>
-            <div role="button" @click="selectMacroPreset('yesterday')" id="macro-btn-yesterday" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">昨日</div>
-            <div role="button" @click="selectMacroPreset('3d')" id="macro-btn-3d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近3天</div>
-            <div role="button" @click="selectMacroPreset('7d')" id="macro-btn-7d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近7天</div>
-            <div role="button" @click="selectMacroPreset('30d')" id="macro-btn-30d" class="macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition">近30天</div>
-            <div role="button" @click="selectMacroPreset('90d')" id="macro-btn-90d" class="macro-chip py-1 rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition">近90天</div>
+            <div role="button" @click="selectMacroPreset('today')" id="macro-btn-today" class="macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95">今日</div>
+            <div role="button" @click="selectMacroPreset('yesterday')" id="macro-btn-yesterday" class="macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95">昨日</div>
+            <div role="button" @click="selectMacroPreset('3d')" id="macro-btn-3d" class="macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95">近3天</div>
+            <div role="button" @click="selectMacroPreset('7d')" id="macro-btn-7d" class="macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95">近7天</div>
+            <div role="button" @click="selectMacroPreset('30d')" id="macro-btn-30d" class="macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95">近30天</div>
+            <div role="button" @click="selectMacroPreset('90d')" id="macro-btn-90d" class="macro-chip py-1 text-center rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition cursor-pointer active:scale-95">近90天</div>
           </div>
         </div>
 
-        <div class="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between flex-wrap gap-2 text-xs font-mono">
-          <div class="flex items-center space-x-1 text-[11px]">
-            <input type="date" v-model="customDateStart" id="input-date-start" class="bg-cyber-950 border border-cyber-700/80 rounded px-1.5 py-0.5 text-slate-200 text-[10px] focus:border-cyber-primary focus:outline-none">
+        <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between gap-1.5 text-xs font-mono">
+          <div class="flex items-center space-x-1 text-[10px] sm:text-[11px]">
+            <span class="text-slate-400 text-[10px]">自定义:</span>
+            <input type="date" v-model="customDateStart" id="input-date-start" class="bg-cyber-900 border border-cyber-700/80 rounded px-1.5 py-0.5 text-slate-200 text-[10px] focus:border-cyber-primary focus:outline-none">
             <span class="text-slate-500">-</span>
-            <input type="date" v-model="customDateEnd" id="input-date-end" class="bg-cyber-950 border border-cyber-700/80 rounded px-1.5 py-0.5 text-slate-200 text-[10px] focus:border-cyber-primary focus:outline-none">
+            <input type="date" v-model="customDateEnd" id="input-date-end" class="bg-cyber-900 border border-cyber-700/80 rounded px-1.5 py-0.5 text-slate-200 text-[10px] focus:border-cyber-primary focus:outline-none">
           </div>
-          <div role="button" @click="applyCustomDateRange()" class="px-3 py-1 rounded-xl bg-cyber-primary text-cyber-950 font-bold text-xs hover:bg-cyan-300 transition shadow-glow-cyan flex items-center space-x-1 cursor-pointer">
-            <i data-lucide="search" class="w-3 h-3"></i>
-            <span>加载</span>
+          <div role="button" id="btn-apply-custom-range" @click="applyCustomDateRange()" class="px-2.5 py-1 rounded-lg bg-cyber-primary/20 border border-cyber-primary/50 text-cyan-300 font-bold text-[10px] hover:bg-cyber-primary hover:text-cyber-950 transition shadow-glow-cyan flex items-center space-x-1 cursor-pointer active:scale-95">
+            <span>应用</span>
           </div>
         </div>
       </div>
@@ -611,6 +610,11 @@
               <span id="live-latest-time" class="text-slate-300 font-mono hidden sm:inline">—</span>
               <span id="live-latest-speed" class="text-cyber-primary font-bold font-mono">0.0 km/h</span>
 
+              <div id="btn-live-snap" role="button" @click="snapToLatestRealtime()" class="hidden px-2 py-0.5 rounded-md bg-cyber-primary/20 border border-cyber-primary/50 text-cyan-300 text-[9px] font-bold hover:bg-cyber-primary/30 transition flex items-center space-x-1 cursor-pointer active:scale-95">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse"></span>
+                <span>回到实时</span>
+              </div>
+
               <!-- 状态三色图例指示 (与时间轴及地图颜色完全对齐) -->
               <div class="hidden lg:flex items-center space-x-2 pl-2 border-l border-white/10 text-[9px] text-slate-400 font-sans">
                 <span class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald"></span><span>移动</span></span>
@@ -640,7 +644,7 @@
         
         <!-- 1. 顶部 Header (固定吸顶) -->
         <div class="p-5 pb-3 border-b border-white/10 shrink-0 relative bg-[#070d1d]/60">
-          <div role="button" @click="toggleOfficialModal()" title="关闭" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition cursor-pointer">
+          <div role="button" id="btn-close-official-modal" @click="toggleOfficialModal()" title="关闭" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition cursor-pointer">
             <i data-lucide="x" class="w-4 h-4"></i>
           </div>
 
@@ -751,7 +755,7 @@
             <a :href="inPageOAuthUrl" target="_blank" title="在外部独立浏览器标签页打开" class="text-slate-400 hover:text-cyan-400 text-xs flex items-center space-x-0.5 no-underline">
               <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
             </a>
-            <div role="button" @click="closeInPageOAuth()" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+            <div role="button" id="btn-close-inpage-oauth" @click="closeInPageOAuth()" class="text-slate-400 hover:text-white p-1 cursor-pointer">
               <i data-lucide="x" class="w-4 h-4"></i>
             </div>
           </div>
@@ -779,9 +783,9 @@
       </div>
     </div>
 
-    <!-- ==================== 9. 全局悬浮通知 Toast ==================== -->
+    <!-- ==================== 9. 全局悬浮通知 Toast (自适应状态栏安全区) ==================== -->
     <transition name="fade">
-      <div v-if="toastMessage" class="fixed top-16 left-1/2 -translate-x-1/2 z-[110] px-4 py-2 rounded-xl backdrop-blur-md shadow-2xl flex items-center space-x-2 text-xs font-mono border transition-all"
+      <div v-if="toastMessage" class="fixed toast-safe left-1/2 -translate-x-1/2 z-[110] px-4 py-2 rounded-xl backdrop-blur-md shadow-2xl flex items-center space-x-2 text-xs font-mono border transition-all"
         :class="toastType === 'success' ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300' : (toastType === 'info' ? 'bg-cyan-950/90 border-cyan-500/50 text-cyan-300' : (toastType === 'warn' ? 'bg-amber-950/90 border-amber-500/50 text-amber-300 shadow-[0_0_15px_-3px_rgba(245,158,11,0.3)]' : 'bg-rose-950/90 border-rose-500/50 text-rose-300'))">
         <i :data-lucide="toastType === 'success' ? 'check-circle' : (toastType === 'info' ? 'info' : (toastType === 'warn' ? 'alert-triangle' : 'alert-circle'))" class="w-4 h-4 shrink-0"></i>
         <span>{{ toastMessage }}</span>
@@ -1018,18 +1022,21 @@ function saveAccountAlias(phone: string) {
 
 const checkingPhone = ref('');
 const isProbing = ref(false);
+let activeAccountSwitchSeq = 0;
 
 async function refreshAccountStates() {
   const states = apiClient.getAccountStates();
   for (const s of states) {
-    try {
-      const cached = await db.getDeviceProfiles(s.account.phone);
-      s.deviceCount = cached.length > 0 ? cached.length : (s.active && deviceList.value.length > 0 ? deviceList.value.length : undefined);
-    } catch {
-      s.deviceCount = s.active && deviceList.value.length > 0 ? deviceList.value.length : undefined;
-    }
-    if (s.active && deviceList.value.length > 0) {
-      s.deviceCount = deviceList.value.length;
+    const probed = apiClient.getProbedDeviceCount(s.account.phone);
+    if (probed !== undefined) {
+      s.deviceCount = probed;
+    } else {
+      try {
+        const cached = await db.getDeviceProfiles(s.account.phone);
+        s.deviceCount = cached.length > 0 ? cached.length : (s.account.phone === apiClient.getActivePhone() ? deviceList.value.length : 0);
+      } catch {
+        s.deviceCount = s.account.phone === apiClient.getActivePhone() ? deviceList.value.length : 0;
+      }
     }
   }
   accountStates.value = states;
@@ -1048,10 +1055,8 @@ async function runSequentialHealthProbe() {
     await apiClient.probeAccountsSequential(undefined, (phone, res) => {
       const item = accountStates.value.find(s => s.account.phone === phone);
       if (item) {
-        item.isExpired = !res.ok;
-        if (res.ok) {
-          item.deviceCount = res.deviceCount;
-        }
+        item.isExpired = !!res.isExpired;
+        item.deviceCount = res.deviceCount;
       }
       nextTick(refreshIcons);
     });
@@ -1095,11 +1100,15 @@ async function refreshAccountCredential(phone: string) {
         await loadRealDevices();
       }
     } else {
-      showToast(res.message, 'error', 4000);
+      if (res.isExpired) {
+        showToast(res.message || `账号 [${formatPhone(phone)}] 登录态已失效，请重新授权`, 'warn', 4000);
+      } else {
+        showToast(res.message || `账号 [${formatPhone(phone)}] 状态检测未通过`, 'warn', 3500);
+      }
       await refreshAccountStates();
     }
   } catch (e: any) {
-    showToast('检测失败，请稍后重试', 'error');
+    showToast(`账号 [${formatPhone(phone)}] 检测遇到网络波动，已保留离线资产`, 'warn', 3000);
   } finally {
     checkingPhone.value = '';
     nextTick(refreshIcons);
@@ -1238,111 +1247,171 @@ function convertStationDeviceToInfo(d: any): DeviceInfo {
 }
 
 /** 从合宙云端或本地守护站同步当前账号的真实设备清单 */
+function hydrateDeviceInfo(baseDev: DeviceInfo, stDev: any): DeviceInfo {
+  const converted = convertStationDeviceToInfo(stDev);
+  return {
+    ...baseDev,
+    online: converted.online,
+    lat: converted.lat ?? baseDev.lat,
+    lng: converted.lng ?? baseDev.lng,
+    gcjLat: converted.gcjLat ?? baseDev.gcjLat,
+    gcjLng: converted.gcjLng ?? baseDev.gcjLng,
+    csq: converted.csq,
+    voltageMv: converted.voltageMv,
+    battPct: converted.battPct,
+    signalLevelText: converted.signalLevelText,
+    speed: converted.speed,
+    coordText: converted.coordText !== '暂无定位' ? converted.coordText : baseDev.coordText,
+    relativeTime: converted.relativeTime !== '—' ? converted.relativeTime : baseDev.relativeTime,
+    lastActiveTime: converted.lastActiveTime !== '未上报' ? converted.lastActiveTime : baseDev.lastActiveTime,
+    address: converted.address !== '未上报物理位置' ? converted.address : baseDev.address
+  };
+}
+
+/** 
+ * 从合宙云端确立资产真理基线（SSOT），并融合本地守护站遥测就地注水（Telemetry In-Place Hydration）
+ * 核心架构准则：基站提供状态增强，绝不决定资产增删；云端/IndexedDB 决定资产名单权威。
+ */
 async function loadRealDevices(isManual = false): Promise<{ success: boolean; count: number; isAuthExpired?: boolean; error?: string }> {
   deviceLoading.value = true;
   authError.value = '';
-  try {
-    let list: DeviceInfo[] = [];
+  const requestAcct = apiClient.getActivePhone();
+  const startSeq = activeAccountSwitchSeq;
 
-    // 1. 若守护站已联机，优先从守护站本地持久 SQLite 读取全部设备档案
-    if (isStationConnected.value) {
+  let baseList: DeviceInfo[] = [];
+  let isAuth = false;
+  let errMsg = '';
+
+  try {
+    // 步骤 1：确立当前账号的法定资产基线（Base Device Set，由云端权威拉取或离线镜像决定）
+    try {
+      baseList = await apiClient.getDeviceList();
+    } catch (e: any) {
+      isAuth = (e && e.name === 'AuthExpiredError') || (e?.message && e.message.includes('auth failed'));
+      errMsg = isAuth ? '合宙云端登录态已失效，请重新授权当前账号。' : (e?.message || '云端设备资产清单同步失败');
+
+      // 降级兜底：优先从本地 IndexedDB 读取当前请求账号的已存快照，杜绝白屏或空列表
+      try {
+        const cached = await db.getDeviceProfiles(requestAcct);
+        if (cached && cached.length > 0) {
+          baseList = cached as any;
+        }
+      } catch (_) {}
+    }
+
+    // 主动核验当前账号是否已被标记为登录态失效（覆盖 client 内部降级返回缓存且未向上抛错的场景）
+    if (apiClient.isAuthExpired(requestAcct)) {
+      isAuth = true;
+      errMsg = '合宙云端登录态已失效（在其他终端重复登录被顶线），请重新授权当前账号。';
+      authError.value = '云端登录态失效，正在以本地离线镜像展示，部分功能需重新授权。';
+      if (!isManual) {
+        showToast('当前账号在其他终端登录，登录态已失效，请在账号弹窗重新授权', 'warn', 4000);
+      }
+    } else if (errMsg && !isAuth) {
+      authError.value = errMsg;
+      if (!isManual) {
+        showToast(errMsg, 'error', 3000);
+      }
+    }
+
+    // 步骤 2：边缘基站遥测就地注水（Telemetry In-Place Hydration，绝不动设备基数）
+    if (isStationConnected.value && baseList.length > 0) {
       try {
         const stDevs = await stationClient.fetchDevices();
         if (stDevs && stDevs.length > 0) {
-          const currentAcct = apiClient.getActivePhone();
-          const filtered = stDevs.filter((d: any) => !d.account || d.account === currentAcct || d.account.includes(currentAcct));
-          const targetDevs = filtered.length > 0 ? filtered : stDevs;
-          list = targetDevs.map((d: any) => convertStationDeviceToInfo(d));
+          // 建立基站遥测哈希索引
+          const stMap = new Map<string, any>();
+          for (const sd of stDevs) {
+            if (sd.imei && sd.imei !== '864317087173038' && (sd.account === requestAcct || sd.account?.endsWith(requestAcct.slice(-11)))) {
+              stMap.set(sd.imei, sd);
+            }
+          }
+
+          // 定向就地注水：复用现有一体化转换模型，只更新匹配设备的遥测数值，绝不剔除未匹配设备
+          baseList = baseList.map(baseDev => {
+            const stDev = stMap.get(baseDev.imei);
+            if (!stDev) return baseDev; // 基站中无此设备时，平稳保留其原有基线状态
+            return hydrateDeviceInfo(baseDev, stDev);
+          });
         }
-      } catch (err) {
-        console.warn('[Station] fetchDevices fallback to cloud', err);
+      } catch (stErr) {
+        console.warn('[Station Hydration] 基站注水跳过，保留基线数据:', stErr);
       }
     }
 
-    // 2. 若未连接守护站或守护站未返回，由合宙云端直连拉取（或 IndexedDB 兜底）
-    if (!list || list.length === 0) {
-      list = await apiClient.getDeviceList();
+    // 时序与账号双重断言：若网络等待期间账号已发生切换，立即丢弃该过期响应
+    if (startSeq !== activeAccountSwitchSeq || requestAcct !== apiClient.getActivePhone()) {
+      console.info('[AirTrack] 丢弃过期的在途设备列表响应:', requestAcct);
+      return { success: false, count: 0 };
     }
 
-    deviceList.value = list;
-    rebuildDeviceDb(list);
-
-    if (list.length > 0) {
-      const keep = list.some(d => d.imei === activeDeviceId.value);
-      selectDeviceTab(keep ? activeDeviceId.value : list[0].imei);
+    // 步骤 3：状态机提交与持久化收口
+    if (baseList.length > 0) {
+      deviceList.value = baseList;
+      rebuildDeviceDb(baseList);
+      const keep = baseList.some(d => d.imei === activeDeviceId.value);
+      selectDeviceTab(keep ? activeDeviceId.value : baseList[0].imei);
+      return { success: !isAuth, count: baseList.length, isAuthExpired: isAuth, error: errMsg };
     } else {
+      deviceList.value = [];
+      rebuildDeviceDb([]);
       activeDeviceId.value = '';
       TRACK_POINTS = [];
       drawSpeedWaveCanvas();
+      return { success: false, count: 0, isAuthExpired: isAuth, error: errMsg || '暂无设备数据' };
     }
-    return { success: true, count: list.length };
-  } catch (e: any) {
-    const isAuth = e && e.name === 'AuthExpiredError';
-    if (isAuth) {
-      authError.value = '合宙云端登录态已失效（在其他终端重复登录被顶线），请重新授权当前账号。';
-      if (!isManual) {
-        showToast('当前账号在其他终端登录，登录态已失效，请点击重新授权', 'warn', 4000);
-      }
-    } else {
-      authError.value = e?.message || '云端设备资产清单同步失败';
-      if (!isManual) {
-        showToast(authError.value, 'error', 3000);
-      }
-    }
-
-    // 降级兜底：优先从本地 IndexedDB 读取已存设备快照，杜绝白屏或空列表
-    try {
-      const cached = await db.getDeviceProfiles(apiClient.getActivePhone());
-      if (cached && cached.length > 0) {
-        deviceList.value = cached;
-        rebuildDeviceDb(cached);
-        const keep = cached.some(d => d.imei === activeDeviceId.value);
-        selectDeviceTab(keep ? activeDeviceId.value : cached[0].imei);
-        console.info('[AirTrack] 云端不可用，已平稳展示 IndexedDB 离线设备快照:', cached.length);
-        return { success: true, count: cached.length, isAuthExpired: isAuth, error: authError.value };
-      }
-    } catch (_) {}
-
-    deviceList.value = [];
-    rebuildDeviceDb([]);
-    activeDeviceId.value = '';
-    TRACK_POINTS = [];
-    console.warn('[AirTrack] loadRealDevices failed', e);
-    return { success: false, count: 0, isAuthExpired: isAuth, error: authError.value };
+  } catch (err: any) {
+    console.warn('[AirTrack] loadRealDevices 异常:', err);
+    return { success: false, count: baseList.length, isAuthExpired: isAuth, error: err?.message || errMsg };
   } finally {
-    deviceLoading.value = false;
-    refreshAccountStates();
-    nextTick(() => {
-      drawSpeedWaveCanvas();
-      refreshIcons();
-    });
+    if (startSeq === activeAccountSwitchSeq && requestAcct === apiClient.getActivePhone()) {
+      deviceLoading.value = false;
+      refreshAccountStates();
+      nextTick(() => {
+        drawSpeedWaveCanvas();
+        refreshIcons();
+      });
+    }
   }
 }
 
-/** 切换合宙工作空间账号 (Cache-First 本地优先秒开) */
 async function switchAccount(phone: string) {
   if (phone === apiClient.getActivePhone()) {
     showToast(`当前账号已是 [${formatPhone(phone)}]`, 'info', 2000);
     return;
   }
+  const curSeq = ++activeAccountSwitchSeq;
   apiClient.setActiveAccount(phone);
   activeDeviceId.value = '';
   TRACK_POINTS = [];
 
+  // 切号立即清空 WebGL 地图全部图元，杜绝旧账号图钉与轨迹折线视觉残留
+  if (typeof window !== 'undefined') {
+    try {
+      if ((window as any).__vehicleMarker) (window as any).__vehicleMarker.setGeometries([]);
+      if ((window as any).__trackLines) (window as any).__trackLines.setGeometries([]);
+      if ((window as any).__fenceCircle) (window as any).__fenceCircle.setGeometries([]);
+    } catch (_) {}
+  }
+
   // 1. Cache-First: 先从本地 IndexedDB 立即载入已缓存设备快照（0ms 响应，绝不白屏）
   try {
     const cached = await db.getDeviceProfiles(phone);
-    if (cached && cached.length > 0) {
-      deviceList.value = cached;
-      rebuildDeviceDb(cached);
-      selectDeviceTab(cached[0].imei);
-    } else {
+    if (curSeq === activeAccountSwitchSeq) {
+      if (cached && cached.length > 0) {
+        deviceList.value = cached;
+        rebuildDeviceDb(cached);
+        selectDeviceTab(cached[0].imei);
+      } else {
+        deviceList.value = [];
+        rebuildDeviceDb([]);
+      }
+    }
+  } catch (_) {
+    if (curSeq === activeAccountSwitchSeq) {
       deviceList.value = [];
       rebuildDeviceDb([]);
     }
-  } catch (_) {
-    deviceList.value = [];
-    rebuildDeviceDb([]);
   }
 
   showToast(`✓ 已成功切换至账号 [${formatPhone(phone)}]`, 'success', 2500);
@@ -1517,6 +1586,7 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
         });
         TRACK_POINTS = points;
         updateTimelineScaleTicks(isMultiDay);
+        initViewportFromTrackPoints();
         drawSpeedWaveCanvas();
         updateLiveStatusBar();
 
@@ -1542,6 +1612,7 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
     if (points && points.length > 0) {
       TRACK_POINTS = points;
       updateTimelineScaleTicks(points[0].isMultiDay);
+      initViewportFromTrackPoints();
       drawSpeedWaveCanvas();
       updateLiveStatusBar();
 
@@ -1589,47 +1660,60 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
 
 function updateTimelineScaleTicks(isMultiDay?: boolean) {
   if (!TRACK_POINTS.length) return;
-  const numPoints = TRACK_POINTS.length;
-  const pStart = TRACK_POINTS[0];
-  const pMid1 = TRACK_POINTS[Math.floor(numPoints * 0.25)];
-  const pMid2 = TRACK_POINTS[Math.floor(numPoints * 0.5)];
-  const pMid3 = TRACK_POINTS[Math.floor(numPoints * 0.75)];
-  const pEnd = TRACK_POINTS[numPoints - 1];
 
-  // 自适应判断：若首尾时间处于同一天，中间刻度采用清晰的 HH:mm 时分格式，杜绝纯日期重复
-  const sDay = pStart.timeStr ? pStart.timeStr.slice(0, 10) : '';
-  const eDay = pEnd.timeStr ? pEnd.timeStr.slice(0, 10) : '';
-  const isSameDay = sDay === eDay;
+  let sMs = viewportStartMs;
+  let eMs = viewportEndMs;
+  if (!isViewportActive || sMs <= 0 || eMs <= sMs) {
+    const pS = TRACK_POINTS[0];
+    const pE = TRACK_POINTS[TRACK_POINTS.length - 1];
+    sMs = pS.timestamp < 1e11 ? pS.timestamp * 1000 : pS.timestamp;
+    eMs = pE.timestamp < 1e11 ? pE.timestamp * 1000 : pE.timestamp;
+  }
 
-  const fmt = (p: any, label = '') => {
-    if (!p || !p.timeStr) return '';
+  const span = Math.max(1000, eMs - sMs);
+  const t0 = sMs;
+  const t1 = sMs + span * 0.25;
+  const t2 = sMs + span * 0.50;
+  const t3 = sMs + span * 0.75;
+  const t4 = eMs;
+
+  const d0 = new Date(t0);
+  const d4 = new Date(t4);
+  const isSameDay = d0.toDateString() === d4.toDateString();
+  const isMicro = span <= 2 * 3600 * 1000;
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const fmtTime = (ts: number, isEdge = false) => {
+    const d = new Date(ts);
+    const h = pad(d.getHours());
+    const m = pad(d.getMinutes());
+    const s = pad(d.getSeconds());
+    const mo = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+
     if (isSameDay) {
-      return `${p.timeStr.slice(11, 16)}${label}`;
+      if (isMicro) return `${h}:${m}:${s}`;
+      return isEdge ? `${mo}-${day} ${h}:${m}` : `${h}:${m}`;
     } else {
-      return `${p.timeStr.slice(5, 10)} ${p.timeStr.slice(11, 16)}${label}`;
+      return `${mo}-${day} ${h}:${m}`;
     }
   };
 
-  const tStart = document.getElementById('scale-tick-start');
-  if (tStart) {
-    tStart.innerText = pStart.timeStr ? (isSameDay ? `${pStart.timeStr.slice(5, 10)} ${pStart.timeStr.slice(11, 16)}` : fmt(pStart)) : '';
-  }
-  const t1 = document.getElementById('scale-tick-1');
-  if (t1) t1.innerText = fmt(pMid1);
-  const t2 = document.getElementById('scale-tick-2');
-  if (t2) t2.innerText = fmt(pMid2);
-  const t3 = document.getElementById('scale-tick-3');
-  if (t3) t3.innerText = fmt(pMid3);
-  const tEnd = document.getElementById('scale-tick-end');
-  if (tEnd) {
-    const endText = pEnd.timeStr ? (isSameDay ? pEnd.timeStr.slice(11, 16) : `${pEnd.timeStr.slice(5, 10)} ${pEnd.timeStr.slice(11, 16)}`) : '';
-    tEnd.innerHTML = `<span>${endText}</span><span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan"></span>`;
+  const elStart = document.getElementById('scale-tick-start');
+  if (elStart) elStart.innerText = fmtTime(t0, true);
+  const el1 = document.getElementById('scale-tick-1');
+  if (el1) el1.innerText = fmtTime(t1);
+  const el2 = document.getElementById('scale-tick-2');
+  if (el2) el2.innerText = fmtTime(t2);
+  const el3 = document.getElementById('scale-tick-3');
+  if (el3) el3.innerText = fmtTime(t3);
+  const elEnd = document.getElementById('scale-tick-end');
+  if (elEnd) {
+    const textLabel = masterMode === 'live' && !isViewportActive ? `${fmtTime(t4, true)} (最新)` : fmtTime(t4, true);
+    elEnd.innerHTML = `<span>${textLabel}</span><span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan"></span>`;
   }
 }
 
-/**
- * 更新跟随最新状态栏：明确指示原地静止/移动中/信号中断三态及其专属颜色发光指示
- */
 function updateLiveStatusBar() {
   const badge = document.getElementById('live-state-badge');
   const dot = document.getElementById('live-state-dot');
@@ -1775,8 +1859,13 @@ function drawSpeedWaveCanvas() {
   const pts: { x: number; y: number; speed: number }[] = [];
   const BASELINE_H = 3;
   const MAX_WAVE_H = h - 5;
+  const sMs = isViewportActive && viewportSpanMs > 0 ? viewportStartMs : (TRACK_POINTS[0].timestamp < 1e11 ? TRACK_POINTS[0].timestamp * 1000 : TRACK_POINTS[0].timestamp);
+  const eMs = isViewportActive && viewportSpanMs > 0 ? viewportEndMs : (TRACK_POINTS[numPoints - 1].timestamp < 1e11 ? TRACK_POINTS[numPoints - 1].timestamp * 1000 : TRACK_POINTS[numPoints - 1].timestamp);
+  const curSpan = Math.max(1000, eMs - sMs);
+
   for (let i = 0; i < numPoints; i++) {
-    const x = numPoints > 1 ? (i / (numPoints - 1)) * w : w / 2;
+    const t = TRACK_POINTS[i].timestamp < 1e11 ? TRACK_POINTS[i].timestamp * 1000 : TRACK_POINTS[i].timestamp;
+    const x = isViewportActive ? ((t - sMs) / curSpan) * w : (numPoints > 1 ? (i / (numPoints - 1)) * w : w / 2);
     const sp = TRACK_POINTS[i].speed || 0;
     const waveH = BASELINE_H + Math.min(1, sp / 65) * (MAX_WAVE_H - BASELINE_H);
     const y = h - waveH;
@@ -1852,6 +1941,204 @@ let committedPlayhead = 100;
 let isHovering = false;
 let isDragging = false;
 
+// ==================== 视口时序模型与双向联动状态 (0017 & 0018) ====================
+let viewportStartMs = 0;
+let viewportEndMs = 0;
+let viewportSpanMs = 0;
+let isViewportActive = false; // 是否处于视口缩放/平移激活态
+let isApplyingScope = false;  // 宏观下发防级联死循环锁
+
+// 移动端策略 A 触控状态
+let touchMode: 'scrub' | 'pan' | 'pinch' | null = null;
+let initialPinchDist = 0;
+let touchStartClientX = 0;
+let snapTimeout: any = null;
+const DRAG_SLOP_PX = 4;
+
+// PC 端游标拖拽与平移状态
+let activePointerAction: 'scrub' | 'pan' | null = null;
+let panStartClientX = 0;
+
+function initViewportFromTrackPoints() {
+  if (!TRACK_POINTS.length) {
+    const now = Date.now();
+    viewportStartMs = now - 2 * 3600 * 1000;
+    viewportEndMs = now;
+    viewportSpanMs = 2 * 3600 * 1000;
+    isViewportActive = false;
+    notifyViewportChanged(viewportStartMs, viewportEndMs);
+    return;
+  }
+  const pFirst = TRACK_POINTS[0];
+  const pLast = TRACK_POINTS[TRACK_POINTS.length - 1];
+  const tS = pFirst.timestamp < 1e11 ? pFirst.timestamp * 1000 : pFirst.timestamp;
+  const tE = pLast.timestamp < 1e11 ? pLast.timestamp * 1000 : pLast.timestamp;
+  viewportStartMs = tS;
+  viewportEndMs = Math.max(tE, tS + 15 * 60 * 1000);
+  viewportSpanMs = viewportEndMs - viewportStartMs;
+  isViewportActive = false;
+  notifyViewportChanged(viewportStartMs, viewportEndMs);
+}
+
+function getTrackPointAtViewportPercent(percent: number): { pt: any; idx: number } {
+  if (!TRACK_POINTS.length) return { pt: null, idx: 0 };
+  if (!isViewportActive || viewportSpanMs <= 0) {
+    const idx = Math.max(0, Math.min(TRACK_POINTS.length - 1, Math.floor((percent / 100) * (TRACK_POINTS.length - 1))));
+    return { pt: TRACK_POINTS[idx], idx };
+  }
+  const targetTimeMs = viewportStartMs + (percent / 100) * viewportSpanMs;
+  let low = 0;
+  let high = TRACK_POINTS.length - 1;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const rawT = TRACK_POINTS[mid].timestamp;
+    const midTime = rawT < 1e11 ? rawT * 1000 : rawT;
+    if (midTime < targetTimeMs) {
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  const idx1 = Math.max(0, Math.min(TRACK_POINTS.length - 1, high));
+  const idx2 = Math.max(0, Math.min(TRACK_POINTS.length - 1, low));
+  const p1 = TRACK_POINTS[idx1];
+  const p2 = TRACK_POINTS[idx2];
+  const t1 = p1.timestamp < 1e11 ? p1.timestamp * 1000 : p1.timestamp;
+  const t2 = p2.timestamp < 1e11 ? p2.timestamp * 1000 : p2.timestamp;
+  const chosenIdx = Math.abs(t1 - targetTimeMs) < Math.abs(t2 - targetTimeMs) ? idx1 : idx2;
+  return { pt: TRACK_POINTS[chosenIdx], idx: chosenIdx };
+}
+
+function shiftTimeWindow(deltaMs: number) {
+  if (!TRACK_POINTS.length) return;
+  isViewportActive = true;
+  const span = viewportSpanMs;
+  let newStart = viewportStartMs + deltaMs;
+  let newEnd = viewportEndMs + deltaMs;
+  const maxEnd = Date.now() + 60_000;
+  const minStart = Date.now() - 90 * 86400_000;
+
+  if (newEnd > maxEnd) {
+    newEnd = maxEnd;
+    newStart = newEnd - span;
+  }
+  if (newStart < minStart) {
+    newStart = minStart;
+    newEnd = newStart + span;
+  }
+  viewportStartMs = newStart;
+  viewportEndMs = newEnd;
+  viewportSpanMs = viewportEndMs - viewportStartMs;
+
+  drawSpeedWaveCanvas();
+  updateTimelineScaleTicks();
+  renderStateAtPosition(committedPlayhead, false);
+  notifyViewportChanged(viewportStartMs, viewportEndMs);
+}
+
+function zoomTimeWindow(zoomFactor: number, centerRatio: number) {
+  if (!TRACK_POINTS.length) return;
+  isViewportActive = true;
+  const currentSpan = viewportSpanMs;
+  let newSpan = currentSpan * zoomFactor;
+
+  const MIN_SPAN_MS = 15 * 60 * 1000; // 最小 15 分钟
+  const MAX_SPAN_MS = 7 * 86400 * 1000; // 最大 7 天
+  if (newSpan < MIN_SPAN_MS) newSpan = MIN_SPAN_MS;
+  if (newSpan > MAX_SPAN_MS) newSpan = MAX_SPAN_MS;
+
+  const centerMs = viewportStartMs + currentSpan * centerRatio;
+  let newStart = centerMs - newSpan * centerRatio;
+  let newEnd = centerMs + newSpan * (1 - centerRatio);
+
+  const maxEnd = Date.now() + 60_000;
+  const minStart = Date.now() - 90 * 86400_000;
+  if (newEnd > maxEnd) {
+    newEnd = maxEnd;
+    newStart = newEnd - newSpan;
+  }
+  if (newStart < minStart) {
+    newStart = minStart;
+    newEnd = newStart + newSpan;
+  }
+
+  viewportStartMs = newStart;
+  viewportEndMs = newEnd;
+  viewportSpanMs = viewportEndMs - viewportStartMs;
+
+  drawSpeedWaveCanvas();
+  updateTimelineScaleTicks();
+  renderStateAtPosition(committedPlayhead, false);
+  notifyViewportChanged(viewportStartMs, viewportEndMs);
+}
+
+let rAFViewportUpdatePending = false;
+function notifyViewportChanged(startMs: number, endMs: number) {
+  if (rAFViewportUpdatePending || isApplyingScope) return;
+  rAFViewportUpdatePending = true;
+  requestAnimationFrame(() => {
+    rAFViewportUpdatePending = false;
+    const label = document.getElementById('current-range-label');
+    if (!label) return;
+
+    if (!isViewportActive) {
+      const mapNames: Record<string, string> = {
+        'today': '今日',
+        'yesterday': '昨日',
+        '3d': '近3天',
+        '7d': '近7天',
+        '30d': '近30天',
+        '90d': '近90天',
+      };
+      label.innerText = mapNames[currentMacroScope] || '近90天';
+      return;
+    }
+
+    const dS = new Date(startMs);
+    const dE = new Date(endMs);
+    const isSameDay = dS.toDateString() === dE.toDateString();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const hmS = `${pad(dS.getHours())}:${pad(dS.getMinutes())}`;
+    const hmE = `${pad(dE.getHours())}:${pad(dE.getMinutes())}`;
+
+    if (isSameDay) {
+      const m = pad(dS.getMonth() + 1);
+      const d = pad(dS.getDate());
+      const isToday = dS.toDateString() === new Date().toDateString();
+      const prefix = isToday ? '今日' : `${m}-${d}`;
+      label.innerText = `${prefix} ${hmS}~${hmE}`;
+    } else {
+      const mS = pad(dS.getMonth() + 1);
+      const dSStr = pad(dS.getDate());
+      const mE = pad(dE.getMonth() + 1);
+      const dEStr = pad(dE.getDate());
+      label.innerText = `${mS}-${dSStr} ~ ${mE}-${dEStr}`;
+    }
+  });
+}
+
+function snapToLatestRealtime() {
+  if (masterMode !== 'live' || !TRACK_POINTS.length) return;
+  committedPlayhead = 100;
+  isHovering = false;
+  isViewportActive = false;
+  initViewportFromTrackPoints();
+  drawSpeedWaveCanvas();
+  updateTimelineScaleTicks();
+
+  const playheadNeedle = document.getElementById('playhead-needle');
+  if (playheadNeedle) {
+    playheadNeedle.style.transition = 'left 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)';
+    playheadNeedle.style.left = '100%';
+    setTimeout(() => {
+      if (playheadNeedle) playheadNeedle.style.transition = '';
+    }, 250);
+  }
+  renderStateAtPosition(100, false);
+  const btnLiveSnap = document.getElementById('btn-live-snap');
+  if (btnLiveSnap) btnLiveSnap.classList.add('hidden');
+}
+
 const todayDate = new Date();
 const padTwo = (n: number) => String(n).padStart(2, '0');
 const formatYMD = (d: Date) => `${d.getFullYear()}-${padTwo(d.getMonth() + 1)}-${padTwo(d.getDate())}`;
@@ -1865,14 +2152,19 @@ function toggleDateRangePopover() {
   if (popover) popover.classList.toggle('hidden');
 }
 
-function selectMacroPreset(preset: string) {
+async function selectMacroPreset(preset: string) {
+  const popover = document.getElementById('date-range-popover');
+  if (popover) popover.classList.add('hidden');
+
+  isApplyingScope = true;
+  isViewportActive = false;
   currentMacroScope = preset;
   document.querySelectorAll('.macro-chip').forEach(b => {
-    b.className = 'macro-chip py-1 rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-slate-500 transition';
+    b.className = 'macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95';
   });
   const activeBtn = document.getElementById('macro-btn-' + preset);
   if (activeBtn) {
-    activeBtn.className = 'macro-chip py-1 rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition';
+    activeBtn.className = 'macro-chip py-1 text-center rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition cursor-pointer active:scale-95';
   }
 
   const label = document.getElementById('current-range-label');
@@ -1885,9 +2177,9 @@ function selectMacroPreset(preset: string) {
     else if (preset === '90d') label.innerText = '近90天';
   }
 
-  loadTrackDataForScope(preset);
-  toggleDateRangePopover();
+  await loadTrackDataForScope(preset);
 
+  initViewportFromTrackPoints();
   if (masterMode === 'range') {
     renderRangeTrackOnMap();
   } else {
@@ -1895,19 +2187,25 @@ function selectMacroPreset(preset: string) {
   }
   renderStateAtPosition(committedPlayhead, false);
   updateRangeDOM();
+  isApplyingScope = false;
 }
 
-function applyCustomDateRange() {
+async function applyCustomDateRange() {
   const dStart = customDateStart.value || (document.getElementById('input-date-start') as HTMLInputElement)?.value;
   const dEnd = customDateEnd.value || (document.getElementById('input-date-end') as HTMLInputElement)?.value;
   if (!dStart || !dEnd) return;
 
+  const popover = document.getElementById('date-range-popover');
+  if (popover) popover.classList.add('hidden');
+
+  isApplyingScope = true;
+  isViewportActive = false;
   currentMacroScope = 'custom';
   const label = document.getElementById('current-range-label');
   if (label) label.innerText = `${dStart.slice(5)}~${dEnd.slice(5)}`;
-  loadTrackDataForScope('custom', dStart, dEnd);
-  toggleDateRangePopover();
+  await loadTrackDataForScope('custom', dStart, dEnd);
 
+  initViewportFromTrackPoints();
   if (masterMode === 'range') {
     renderRangeTrackOnMap();
   } else {
@@ -1915,6 +2213,7 @@ function applyCustomDateRange() {
   }
   renderStateAtPosition(committedPlayhead, false);
   updateRangeDOM();
+  isApplyingScope = false;
 }
 
 function switchMasterMode(mode: string) {
@@ -2003,9 +2302,7 @@ function getPointStateInfo(idx: number) {
 
 function renderStateAtPosition(percent: number, isPreview = false) {
   if (!TRACK_POINTS.length) return;
-  const numPoints = TRACK_POINTS.length;
-  const idx = Math.min(Math.floor((percent / 100) * (numPoints - 1)), numPoints - 1);
-  const pt = TRACK_POINTS[idx];
+  const { pt, idx } = getTrackPointAtViewportPercent(percent);
   if (!pt) return;
   const sColor = getContinuousSpeedColor(pt.speed);
   const stInfo = getPointStateInfo(idx);
@@ -2098,7 +2395,7 @@ function renderStateAtPosition(percent: number, isPreview = false) {
 }
 
 function onTimelineMouseMove(e: MouseEvent) {
-  if (isDragging || !TRACK_POINTS.length) return;
+  if (isDragging || activePointerAction || !TRACK_POINTS.length) return;
 
   const container = document.getElementById('timeline-track-container');
   if (!container) return;
@@ -2147,6 +2444,11 @@ function onTimelineUserClick(e: MouseEvent) {
   const hoverNeedle = document.getElementById('hover-needle');
   if (hoverNeedle) hoverNeedle.classList.add('hidden');
   renderStateAtPosition(committedPlayhead, false);
+
+  if (masterMode === 'live' && p < 98) {
+    const btnLiveSnap = document.getElementById('btn-live-snap');
+    if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
+  }
 }
 
 function onTimelineMouseLeave() {
@@ -2156,6 +2458,11 @@ function onTimelineMouseLeave() {
   const hoverNeedle = document.getElementById('hover-needle');
   if (hoverNeedle) hoverNeedle.classList.add('hidden');
   renderStateAtPosition(committedPlayhead, false);
+
+  if (masterMode === 'live' && p < 98) {
+    const btnLiveSnap = document.getElementById('btn-live-snap');
+    if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
+  }
 }
 
 function updateRangeDOM() {
@@ -2376,9 +2683,201 @@ function setupSilkyTimelineInteractions() {
   rangeBody.addEventListener('pointerup', onPointerUp);
   rangeBody.addEventListener('pointercancel', onPointerUp);
 
+  // ==================== 0017: PC 端滚轮缩放与平移 ====================
+  container.addEventListener('wheel', (e: WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!TRACK_POINTS.length) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const cursorRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+
+    if (e.shiftKey) {
+      // Shift + 滚轮：平移时间窗口
+      const panStepMs = viewportSpanMs * 0.08 * (e.deltaY > 0 ? 1 : -1);
+      shiftTimeWindow(panStepMs);
+    } else {
+      // 纯滚轮：以光标为中心缩放时间跨度
+      const zoomFactor = e.deltaY > 0 ? 1.15 : 0.85;
+      zoomTimeWindow(zoomFactor, cursorRatio);
+    }
+  }, { passive: false });
+
+  // ==================== 0017: PC 端鼠标按住游标拖拽与空白平移 ====================
+  let pointerDownTime = 0;
+  let pointerDownClientX = 0;
+
+  container.addEventListener('pointerdown', (e: PointerEvent) => {
+    if (e.pointerType !== 'mouse') return;
+    const target = e.target as HTMLElement;
+    if (target.closest('#range-capsule') || target.closest('.handle-hit-zone')) return;
+
+    pointerDownTime = Date.now();
+    pointerDownClientX = e.clientX;
+    e.stopPropagation();
+
+    const playheadNeedle = document.getElementById('playhead-needle');
+    const needleRect = playheadNeedle?.getBoundingClientRect();
+    const isNearNeedle = needleRect && Math.abs(e.clientX - (needleRect.left + needleRect.width / 2)) <= 36;
+
+    if (isNearNeedle) {
+      activePointerAction = 'scrub';
+    } else {
+      activePointerAction = 'pan';
+      panStartClientX = e.clientX;
+    }
+    try { (container as HTMLElement).setPointerCapture(e.pointerId); } catch (err) {}
+  });
+
+  container.addEventListener('pointermove', (e: PointerEvent) => {
+    if (e.pointerType !== 'mouse' || !activePointerAction) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0) return;
+
+    if (activePointerAction === 'scrub') {
+      const p = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      committedPlayhead = p;
+      renderStateAtPosition(p, false);
+
+      if (masterMode === 'live') {
+        const btnLiveSnap = document.getElementById('btn-live-snap');
+        if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
+      }
+    } else if (activePointerAction === 'pan') {
+      const deltaX = e.clientX - panStartClientX;
+      panStartClientX = e.clientX;
+      const dtMs = -(deltaX / rect.width) * viewportSpanMs;
+      shiftTimeWindow(dtMs);
+    }
+  });
+
+  const onPointerUpGlobal = (e: PointerEvent) => {
+    if (e.pointerType !== 'mouse' || !activePointerAction) return;
+    try { (container as HTMLElement).releasePointerCapture(e.pointerId); } catch (err) {}
+
+    const clickDuration = Date.now() - pointerDownTime;
+    const clickDist = Math.abs(e.clientX - pointerDownClientX);
+    if (clickDuration < 300 && clickDist < 6) {
+      const rect = container.getBoundingClientRect();
+      const p = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      committedPlayhead = p;
+      renderStateAtPosition(committedPlayhead, false);
+
+      if (masterMode === 'live' && p < 98) {
+        const btnLiveSnap = document.getElementById('btn-live-snap');
+        if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
+      }
+    }
+    activePointerAction = null;
+  };
+  container.addEventListener('pointerup', onPointerUpGlobal);
+  container.addEventListener('pointercancel', onPointerUpGlobal);
+
+  // ==================== 0017: 鼠标悬停与移开自愈吸附 ====================
   container.addEventListener('mousemove', onTimelineMouseMove);
-  container.addEventListener('click', onTimelineUserClick);
-  container.addEventListener('mouseleave', onTimelineMouseLeave);
+  container.addEventListener('mouseleave', () => {
+    if (isDragging || activePointerAction) return;
+    isHovering = false;
+    const hoverNeedle = document.getElementById('hover-needle');
+    if (hoverNeedle) hoverNeedle.classList.add('hidden');
+
+    // 鼠标移出时消除悬停预览，还原为用户已确认的播放点位
+    renderStateAtPosition(committedPlayhead, false);
+  });
+
+  // ==================== 0017: 移动端【策略 A】触控手势管线 ====================
+  container.addEventListener('touchstart', (e: TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (isDragging || target.closest('#range-capsule') || target.closest('.handle-hit-zone')) return;
+
+    const playheadNeedle = document.getElementById('playhead-needle');
+    if (playheadNeedle) playheadNeedle.style.transition = '';
+
+    if (snapTimeout) {
+      clearTimeout(snapTimeout);
+      snapTimeout = null;
+    }
+
+    e.stopPropagation();
+
+    // 1. 双指手势 -> 缩放时间窗口 (Pinch to Zoom)
+    if (e.touches.length === 2) {
+      touchMode = 'pinch';
+      initialPinchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      e.preventDefault();
+      return;
+    }
+
+    // 2. 单指手势 -> 按住游标拖拽 vs 空白轨身平移
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      touchStartClientX = touch.clientX;
+      const needleRect = playheadNeedle?.getBoundingClientRect();
+      const isNearNeedle = needleRect && Math.abs(touch.clientX - (needleRect.left + needleRect.width / 2)) <= 36;
+
+      if (isNearNeedle) {
+        touchMode = 'scrub';
+      } else {
+        touchMode = 'pan';
+      }
+    }
+  }, { passive: false });
+
+  container.addEventListener('touchmove', (e: TouchEvent) => {
+    if (!touchMode) return;
+    e.stopPropagation();
+    e.preventDefault();
+
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0) return;
+
+    if (touchMode === 'pinch' && e.touches.length === 2) {
+      const curDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (Math.abs(curDist - initialPinchDist) > DRAG_SLOP_PX) {
+        const factor = initialPinchDist / curDist;
+        zoomTimeWindow(factor, 0.5);
+        initialPinchDist = curDist;
+      }
+    } else if (touchMode === 'scrub' && e.touches.length === 1) {
+      const x = e.touches[0].clientX;
+      const p = Math.max(0, Math.min(100, ((x - rect.left) / rect.width) * 100));
+      committedPlayhead = p;
+      renderStateAtPosition(p, false);
+
+      if (masterMode === 'live') {
+        const btnLiveSnap = document.getElementById('btn-live-snap');
+        if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
+      }
+    } else if (touchMode === 'pan' && e.touches.length === 1) {
+      const deltaX = e.touches[0].clientX - touchStartClientX;
+      if (Math.abs(deltaX) > DRAG_SLOP_PX) {
+        touchStartClientX = e.touches[0].clientX;
+        const dtMs = -(deltaX / rect.width) * viewportSpanMs;
+        shiftTimeWindow(dtMs);
+      }
+    }
+  }, { passive: false });
+
+  container.addEventListener('touchend', (e: TouchEvent) => {
+    if (!touchMode) return;
+    e.stopPropagation();
+    touchMode = null;
+
+    if (masterMode === 'live') {
+      const btnLiveSnap = document.getElementById('btn-live-snap');
+      if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
+
+      snapTimeout = setTimeout(() => {
+        snapToLatestRealtime();
+      }, 1500);
+    }
+  });
 }
 
 function renderFullColoredTrackOnMap() {
@@ -2865,6 +3364,48 @@ html, body, #app {
   height: 100%;
   background-color: #030712 !important;
   overflow: hidden;
+}
+
+/* 移动端状态栏与安全区适配 (Safe Area Insets) */
+.mobile-safe-header {
+  top: max(calc(env(safe-area-inset-top, 0px) + 8px), 36px);
+}
+@media (min-width: 768px) {
+  .mobile-safe-header {
+    top: 12px;
+  }
+}
+
+.map-capsule-safe {
+  top: max(calc(env(safe-area-inset-top, 0px) + 64px), 92px);
+}
+@media (min-width: 768px) {
+  .map-capsule-safe {
+    top: 96px;
+  }
+}
+
+.toast-safe {
+  top: max(calc(env(safe-area-inset-top, 0px) + 60px), 88px);
+}
+@media (min-width: 768px) {
+  .toast-safe {
+    top: 64px;
+  }
+}
+
+.timeline-hud-safe {
+  position: fixed;
+  bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .timeline-hud-safe {
+    bottom: 12px;
+  }
+}
+
+.mobile-fab-safe {
+  bottom: calc(205px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 渐隐过渡动画 */

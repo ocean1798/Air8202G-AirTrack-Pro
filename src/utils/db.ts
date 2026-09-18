@@ -34,7 +34,7 @@ export interface StoredDeviceProfile {
 }
 
 const DB_NAME = 'AirTrackDB_v1';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORE_TRACKS = 'track_points';
 const STORE_DEVICES = 'device_profiles';
 
@@ -207,6 +207,21 @@ class AirTrackDatabase {
               }
             } catch (_) {}
           }
+
+          // 4. 版本4升级：定向自愈清洗因探针单例踩踏导致的种子设备归属混乱，保留用户自定义设备快照
+          if (e.oldVersion < 4 && db.objectStoreNames.contains(STORE_DEVICES)) {
+            try {
+              const tx = (e.target as IDBOpenDBRequest).transaction;
+              if (tx) {
+                const devStore = tx.objectStore(STORE_DEVICES);
+                // 仅对已知官方 8 台种子设备执行覆盖纠正归属
+                for (const seed of SEED_DEVICE_PROFILES) {
+                  devStore.put(seed);
+                }
+                devStore.delete('864317087173038');
+              }
+            } catch (_) {}
+          }
         };
 
         req.onsuccess = () => resolve(req.result);
@@ -273,13 +288,13 @@ class AirTrackDatabase {
     if (!db) {
       const results: StoredTrackPoint[] = [];
       for (const p of this.memoryTracks.values()) {
-        if (p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs) {
+        if ((!p.accountPhone || p.accountPhone === accountPhone) && p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs) {
           results.push(p);
         }
       }
       if (results.length > 0) return results.sort((a, b) => a.timestamp - b.timestamp);
 
-      const seeds = SEED_TRACK_POINTS.filter((p) => p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs);
+      const seeds = SEED_TRACK_POINTS.filter((p) => (!p.accountPhone || p.accountPhone === accountPhone) && p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs);
       return seeds;
     }
 
@@ -298,10 +313,12 @@ class AirTrackDatabase {
           const cursor = (e.target as IDBRequest<IDBCursorWithValue>).result;
           if (cursor) {
             const v = cursor.value;
+            // 租户归属强断言：确保点位严格属于当前查询账号
+            const belongsToAccount = !v.accountPhone || v.accountPhone === accountPhone;
             // 排除历史合成测试种子特征点
             const isSynthetic = (Math.abs(v.lat - 31.1480) < 0.001 && Math.abs(v.lng - 121.5280) < 0.001) ||
                                 (Math.abs(v.lat - 34.8050) < 0.001 && Math.abs(v.lng - 114.3200) < 0.001);
-            if (!isSynthetic) {
+            if (belongsToAccount && !isSynthetic) {
               list.push(v);
             }
             cursor.continue();
@@ -319,7 +336,7 @@ class AirTrackDatabase {
         };
       } catch (e) {
         console.warn('[AirTrackDB] getTrackPointsByRange exception', e);
-        const seeds = SEED_TRACK_POINTS.filter((p) => p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs);
+        const seeds = SEED_TRACK_POINTS.filter((p) => (!p.accountPhone || p.accountPhone === accountPhone) && p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs);
         resolve(seeds);
       }
     });
@@ -382,8 +399,8 @@ class AirTrackDatabase {
 
         req.onsuccess = () => {
           let res = req.result || [];
-          // 彻底过滤已下线的 864317087173038
-          res = res.filter((d: any) => d.imei !== '864317087173038');
+          // 彻底过滤已下线的 864317087173038 并进行账号归属二次断言
+          res = res.filter((d: any) => d.imei !== '864317087173038' && d.accountPhone === accountPhone);
           if (res.length > 0) {
             resolve(res);
           } else {

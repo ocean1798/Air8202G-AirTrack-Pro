@@ -62,6 +62,14 @@ export class AuthExpiredError extends Error {
   }
 }
 
+export interface HealthProbeResult {
+  ok: boolean;
+  isExpired?: boolean;
+  isNetworkError?: boolean;
+  message: string;
+  deviceCount: number;
+}
+
 const LS_ACTIVE_ACCOUNT = 'airtrack_active_account';
 const LS_PENDING_ACCOUNT = 'airtrack_pending_account';
 const LS_PROJECTS_CACHE = 'airtrack_projects_cache_';
@@ -131,6 +139,7 @@ export class AirCloudClient {
   private projectKey = '';
   private activePhone = DEFAULT_ACCOUNT_PHONE;
   private expiredAccounts = new Set<string>();
+  private probedDeviceCounts: Map<string, number> = new Map();
 
   public static getInstance(): AirCloudClient {
     if (!AirCloudClient.instance) {
@@ -160,48 +169,216 @@ export class AirCloudClient {
     return this.activePhone;
   }
 
+  public getProbedDeviceCount(phone: string): number | undefined {
+    return this.probedDeviceCounts.get(phone);
+  }
+
   /**
-   * 刷新 / 检测指定账号的凭据有效性与设备数
-   * @returns 检测结论与最新设备数
+   * 独立凭据获取辅助方法：获取指定手机号独立凭据，避免单例污染
    */
-  public async checkAccountHealth(phone?: string): Promise<{ ok: boolean; message: string; deviceCount: number }> {
-    const targetPhone = phone || this.activePhone;
-    if (!this.hasAuth(targetPhone)) {
-      this.markAuthExpired(targetPhone, true);
-      return { ok: false, message: `账号 ${targetPhone.slice(-4)} 尚未登录授权`, deviceCount: 0 };
+  public getCredentialsForPhone(phone: string): { token: string; salt: string; sid: string; projectKey: string } | null {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    let token = '';
+    let salt = '';
+    let sid = '336677';
+    let projectKey = this.readProjectKey(phone) || '';
+
+    try {
+      const authStr = window.localStorage.getItem(lsAuthKey(phone));
+      if (authStr) {
+        const auth = JSON.parse(authStr);
+        if (auth?.token && auth?.salt) {
+          token = auth.token;
+          salt = auth.salt;
+        }
+      }
+      const servStr = window.localStorage.getItem(lsServiceKey(phone));
+      if (servStr) {
+        const serv = JSON.parse(servStr);
+        if (serv?.sid) sid = serv.sid;
+      }
+    } catch (_) {}
+
+    if ((!token || !salt) && PRESET_AUTH_TOKENS[phone]) {
+      const preset = PRESET_AUTH_TOKENS[phone];
+      token = preset.auth?.token || '';
+      salt = preset.auth?.salt || '';
+      if (preset.service?.sid) sid = preset.service.sid;
     }
 
-    const prevPhone = this.activePhone;
+    if (!projectKey) {
+      const acct = findAccount(phone);
+      if (acct?.projectKey) projectKey = acct.projectKey;
+    }
+
+    if (token && salt) {
+      return { token, salt, sid, projectKey };
+    }
+    return null;
+  }
+
+  /**
+   * 轻量无副作用只读 HTTP 请求：使用目标账号独立凭据发送单次调用，绝不改写单例状态
+   */
+  public async rawPostApi(
+    endpoint: string,
+    payload: any,
+    creds: { token: string; salt: string; sid: string; projectKey?: string },
+    timeoutMs: number = 5000
+  ): Promise<any> {
+    const url = `${OFFICIAL_API_CONFIG.gateway}/${endpoint.replace(/^\//, '')}`;
+    // 严格遵循合宙 API CORS 白名单，严禁添加自定义 header (如 project)，否则将被浏览器 preflight 拦截报 Failed to fetch
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'authorization': creds.token,
+      'salt': creds.salt,
+      'sid': creds.sid || '336677'
+    };
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
-      if (targetPhone !== prevPhone) {
-        this.setActiveAccount(targetPhone);
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
       }
-      const devices = await this.getDeviceList();
-      this.markAuthExpired(targetPhone, false);
+      return await res.json();
+    } catch (err) {
+      clearTimeout(timer);
+      throw err;
+    }
+  }
+
+  /**
+   * 纯只读健康探活接口（严禁调用 setActiveAccount，绝不篡改全局激活状态与写盘）
+   */
+  public async checkAccountHealth(phone?: string): Promise<HealthProbeResult> {
+    const targetPhone = phone || this.activePhone;
+    const creds = this.getCredentialsForPhone(targetPhone);
+
+    let fallbackCount = this.probedDeviceCounts.get(targetPhone);
+    if (fallbackCount === undefined) {
+      try {
+        const cachedDevs = await db.getDeviceProfiles(targetPhone);
+        if (cachedDevs && cachedDevs.length > 0) {
+          fallbackCount = cachedDevs.length;
+        }
+      } catch (_) {}
+    }
+    const finalFallback = fallbackCount ?? 0;
+
+    if (!creds || !creds.token || !creds.salt) {
+      this.markAuthExpired(targetPhone, true);
       return {
-        ok: true,
-        message: `账号 ${targetPhone.slice(-4)} 凭据有效，名下共 ${devices.length} 台设备`,
-        deviceCount: devices.length
+        ok: false,
+        isExpired: true,
+        message: `账号 ${targetPhone.slice(-4)} 尚未登录授权`,
+        deviceCount: finalFallback
       };
-    } catch (e: any) {
-      const msg = String(e?.message || '');
-      if (e instanceof AuthExpiredError || (e && e.name === 'AuthExpiredError') || msg.toLowerCase().includes('auth')) {
+    }
+
+    try {
+      let projectKey = creds.projectKey || '';
+      if (!projectKey) {
+        const pResp = await this.rawPostApi('/list_my_projects', { page: 1, size: 50 }, creds, 5000);
+        if (pResp && (pResp.code === 105 || (typeof pResp.value === 'string' && pResp.value.includes('auth failed')))) {
+          this.markAuthExpired(targetPhone, true);
+          return {
+            ok: false,
+            isExpired: true,
+            message: `账号 ${targetPhone.slice(-4)} 登录态已失效`,
+            deviceCount: finalFallback
+          };
+        }
+        if (pResp && pResp.code === 0 && Array.isArray(pResp.value) && pResp.value.length > 0) {
+          projectKey = pResp.value[0].project_key;
+          creds.projectKey = projectKey;
+          this.writeProjectKey(targetPhone, projectKey);
+        }
+      }
+
+      if (!projectKey) {
+        return {
+          ok: false,
+          isExpired: false,
+          message: `账号 ${targetPhone.slice(-4)} 未找到有效项目`,
+          deviceCount: finalFallback
+        };
+      }
+
+      const dResp = await this.rawPostApi('/list_my_devices', {
+        project: projectKey,
+        page: 1,
+        size: 50
+      }, creds, 5000);
+
+      if (dResp && (dResp.code === 105 || (typeof dResp.value === 'string' && dResp.value.includes('auth failed')))) {
         this.markAuthExpired(targetPhone, true);
         return {
           ok: false,
-          message: `账号 ${targetPhone.slice(-4)} 登录态已失效，请重新授权`,
-          deviceCount: 0
+          isExpired: true,
+          message: `账号 ${targetPhone.slice(-4)} 登录态已失效，需重新授权`,
+          deviceCount: finalFallback
         };
+      }
+
+      let rawRecords: any[] = [];
+      if (dResp && dResp.code === 0 && dResp.value) {
+        if (Array.isArray(dResp.value.records)) {
+          rawRecords = dResp.value.records;
+        } else if (Array.isArray(dResp.value)) {
+          rawRecords = dResp.value;
+        }
+      }
+
+      if (dResp && dResp.code === 0 && dResp.value) {
+        this.markAuthExpired(targetPhone, false);
+        const validRecords = rawRecords.filter((r: any) => {
+          const imei = r.deviceid || r.deviceId;
+          return imei !== '864317087173038';
+        });
+        const count = validRecords.length;
+        this.probedDeviceCounts.set(targetPhone, count);
+        return {
+          ok: true,
+          isExpired: false,
+          message: `账号 ${targetPhone.slice(-4)} 凭据有效，名下共 ${count} 台设备`,
+          deviceCount: count
+        };
+      }
+
+      return {
+        ok: false,
+        isExpired: false,
+        message: '设备清单拉取失败',
+        deviceCount: this.probedDeviceCounts.get(targetPhone) ?? finalFallback
+      };
+    } catch (e: any) {
+      const isTimeout = e?.name === 'AbortError' || e?.message?.includes('timeout') || e?.message?.includes('aborted');
+      const isFetchErr = e?.message?.includes('fetch') || e?.message?.includes('network') || e?.message?.includes('NetworkError');
+      let errMsg = '网络连接异常';
+      if (isTimeout) {
+        errMsg = `账号 ${targetPhone.slice(-4)} 云端连接超时`;
+      } else if (isFetchErr) {
+        errMsg = `账号 ${targetPhone.slice(-4)} 云端网络受阻，已保留离线资产`;
+      } else if (e?.message) {
+        errMsg = e.message;
       }
       return {
         ok: false,
-        message: e?.message || '网络连接异常，请重试',
-        deviceCount: 0
+        isExpired: false,
+        isNetworkError: true,
+        message: errMsg,
+        deviceCount: this.probedDeviceCounts.get(targetPhone) ?? finalFallback
       };
-    } finally {
-      if (targetPhone !== prevPhone) {
-        this.setActiveAccount(prevPhone);
-      }
     }
   }
 
@@ -210,12 +387,12 @@ export class AirCloudClient {
    */
   public async probeAccountsSequential(
     phones?: string[],
-    onProgress?: (phone: string, result: { ok: boolean; message: string; deviceCount: number }) => void
-  ): Promise<Record<string, { ok: boolean; message: string; deviceCount: number }>> {
+    onProgress?: (phone: string, result: HealthProbeResult) => void
+  ): Promise<Record<string, HealthProbeResult>> {
     const list = phones && phones.length > 0 
       ? phones 
       : getAllRegisteredAccounts().map(a => a.phone);
-    const results: Record<string, { ok: boolean; message: string; deviceCount: number }> = {};
+    const results: Record<string, HealthProbeResult> = {};
     for (const p of list) {
       try {
         const res = await this.checkAccountHealth(p);
@@ -224,7 +401,13 @@ export class AirCloudClient {
           onProgress(p, res);
         }
       } catch (err: any) {
-        results[p] = { ok: false, message: err?.message || '检测异常', deviceCount: 0 };
+        results[p] = {
+          ok: false,
+          isExpired: false,
+          isNetworkError: true,
+          message: err?.message || '检测异常',
+          deviceCount: this.probedDeviceCounts.get(p) ?? 0
+        };
         if (onProgress) {
           onProgress(p, results[p]);
         }
@@ -664,10 +847,13 @@ export class AirCloudClient {
    * 拉取设备清单：优先云端，云端受阻或未登录时从本地 IndexedDB 恢复
    */
   public async getDeviceList(): Promise<DeviceInfo[]> {
+    const currentReqPhone = this.activePhone;
+
     // 1. 若当前未授权或离线，尝试直接加载本地已持久化档案
-    if (!this.hasAuth()) {
-      const cached = await db.getDeviceProfiles(this.activePhone);
+    if (!this.hasAuth(currentReqPhone)) {
+      const cached = await db.getDeviceProfiles(currentReqPhone);
       if (cached.length > 0) {
+        this.probedDeviceCounts.set(currentReqPhone, cached.length);
         return this.profilesToDeviceInfos(cached);
       }
       throw new AuthExpiredError('当前空间尚未授权');
@@ -777,7 +963,7 @@ export class AirCloudClient {
 
         toCache.push({
           imei,
-          accountPhone: this.activePhone,
+          accountPhone: currentReqPhone,
           name: defaultName,
           status: isOnline ? "在线" : "离线",
           csq: `CSQ ${dev.csq}`,
@@ -793,12 +979,14 @@ export class AirCloudClient {
 
       // 写入本地持久化
       await db.putDeviceProfiles(toCache);
+      this.probedDeviceCounts.set(currentReqPhone, devices.length);
       devices.sort((a, b) => String(b.lastActiveTime).localeCompare(String(a.lastActiveTime)));
       return devices;
     } catch (err) {
       // 网络或鉴权失败时，安全回退到本地离线档案
-      const cached = await db.getDeviceProfiles(this.activePhone);
+      const cached = await db.getDeviceProfiles(currentReqPhone);
       if (cached.length > 0) {
+        this.probedDeviceCounts.set(currentReqPhone, cached.length);
         return this.profilesToDeviceInfos(cached);
       }
       throw err;

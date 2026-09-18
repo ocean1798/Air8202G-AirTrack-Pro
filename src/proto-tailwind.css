@@ -1808,14 +1808,17 @@ svg.tmap2d-adapter-zoom-animated {
     /* 移动端底部抽屉三种高度形态 (Bottom Sheet Snap Points) */
     @media (max-width: 767px) {
       .sheet-peek {
-        height: 74px !important;
+        height: calc(74px + env(safe-area-inset-bottom, 0px)) !important;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
         overflow: hidden !important;
       }
       .sheet-half {
         height: 48vh !important;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
       }
       .sheet-full {
         height: 86vh !important;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
       }
     }
   

@@ -168,6 +168,8 @@ export function getAllRegisteredAccounts(): AccountDef[] {
       list[existingIdx] = {
         ...evalAcct,
         ...list[existingIdx],
+        projectKey: list[existingIdx].projectKey || evalAcct.projectKey || '',
+        nameHints: { ...evalAcct.nameHints, ...(list[existingIdx].nameHints || {}) },
         label: list[existingIdx].label || evalAcct.label,
         role: list[existingIdx].role || evalAcct.role
       };
@@ -185,12 +187,13 @@ export function registerUserAccount(account: { phone: string; label?: string; pr
     const raw = localStorage.getItem(LS_USER_ACCOUNTS);
     const list: AccountDef[] = raw ? JSON.parse(raw) : [];
     const idx = list.findIndex(a => a.phone === account.phone);
+    const existing = idx >= 0 ? list[idx] : null;
     const item: AccountDef = {
       phone: account.phone,
-      password: account.password || '',
-      label: account.label ? account.label.trim() : (idx >= 0 && list[idx].label ? list[idx].label : ''),
-      projectKey: account.projectKey || '',
-      nameHints: {}
+      password: account.password || (existing?.password || ''),
+      label: account.label ? account.label.trim() : (existing?.label || ''),
+      projectKey: account.projectKey || (existing?.projectKey || ''),
+      nameHints: existing?.nameHints || {}
     };
     if (idx >= 0) {
       list[idx] = { ...list[idx], ...item };
