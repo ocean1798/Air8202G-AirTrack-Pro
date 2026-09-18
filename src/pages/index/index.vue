@@ -4,6 +4,18 @@
     <!-- ==================== 1. 全景腾讯 WebGL 地图底座 ==================== -->
     <div id="main-map" class="absolute inset-0 w-full h-full z-0 bg-cyber-950"></div>
 
+    <!-- 地图时空轨迹加载胶囊 (L3 悬浮态，声明 pointer-events-none 严禁阻断地图交互，top-24 与 top-16 的 Toast 错开) -->
+    <transition name="fade">
+      <div v-if="isTrackLoading"
+           id="map-track-loading-capsule"
+           class="fixed top-24 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3.5 py-1.5 rounded-full glass-panel border border-cyan-400/40 bg-[#070d1d]/85 backdrop-blur-md shadow-[0_0_20px_rgba(0,240,255,0.25)] flex items-center space-x-2 text-xs font-mono text-cyan-300 animate-pulse">
+        <svg class="w-3.5 h-3.5 animate-spin text-cyan-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        <span class="tracking-wide">正在同步时空轨迹...</span>
+      </div>
+    </transition>
+
     <!-- ==================== 2. 顶部轻量浮动 Bar (响应式双模严格隔离) ==================== -->
     <header class="absolute top-2 left-2 right-2 md:top-3 md:left-3 md:right-3 z-30 pointer-events-none">
       
@@ -37,8 +49,15 @@
              role="button"
              @click.stop="manualRefreshDevices"
              title="刷新设备状态"
-             class="shrink-0 p-1.5 rounded-full border border-cyber-700/60 hover:border-cyber-primary text-slate-300 hover:text-cyber-primary bg-cyber-950/80 transition cursor-pointer mr-1">
-          <i data-lucide="refresh-cw" :class="['w-3.5 h-3.5', isDeviceRefreshing ? 'animate-spin text-cyber-primary' : '']"></i>
+             :class="['shrink-0 p-1.5 rounded-full border border-cyber-700/60 hover:border-cyber-primary text-slate-300 hover:text-cyber-primary bg-cyber-950/80 transition cursor-pointer mr-1', isDeviceRefreshing ? 'pointer-events-none opacity-80' : '']">
+          <svg class="w-3.5 h-3.5 transition-transform duration-300"
+               :class="isDeviceRefreshing ? 'animate-spin text-cyber-primary' : ''"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+            <path d="M21 3v5h-5"/>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+            <path d="M8 16H3v5"/>
+          </svg>
         </div>
 
         <!-- 移动端专享：纯用户头像 (不带电话号码) -->
@@ -166,8 +185,15 @@
                role="button"
                @click.stop="manualRefreshDevices"
                title="刷新设备列表与状态"
-               class="p-1 rounded-lg text-slate-400 hover:text-cyber-primary hover:bg-cyber-primary/10 transition cursor-pointer">
-            <i data-lucide="refresh-cw" :class="['w-3.5 h-3.5', isDeviceRefreshing ? 'animate-spin text-cyber-primary' : '']"></i>
+               :class="['p-1 rounded-lg text-slate-400 hover:text-cyber-primary hover:bg-cyber-primary/10 transition cursor-pointer', isDeviceRefreshing ? 'pointer-events-none opacity-80' : '']">
+            <svg class="w-3.5 h-3.5 transition-transform duration-300"
+                 :class="isDeviceRefreshing ? 'animate-spin text-cyber-primary' : ''"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+              <path d="M21 3v5h-5"/>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+              <path d="M8 16H3v5"/>
+            </svg>
           </div>
           <!-- 折叠收起按钮 -->
           <div role="button" @click="toggleDeviceDock()" id="btn-collapse-dock" title="收起设备列表" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer">
@@ -176,7 +202,27 @@
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-2 space-y-2" id="desktop-device-card-list">
+      <!-- 设备列表顶部的 1.5px 极简微光扫描条（刷新中呈现科技光流） -->
+      <div v-if="isDeviceRefreshing" class="w-full h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-pulse shadow-[0_0_8px_rgba(0,240,255,0.8)]"></div>
+
+      <div class="flex-1 overflow-y-auto p-2 space-y-2 transition-opacity duration-300"
+           :class="isDeviceRefreshing ? 'opacity-75' : ''"
+           id="desktop-device-card-list">
+
+        <!-- 当空列表且正在加载中时呈现的微光骨架屏 -->
+        <div v-if="!deviceList.length && (deviceLoading || isDeviceRefreshing)" class="space-y-2 animate-pulse">
+          <div v-for="i in 2" :key="i" class="p-2.5 rounded-xl bg-cyber-900/50 border border-cyber-700/40 space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <div class="w-2 h-2 rounded-full bg-slate-700"></div>
+                <div class="h-3 w-20 bg-slate-700 rounded"></div>
+              </div>
+              <div class="h-3 w-10 bg-slate-800 rounded"></div>
+            </div>
+            <div class="h-2 w-32 bg-slate-800 rounded"></div>
+            <div class="h-2 w-24 bg-slate-800 rounded"></div>
+          </div>
+        </div>
 
         <div v-for="d in deviceList" :key="d.imei"
              @click="selectDeviceTab(d.imei)"
@@ -305,7 +351,8 @@
       <div class="flex-1 overflow-y-auto p-3 space-y-3 scroll-smooth overscroll-contain">
         
         <!-- 遥测模块 1 · 物理空间定位状态 -->
-        <section class="glass-panel p-3 rounded-xl border border-cyber-primary/30 space-y-2 shadow-lg">
+        <section class="glass-panel p-3 rounded-xl border border-cyber-primary/30 space-y-2 shadow-lg transition-opacity duration-300"
+                 :class="isInspectorLoading ? 'animate-pulse opacity-75' : ''">
           <div class="flex items-center justify-between text-[11px] pb-1.5 border-b border-white/10">
             <span class="text-slate-200 font-bold flex items-center space-x-1.5">
               <i data-lucide="map-pin" class="w-3.5 h-3.5 text-cyber-primary"></i>
@@ -335,7 +382,8 @@
         </section>
 
         <!-- 遥测模块 2 · 硬件供电与射频状态 -->
-        <section class="glass-panel rounded-xl overflow-hidden border border-cyber-700/60 shadow-lg">
+        <section class="glass-panel rounded-xl overflow-hidden border border-cyber-700/60 shadow-lg transition-opacity duration-300"
+                 :class="isInspectorLoading ? 'animate-pulse opacity-75' : ''">
           <div class="p-2.5 bg-cyber-900/90 border-b border-cyber-700/50 flex items-center justify-between text-[11px]">
             <span class="text-slate-200 font-bold flex items-center space-x-1.5">
               <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyber-primary"></i>
@@ -635,8 +683,12 @@
                   当前账号
                 </span>
               </div>
-              <span class="text-xs font-mono text-slate-300 bg-[#030712] px-2 py-0.5 rounded border border-white/5">
-                {{ s.deviceCount || 0 }} 台设备
+              <span class="text-xs font-mono text-slate-300 bg-[#030712] px-2 py-0.5 rounded border border-white/5 flex items-center space-x-1">
+                <span v-if="s.deviceCount !== undefined">{{ s.deviceCount }} 台设备</span>
+                <span v-else class="text-cyan-400 flex items-center space-x-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                  <span>检测中...</span>
+                </span>
               </span>
             </div>
 
@@ -649,10 +701,20 @@
 
               <div class="flex items-center space-x-1.5" @click.stop>
                 <button @click="onRefreshAccountCredential(s.account.phone, s.isExpired)"
-                        :class="s.isExpired
-                          ? 'px-2.5 py-1 rounded-lg text-xs font-sans font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition shadow-[0_0_10px_-1px_rgba(0,240,255,0.45)] flex items-center space-x-1 cursor-pointer'
-                          : 'px-2.5 py-1 rounded-lg text-xs font-sans text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition flex items-center space-x-1 cursor-pointer'">
-                  <i data-lucide="refresh-cw" :class="checkingPhone === s.account.phone ? 'w-3 h-3 animate-spin text-cyan-400' : 'w-3 h-3'"></i>
+                        :class="[
+                          s.isExpired
+                            ? 'px-2.5 py-1 rounded-lg text-xs font-sans font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition shadow-[0_0_10px_-1px_rgba(0,240,255,0.45)] flex items-center space-x-1 cursor-pointer'
+                            : 'px-2.5 py-1 rounded-lg text-xs font-sans text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition flex items-center space-x-1 cursor-pointer',
+                          checkingPhone === s.account.phone ? 'pointer-events-none opacity-80' : ''
+                        ]">
+                  <svg class="w-3 h-3 transition-transform duration-300"
+                       :class="checkingPhone === s.account.phone ? 'animate-spin text-cyan-400' : ''"
+                       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                    <path d="M21 3v5h-5"/>
+                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                    <path d="M8 16H3v5"/>
+                  </svg>
                   <span>{{ checkingPhone === s.account.phone ? '刷新中' : '刷新凭据' }}</span>
                 </button>
                 <button v-if="!s.active" @click="onRemoveAccount(s.account.phone)" title="从本机移除此账号" class="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer">
@@ -719,9 +781,9 @@
 
     <!-- ==================== 9. 全局悬浮通知 Toast ==================== -->
     <transition name="fade">
-      <div v-if="toastMessage" class="fixed top-16 left-1/2 -translate-x-1/2 z-[110] px-4 py-2 rounded-xl backdrop-blur-md shadow-2xl flex items-center space-x-2 text-xs font-mono border"
-        :class="toastType === 'success' ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300' : (toastType === 'info' ? 'bg-cyan-950/90 border-cyan-500/50 text-cyan-300' : 'bg-rose-950/90 border-rose-500/50 text-rose-300')">
-        <i :data-lucide="toastType === 'success' ? 'check-circle' : (toastType === 'info' ? 'info' : 'alert-triangle')" class="w-4 h-4 shrink-0"></i>
+      <div v-if="toastMessage" class="fixed top-16 left-1/2 -translate-x-1/2 z-[110] px-4 py-2 rounded-xl backdrop-blur-md shadow-2xl flex items-center space-x-2 text-xs font-mono border transition-all"
+        :class="toastType === 'success' ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300' : (toastType === 'info' ? 'bg-cyan-950/90 border-cyan-500/50 text-cyan-300' : (toastType === 'warn' ? 'bg-amber-950/90 border-amber-500/50 text-amber-300 shadow-[0_0_15px_-3px_rgba(245,158,11,0.3)]' : 'bg-rose-950/90 border-rose-500/50 text-rose-300'))">
+        <i :data-lucide="toastType === 'success' ? 'check-circle' : (toastType === 'info' ? 'info' : (toastType === 'warn' ? 'alert-triangle' : 'alert-circle'))" class="w-4 h-4 shrink-0"></i>
         <span>{{ toastMessage }}</span>
       </div>
     </transition>
@@ -759,21 +821,38 @@ function toggleDownloadPopover() {
 
 // 设备手动刷新状态
 const isDeviceRefreshing = ref(false);
+const isInspectorLoading = ref(false);
 
 async function manualRefreshDevices() {
   if (isDeviceRefreshing.value) return;
   isDeviceRefreshing.value = true;
+
+  // 8s 熔断保护，防止弱网悬挂
+  const watchdog = setTimeout(() => {
+    if (isDeviceRefreshing.value) {
+      isDeviceRefreshing.value = false;
+      showToast('刷新超时，请检查网络', 'warn', 3000);
+    }
+  }, 8000);
+
   try {
     // 若守护站已联机，先请求后台调度器同步最新设备
     if (isStationConnected.value) {
       await stationClient.fetchDevices();
     }
-    await loadRealDevices();
-    showToast('已同步最新设备与状态', 'success', 2500);
-  } catch (err) {
+    const res = await loadRealDevices(true);
+    if (res.success) {
+      showToast(`已同步最新 ${res.count} 台设备资产与状态`, 'success', 2500);
+    } else if (res.isAuthExpired) {
+      showToast('当前账号云端会话已断开，请重新登录', 'warn', 4000);
+    } else {
+      showToast(res.error || '设备同步失败，请检查网络', 'error', 3000);
+    }
+  } catch (err: any) {
     console.warn('[AirTrack] 手动刷新设备失败:', err);
-    showToast('设备同步失败，请检查网络', 'error');
+    showToast('设备同步失败，请检查网络', 'error', 3000);
   } finally {
+    clearTimeout(watchdog);
     setTimeout(() => {
       isDeviceRefreshing.value = false;
       nextTick(refreshIcons);
@@ -945,9 +1024,9 @@ async function refreshAccountStates() {
   for (const s of states) {
     try {
       const cached = await db.getDeviceProfiles(s.account.phone);
-      s.deviceCount = cached.length;
+      s.deviceCount = cached.length > 0 ? cached.length : (s.active && deviceList.value.length > 0 ? deviceList.value.length : undefined);
     } catch {
-      s.deviceCount = 0;
+      s.deviceCount = s.active && deviceList.value.length > 0 ? deviceList.value.length : undefined;
     }
     if (s.active && deviceList.value.length > 0) {
       s.deviceCount = deviceList.value.length;
@@ -1039,10 +1118,10 @@ function closeInPageOAuth() {
 
 // 全局悬浮 Toast 通知状态
 const toastMessage = ref('');
-const toastType = ref<'success' | 'info' | 'error'>('info');
+const toastType = ref<'success' | 'info' | 'warn' | 'error'>('info');
 let toastTimer: any = null;
 
-function showToast(msg: string, type: 'success' | 'info' | 'error' = 'info', duration = 3500) {
+function showToast(msg: string, type: 'success' | 'info' | 'warn' | 'error' = 'info', duration = 3500) {
   toastMessage.value = msg;
   toastType.value = type;
   nextTick(refreshIcons);
@@ -1159,7 +1238,7 @@ function convertStationDeviceToInfo(d: any): DeviceInfo {
 }
 
 /** 从合宙云端或本地守护站同步当前账号的真实设备清单 */
-async function loadRealDevices() {
+async function loadRealDevices(isManual = false): Promise<{ success: boolean; count: number; isAuthExpired?: boolean; error?: string }> {
   deviceLoading.value = true;
   authError.value = '';
   try {
@@ -1196,18 +1275,40 @@ async function loadRealDevices() {
       TRACK_POINTS = [];
       drawSpeedWaveCanvas();
     }
+    return { success: true, count: list.length };
   } catch (e: any) {
+    const isAuth = e && e.name === 'AuthExpiredError';
+    if (isAuth) {
+      authError.value = '合宙云端登录态已失效（在其他终端重复登录被顶线），请重新授权当前账号。';
+      if (!isManual) {
+        showToast('当前账号在其他终端登录，登录态已失效，请点击重新授权', 'warn', 4000);
+      }
+    } else {
+      authError.value = e?.message || '云端设备资产清单同步失败';
+      if (!isManual) {
+        showToast(authError.value, 'error', 3000);
+      }
+    }
+
+    // 降级兜底：优先从本地 IndexedDB 读取已存设备快照，杜绝白屏或空列表
+    try {
+      const cached = await db.getDeviceProfiles(apiClient.getActivePhone());
+      if (cached && cached.length > 0) {
+        deviceList.value = cached;
+        rebuildDeviceDb(cached);
+        const keep = cached.some(d => d.imei === activeDeviceId.value);
+        selectDeviceTab(keep ? activeDeviceId.value : cached[0].imei);
+        console.info('[AirTrack] 云端不可用，已平稳展示 IndexedDB 离线设备快照:', cached.length);
+        return { success: true, count: cached.length, isAuthExpired: isAuth, error: authError.value };
+      }
+    } catch (_) {}
+
     deviceList.value = [];
     rebuildDeviceDb([]);
     activeDeviceId.value = '';
     TRACK_POINTS = [];
-    if (e && e.name === 'AuthExpiredError') {
-      authError.value = '合宙云端登录态已失效（在其他终端重复登录被顶线），请重新授权当前账号。';
-      showToast('当前账号在其他终端登录，登录态已失效，请点击重新授权', 'warn', 4000);
-    } else {
-      authError.value = e?.message || '云端设备资产清单同步失败';
-    }
     console.warn('[AirTrack] loadRealDevices failed', e);
+    return { success: false, count: 0, isAuthExpired: isAuth, error: authError.value };
   } finally {
     deviceLoading.value = false;
     refreshAccountStates();
@@ -1250,20 +1351,8 @@ async function switchAccount(phone: string) {
 }
 
 async function fetchDeviceLiveTrackAndTags(imei: string) {
+  isInspectorLoading.value = true;
   try {
-    const realPoints = await apiClient.getHistoricalTrack(imei, masterMode === 'range' ? currentMacroScope : 'recent_window');
-    if (realPoints && realPoints.length > 5) {
-      TRACK_POINTS = realPoints;
-      updateTimelineScaleTicks(realPoints[0].isMultiDay);
-      if (masterMode === 'range') {
-        renderRangeTrackOnMap();
-      } else {
-        renderFullColoredTrackOnMap();
-      }
-      renderStateAtPosition(committedPlayhead, false);
-      drawSpeedWaveCanvas();
-    }
-
     const tagData = await apiClient.getRealTagTelemetry(imei);
     if (tagData) {
       if (tagData.val_799) {
@@ -1281,6 +1370,8 @@ async function fetchDeviceLiveTrackAndTags(imei: string) {
     }
   } catch (err) {
     console.warn('[AirCloud] Live telemetry sync fallback', err);
+  } finally {
+    isInspectorLoading.value = false;
   }
 }
 
@@ -1375,7 +1466,7 @@ let TRACK_POINTS: any[] = [];
 let currentBaseLat = 34.794375;
 let currentBaseLng = 114.335039;
 let currentMacroScope = '90d';
-let isTrackLoading = false;
+const isTrackLoading = ref(false);
 
 async function loadTrackDataForScope(scope: string, startDate: string | null = null, endDate: string | null = null) {
   const imei = activeDeviceId.value;
@@ -1387,7 +1478,20 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
   }
 
   const dev = DEVICES_DB[imei];
-  isTrackLoading = true;
+  isTrackLoading.value = true;
+  const startLoadTime = Date.now();
+
+  const finishTrackLoading = () => {
+    const elapsed = Date.now() - startLoadTime;
+    const minHold = 400; // 400ms 最小视觉停留，杜绝毫秒闪烁与毛刺
+    if (elapsed < minHold) {
+      setTimeout(() => {
+        isTrackLoading.value = false;
+      }, minHold - elapsed);
+    } else {
+      isTrackLoading.value = false;
+    }
+  };
 
   try {
     // 0. 若已连接独立守护站 (AirTrack Station)，优先向守护站本地高持久 SQLite 获取
@@ -1452,7 +1556,7 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
   } catch (err) {
     console.warn('[AirTrack] loadTrackDataForScope failed', err);
   } finally {
-    isTrackLoading = false;
+    finishTrackLoading();
   }
 
   // 兜底：若该跨度内暂无轨迹上报，但设备有最新经纬度
@@ -2761,5 +2865,16 @@ html, body, #app {
   height: 100%;
   background-color: #030712 !important;
   overflow: hidden;
+}
+
+/* 渐隐过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -4px);
 }
 </style>
