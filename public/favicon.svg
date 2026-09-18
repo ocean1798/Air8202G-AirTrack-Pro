@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <!-- 渐变背景与微光 -->
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0d1b38" />
+      <stop offset="85%" stop-color="#060a17" />
+      <stop offset="100%" stop-color="#03060f" />
+    </radialGradient>
+    <linearGradient id="neonCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff" />
+      <stop offset="100%" stop-color="#0080ff" />
+    </linearGradient>
+    <radialGradient id="radarSweep" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(0, 240, 255, 0.4)" />
+      <stop offset="70%" stop-color="rgba(0, 240, 255, 0.1)" />
+      <stop offset="100%" stop-color="transparent" />
+    </radialGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- 底座圆盘 -->
+  <circle cx="64" cy="64" r="60" fill="url(#bgGlow)" stroke="#1e293b" stroke-width="2" />
+  <circle cx="64" cy="64" r="58" fill="none" stroke="rgba(0, 240, 255, 0.3)" stroke-width="1" stroke-dasharray="4, 4" />
+
+  <!-- 雷达同心圆刻度 -->
+  <circle cx="64" cy="64" r="44" fill="none" stroke="rgba(0, 240, 255, 0.25)" stroke-width="1.2" />
+  <circle cx="64" cy="64" r="28" fill="none" stroke="rgba(0, 240, 255, 0.35)" stroke-width="1.2" />
+  <circle cx="64" cy="64" r="14" fill="none" stroke="rgba(0, 240, 255, 0.5)" stroke-width="1.2" />
+
+  <!-- 十字瞄准基线 -->
+  <line x1="64" y1="8" x2="64" y2="120" stroke="rgba(0, 240, 255, 0.2)" stroke-width="1" />
+  <line x1="8" y1="64" x2="120" y2="64" stroke="rgba(0, 240, 255, 0.2)" stroke-width="1" />
+
+  <!-- 雷达扫描扇区 -->
+  <path d="M64,64 L104,24 A56,56 0 0,0 64,8 Z" fill="url(#radarSweep)" />
+
+  <!-- 动态脉冲航迹线 -->
+  <path d="M26,82 Q42,54 64,64 T102,46" fill="none" stroke="url(#neonCyan)" stroke-width="3" stroke-linecap="round" filter="url(#glow)" />
+
+  <!-- 目标设备定位卫星标点 -->
+  <circle cx="64" cy="64" r="5" fill="#00f0ff" filter="url(#glow)" />
+  <circle cx="64" cy="64" r="2.5" fill="#ffffff" />
+
+  <!-- 移动资产目标点 -->
+  <circle cx="102" cy="46" r="4" fill="#10b981" filter="url(#glow)" />
+  <circle cx="102" cy="46" r="2" fill="#ffffff" />
+
+  <!-- 资产静止锚点 -->
+  <circle cx="26" cy="82" r="3.5" fill="#f59e0b" />
+  <circle cx="26" cy="82" r="1.5" fill="#ffffff" />
+</svg>

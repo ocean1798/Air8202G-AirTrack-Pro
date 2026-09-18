@@ -123,7 +123,7 @@
                   <span class="text-xs font-bold text-white">Android 原生客户端</span>
                 </div>
                 <div class="flex items-center space-x-1.5">
-                  <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1 py-0.2 rounded">v1.0.1</span>
+                  <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1 py-0.2 rounded">v1.0.2</span>
                   <div role="button" @click="showDownloadPopover = false" class="text-slate-400 hover:text-white p-0.5 cursor-pointer">
                     <i data-lucide="x" class="w-3.5 h-3.5"></i>
                   </div>
@@ -1946,6 +1946,33 @@ function drawSpeedWaveCanvas() {
     pts.push({ x, y, speed: sp });
   }
 
+  // 检查是否为纯静止状态 (maxSpeed === 0)
+  let maxSp = 0;
+  for (let i = 0; i < numPoints; i++) {
+    if (TRACK_POINTS[i].speed > maxSp) maxSp = TRACK_POINTS[i].speed;
+  }
+
+  if (maxSp === 0) {
+    // 原地静止驻留态：绘制 8px 青蓝微光平稳能量带，居中标注文字
+    const dwellGrad = ctx.createLinearGradient(0, h - 10, 0, h);
+    dwellGrad.addColorStop(0, 'rgba(0, 240, 255, 0.45)');
+    dwellGrad.addColorStop(1, 'rgba(0, 240, 255, 0.08)');
+    ctx.fillStyle = dwellGrad;
+    ctx.fillRect(0, h - 10, w, 10);
+
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.85)';
+    ctx.fillRect(0, h - 2, w, 2);
+
+    ctx.save();
+    ctx.font = '10px monospace';
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.65)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⏱️ 原地静止驻留 · 0.0 km/h', w / 2, h / 2 - 2);
+    ctx.restore();
+    return;
+  }
+
   // 3. 全局横向速度色谱渐变
   const speedGradient = ctx.createLinearGradient(0, 0, w, 0);
   for (let i = 0; i < numPoints; i++) {
@@ -2977,9 +3004,21 @@ function renderFullColoredTrackOnMap() {
   const isStationaryDwell = (deltaLat < 0.0003 && deltaLng < 0.0003 && maxSpeed < 3.0);
 
   if (isStationaryDwell) {
-    // 室内静止驻留点：不绘制多点漂移杂乱折线，直接清空路线，仅保留车辆标点
     (window as any).__trackLines.setGeometries([]);
+    if ((window as any).__stationaryCircle) {
+      const pCenter = TRACK_POINTS[Math.floor(numPoints / 2)];
+      (window as any).__stationaryCircle.setGeometries([{
+        id: 'dwell_circle',
+        center: new TMap.LatLng(pCenter.lat, pCenter.lng),
+        radius: 35,
+        styleId: 'dwell_style'
+      }]);
+    }
     return;
+  }
+
+  if ((window as any).__stationaryCircle) {
+    (window as any).__stationaryCircle.setGeometries([]);
   }
 
   const rainbowPaths = [];
@@ -3034,7 +3073,20 @@ function renderRangeTrackOnMap() {
 
   if (isStationaryDwell) {
     (window as any).__trackLines.setGeometries([]);
+    if ((window as any).__stationaryCircle) {
+      const pCenter = TRACK_POINTS[Math.floor((idxStart + idxEnd) / 2)];
+      (window as any).__stationaryCircle.setGeometries([{
+        id: 'dwell_circle',
+        center: new TMap.LatLng(pCenter.lat, pCenter.lng),
+        radius: 35,
+        styleId: 'dwell_style'
+      }]);
+    }
     return;
+  }
+
+  if ((window as any).__stationaryCircle) {
+    (window as any).__stationaryCircle.setGeometries([]);
   }
 
   const rainbowPaths = [];
@@ -3381,6 +3433,19 @@ onMounted(() => {
             fence: new TMap.CircleStyle({ color: 'rgba(0, 240, 255, 0.12)', showBorder: true, borderColor: '#00f0ff', borderWidth: 1.5 })
           }
         });
+
+        (window as any).__stationaryCircle = new TMap.MultiCircle({
+          map: map,
+          geometries: [],
+          styles: {
+            dwell_style: new TMap.CircleStyle({
+              color: 'rgba(0, 240, 255, 0.18)',
+              showBorder: true,
+              borderColor: 'rgba(0, 240, 255, 0.75)',
+              borderWidth: 1.5
+            })
+          }
+        });
       }
     }
   } catch (e) {
@@ -3479,7 +3544,17 @@ html, body, #app {
 }
 
 .mobile-fab-safe {
-  bottom: calc(205px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(260px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 移动端地图右上角控件（指北针与缩放）避让顶部悬浮胶囊栏 */
+@media (max-width: 768px) {
+  .tmap-control-container > div[style*="top"],
+  .tmap-zoom-control,
+  .tmap-rotate-control,
+  .tmap-control-right-top {
+    top: calc(env(safe-area-inset-top, 0px) + 82px) !important;
+  }
 }
 
 /* 渐隐过渡动画 */

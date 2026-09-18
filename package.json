@@ -1,6 +1,6 @@
 {
   "name": "airtrack-app",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "scripts": {
     "dev:custom": "uni -p",
@@ -20,7 +20,7 @@
     "dev:quickapp-webview-huawei": "uni -p quickapp-webview-huawei",
     "dev:quickapp-webview-union": "uni -p quickapp-webview-union",
     "build:custom": "uni build -p",
-    "build:h5": "uni build && node -e \"const fs=require('fs'); fs.copyFileSync('public/oauth-callback.html', 'dist/build/h5/oauth-callback.html');\"",
+    "build:h5": "uni build && node -e \"const fs=require('fs'); fs.copyFileSync('public/oauth-callback.html', 'dist/build/h5/oauth-callback.html'); if(fs.existsSync('public/favicon.svg')) fs.copyFileSync('public/favicon.svg', 'dist/build/h5/favicon.svg'); if(fs.existsSync('public/favicon.ico')) fs.copyFileSync('public/favicon.ico', 'dist/build/h5/favicon.ico');\"",
     "build:h5:ssr": "uni build --ssr",
     "build:app": "uni build -p app",
     "build:android": "pnpm build:h5 && npx cap sync android",
