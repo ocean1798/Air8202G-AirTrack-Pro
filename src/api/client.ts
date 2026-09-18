@@ -8,6 +8,7 @@
  * 4. 商业化多账号管理：支持任意合宙账号安全授权与多项目自动适配。
  */
 
+import { Capacitor } from '@capacitor/core';
 import type { DeviceInfo, TrackPoint } from './types';
 import { OfficialTags } from './types';
 import { DeviceRateLimiter } from './rate-limiter';
@@ -648,15 +649,21 @@ export class AirCloudClient {
       window.localStorage.setItem(LS_PENDING_ACCOUNT, phone);
     }
 
-    const isNative = typeof window !== 'undefined' && (
+    // 精确判定：Capacitor 原生平台、本地回环、或者非标准 http/https 协议环境
+    const isNativeOrLocal = typeof window !== 'undefined' && (
+      Capacitor.isNativePlatform() ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
       window.location.protocol === 'capacitor:' ||
       window.location.protocol === 'file:' ||
       !window.location.protocol.startsWith('http')
     );
 
-    // 确定回调地址：原生环境指向公网中转页；浏览器环境（含本地与生产）均优先使用当前源下的 oauth-callback.html
+    // 确定回调地址：
+    // 原生 App 与本地环境必须重定向至已部署的公网高可用中转页
+    // 严禁将 http://localhost 传给外部浏览器作为回调，否则 Android 外部浏览器访问本机将报 ERR_CONNECTION_REFUSED
     let callbackUrl = 'https://ocean1798.github.io/Air8202G-AirTrack-Pro/oauth-callback.html';
-    if (!isNative && typeof window !== 'undefined' && window.location.origin) {
+    if (!isNativeOrLocal && typeof window !== 'undefined' && window.location.origin) {
       try {
         const origin = window.location.origin;
         const pathname = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);

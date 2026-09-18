@@ -123,7 +123,7 @@
                   <span class="text-xs font-bold text-white">Android 原生客户端</span>
                 </div>
                 <div class="flex items-center space-x-1.5">
-                  <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1 py-0.2 rounded">v1.0.0</span>
+                  <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1 py-0.2 rounded">v1.0.1</span>
                   <div role="button" @click="showDownloadPopover = false" class="text-slate-400 hover:text-white p-0.5 cursor-pointer">
                     <i data-lucide="x" class="w-3.5 h-3.5"></i>
                   </div>
@@ -731,11 +731,44 @@
         </div>
 
         <!-- 3. 底部通栏主操作 (固定吸底 Sticky Footer) -->
-        <div class="p-4 pt-3 border-t border-white/10 shrink-0 bg-[#070d1d]/60">
+        <div class="p-4 pt-3 border-t border-white/10 shrink-0 bg-[#070d1d]/60 space-y-2">
           <button id="btn-login-new-account" @click="openOAuthAuthorization()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition flex items-center justify-center space-x-1.5 shadow-[0_0_20px_-2px_rgba(0,240,255,0.35)] cursor-pointer active:scale-98">
             <i data-lucide="plus" class="w-4 h-4"></i>
-            <span>登录新账号</span>
+            <span>登录新账号 (官方授权)</span>
           </button>
+
+          <!-- 备用通道：手动粘贴 Token 换票 (防个别 ROM 拦截自定义协议唤醒) -->
+          <div class="pt-0.5">
+            <div v-if="!showManualTokenInput" @click="showManualTokenInput = true; nextTick(refreshIcons)" role="button" class="text-[11px] text-slate-400 hover:text-cyan-300 text-center cursor-pointer transition flex items-center justify-center space-x-1 py-1">
+              <i data-lucide="key-round" class="w-3 h-3 text-cyan-400"></i>
+              <span>无法自动跳转？点击手动粘贴 Token 换票</span>
+            </div>
+            <div v-else class="space-y-1.5 p-2.5 rounded-xl bg-cyber-900/90 border border-cyber-700/60 shadow-inner">
+              <div class="flex items-center justify-between text-[11px] text-slate-300">
+                <span class="flex items-center space-x-1">
+                  <i data-lucide="shield-check" class="w-3 h-3 text-cyan-400"></i>
+                  <span>手动粘贴 Token / 回调链接</span>
+                </span>
+                <span @click="showManualTokenInput = false" role="button" class="text-slate-400 hover:text-white cursor-pointer px-1">取消</span>
+              </div>
+              <div class="flex space-x-1.5">
+                <input
+                  v-model="manualTokenText"
+                  type="text"
+                  placeholder="粘贴 Token 或完整回调 URL..."
+                  class="flex-1 px-2.5 py-1.5 rounded-lg bg-cyber-950 border border-cyber-700/80 text-white font-mono text-[11px] focus:outline-none focus:border-cyan-400"
+                />
+                <button
+                  id="btn-apply-manual-token"
+                  @click="applyManualToken()"
+                  :disabled="isExchangingManualToken"
+                  class="px-3 py-1.5 rounded-lg bg-cyan-400 text-slate-950 text-[11px] font-bold hover:bg-cyan-300 transition shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  {{ isExchangingManualToken ? '换票中...' : '兑换' }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -1163,6 +1196,47 @@ async function openOAuthAuthorization(phone?: string) {
   isIframeLoading.value = true;
   showInPageOAuthModal.value = true;
   nextTick(refreshIcons);
+}
+
+// 备用手动 Token 输入状态
+const showManualTokenInput = ref(false);
+const manualTokenText = ref('');
+const isExchangingManualToken = ref(false);
+
+async function applyManualToken() {
+  const raw = manualTokenText.value.trim();
+  if (!raw) {
+    showToast('请先粘贴 Token 或授权回调链接', 'warn', 2500);
+    return;
+  }
+  const cleanToken = apiClient.extractToken(raw);
+  if (!cleanToken) {
+    showToast('未能提取出有效 Token，请核对', 'warn', 2500);
+    return;
+  }
+
+  isExchangingManualToken.value = true;
+  try {
+    const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
+    const ok = await apiClient.exchangeOAuthToken(cleanToken, pending);
+    if (ok) {
+      showToast(`✓ 账号 ${pending} 授权连接成功！`, 'success', 3000);
+      manualTokenText.value = '';
+      showManualTokenInput.value = false;
+      refreshAccountStates();
+      await loadRealDevices();
+      const modal = document.getElementById('official-modal');
+      if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+      }
+    } else {
+      showToast('Token 无效或已过期，请重新获取', 'error', 3500);
+    }
+  } catch (err: any) {
+    showToast(err?.message || '换票失败，请检查网络', 'error', 3000);
+  } finally {
+    isExchangingManualToken.value = false;
+  }
 }
 
 function mobileTabClass(d: any) {
