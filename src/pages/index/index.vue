@@ -846,7 +846,12 @@
     <!-- 微信小程序端 OAuth 步骤向导悬浮层 -->
     <!-- #ifdef MP-WEIXIN -->
     <div v-if="showMpOAuthGuide" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[130] flex items-center justify-center p-4">
-      <div class="w-full max-w-sm bg-slate-900 border border-cyan-500/40 rounded-2xl p-5 shadow-2xl space-y-4 text-center">
+      <div class="relative w-full max-w-sm bg-slate-900 border border-cyan-500/40 rounded-2xl p-5 shadow-2xl space-y-4 text-center max-h-[85vh] overflow-y-auto">
+        <!-- 右上角显式 ✕ 关闭按钮 -->
+        <button @click="closeMpOAuthGuide()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm transition z-10">
+          ✕
+        </button>
+
         <div class="w-12 h-12 mx-auto rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xl font-bold">
           ⚡
         </div>
@@ -860,14 +865,38 @@
           <p><span class="text-cyan-400 font-bold">第 1 步：</span>切至手机浏览器，在地址栏粘贴并打开；</p>
           <p><span class="text-cyan-400 font-bold">第 2 步：</span>登录合宙账号并点击授权；</p>
           <p><span class="text-cyan-400 font-bold">第 3 步：</span>在成功页面点击【一键复制 Token】；</p>
-          <p><span class="text-cyan-400 font-bold">第 4 步：</span>切回本小程序，系统将自动识别接入！</p>
+          <p><span class="text-cyan-400 font-bold">第 4 步：</span>切回本小程序，点击下方【立即粘贴】验证！</p>
         </div>
-        <div class="pt-1 flex gap-2">
-          <button @click="showMpOAuthGuide = false; awaitingOAuthSince = 0" class="flex-1 py-2 rounded-xl text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
-            取消等待
+
+        <!-- 手动输入框展开模式（双保险兜底） -->
+        <div v-if="showMpManualInput" class="bg-slate-950/90 p-3 rounded-xl border border-cyan-500/30 text-left space-y-2">
+          <div class="text-[11px] text-cyan-300 font-medium">长按下方输入框粘贴 Token：</div>
+          <input
+            v-model="mpManualTokenText"
+            type="text"
+            placeholder="在此长按粘贴 Token 字符串"
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono"
+          />
+          <button
+            @click="submitTokenForExchange()"
+            :disabled="isMpExchangingToken || !mpManualTokenText.trim()"
+            class="w-full py-2 rounded-lg text-xs font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 disabled:opacity-50 transition"
+          >
+            {{ isMpExchangingToken ? '正在接入...' : '确定接入' }}
           </button>
-          <button @click="openOAuthAuthorization()" class="flex-1 py-2 rounded-xl text-xs font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition">
+        </div>
+
+        <!-- 底部主辅操作栏 -->
+        <div class="pt-1 flex gap-2">
+          <button @click="openOAuthAuthorization()" class="flex-1 py-2.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
             重新复制链接
+          </button>
+          <button
+            @click="handleMpPasteAndExchange()"
+            :disabled="isMpExchangingToken"
+            class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 hover:from-cyan-300 hover:to-emerald-300 disabled:opacity-50 transition flex items-center justify-center space-x-1 shadow-lg shadow-cyan-950/40"
+          >
+            <span>{{ isMpExchangingToken ? '正在接入...' : '📋 我已复制，立即粘贴' }}</span>
           </button>
         </div>
       </div>
@@ -994,8 +1023,19 @@ const timelineDisplay = reactive({
 const awaitingOAuthSince = ref<number>(0);
 const OAUTH_AWAIT_TIMEOUT_MS = 10 * 60 * 1000; // 10分钟时效
 const showMpOAuthGuide = ref(false);
+const showMpManualInput = ref(false);
+const mpManualTokenText = ref('');
+const isMpExchangingToken = ref(false);
 const consumedTokens = new Set<string>();
 const ignoredTokens = new Set<string>();
+
+function closeMpOAuthGuide() {
+  showMpOAuthGuide.value = false;
+  showMpManualInput.value = false;
+  mpManualTokenText.value = '';
+  isMpExchangingToken.value = false;
+  awaitingOAuthSince.value = 0;
+}
 
 // 手机 APP 引导弹层状态
 const showDownloadPopover = ref(false);
@@ -3725,9 +3765,80 @@ function toggleOfficialModal(forceOpen?: boolean) {
   }
 }
 
+async function submitTokenForExchange(rawText?: string) {
+  if (isMpExchangingToken.value) return;
+
+  const raw = (rawText !== undefined ? rawText : mpManualTokenText.value).trim();
+  const cleanToken = apiClient.extractToken(raw);
+
+  if (!cleanToken || cleanToken.length < 60) {
+    showToast('未能提取到有效 Token，请确认已复制', 'warn', 2500);
+    showMpManualInput.value = true;
+    return;
+  }
+
+  isMpExchangingToken.value = true;
+  showToast('正在验证凭据...', 'info', 2000);
+
+  try {
+    const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
+    const result = await apiClient.exchangeOAuthToken(cleanToken, pending);
+    if (result.ok) {
+      consumedTokens.add(cleanToken);
+      showToast('✓ 账号授权绑定成功！', 'success', 3000);
+      closeMpOAuthGuide();
+      showAccountModal.value = false;
+      await refreshAccountStates();
+      await loadRealDevices();
+    } else {
+      // 现场保全：绝不关闭弹窗，展开手动输入框，保留当前文本供用户修改或重试
+      showMpManualInput.value = true;
+      mpManualTokenText.value = cleanToken;
+      showToast(result.message || '换票失败，请检查网络或重新复制', 'error', 3500);
+    }
+  } catch (e: any) {
+    showMpManualInput.value = true;
+    showToast(e?.message || '网络连接异常，请重试', 'error', 3500);
+  } finally {
+    isMpExchangingToken.value = false;
+  }
+}
+
+function handleMpPasteAndExchange() {
+  if (isMpExchangingToken.value) return;
+
+  // #ifdef MP-WEIXIN
+  uni.getClipboardData({
+    success: (res) => {
+      const raw = (res.data || '').trim();
+      const clean = apiClient.extractToken(raw);
+      if (clean && clean.length >= 60) {
+        submitTokenForExchange(clean);
+      } else {
+        // 剪贴板中无有效 Token 或格式不符，优雅平滑展开手动输入框
+        showMpManualInput.value = true;
+        if (raw) {
+          mpManualTokenText.value = raw;
+        }
+        showToast('剪贴板未检测到有效 Token，请手动粘贴', 'warn', 2500);
+      }
+    },
+    fail: () => {
+      // 权限受限或系统读取失败，平滑降级至展开手动输入框
+      showMpManualInput.value = true;
+      showToast('无法读取剪贴板，请在此长按粘贴', 'info', 2500);
+    }
+  });
+  // #endif
+
+  // #ifndef MP-WEIXIN
+  showMpManualInput.value = true;
+  // #endif
+}
+
 function checkClipboardToken() {
   // #ifdef MP-WEIXIN
-  if (awaitingOAuthSince.value <= 0) return;
+  if (awaitingOAuthSince.value <= 0 || isMpExchangingToken.value) return;
   const elapsed = Date.now() - awaitingOAuthSince.value;
   if (elapsed > OAUTH_AWAIT_TIMEOUT_MS) {
     awaitingOAuthSince.value = 0;
@@ -3750,21 +3861,8 @@ function checkClipboardToken() {
           confirmColor: '#00f0ff',
           cancelText: '暂不接入',
           success: async (modalRes) => {
-            awaitingOAuthSince.value = 0;
-            showMpOAuthGuide.value = false;
             if (modalRes.confirm) {
-              consumedTokens.add(cleanToken);
-              showToast('正在安全换取凭据...', 'info', 2500);
-              const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
-              const result = await apiClient.exchangeOAuthToken(cleanToken, pending);
-              if (result.ok) {
-                showToast('✓ 账号授权绑定成功！', 'success', 3000);
-                showAccountModal.value = false;
-                await refreshAccountStates();
-                await loadRealDevices();
-              } else {
-                showToast(result.message || '换票失败，请检查网络', 'error', 3500);
-              }
+              await submitTokenForExchange(cleanToken);
             } else {
               ignoredTokens.add(cleanToken);
             }
@@ -4139,11 +4237,12 @@ html, body, #app {
 
 /* 移动端地图右上角控件（指北针与缩放）避让顶部悬浮胶囊栏 */
 @media (max-width: 768px) {
+  .tmap-control-container,
   .tmap-control-container > div[style*="top"],
   .tmap-zoom-control,
   .tmap-rotate-control,
   .tmap-control-right-top {
-    top: calc(env(safe-area-inset-top, 0px) + 82px) !important;
+    top: calc(env(safe-area-inset-top, 0px) + 92px) !important;
   }
 }
 

@@ -1,3 +1,14 @@
+/* 移动端地图右上角控件（指北针与缩放）避让顶部悬浮胶囊栏 */
+@media (max-width: 768px) {
+  .tmap-control-container,
+  .tmap-control-container > div[style*="top"],
+  .tmap-zoom-control,
+  .tmap-rotate-control,
+  .tmap-control-right-top {
+    top: calc(env(safe-area-inset-top, 0px) + 96px) !important;
+  }
+}
+
 .tmap-zoom-control {
   margin: 10px 30px 20px 30px;
   display: -ms-flexbox;
