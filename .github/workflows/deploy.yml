@@ -161,8 +161,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.0.2
-          name: AirTrack Pro v1.0.2 (Android APK)
+          tag_name: v1.0.3
+          name: AirTrack Pro v1.0.3 (Android APK)
           draft: false
           prerelease: false
           files: |
