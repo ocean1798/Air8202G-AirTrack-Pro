@@ -2,7 +2,9 @@ import { createSSRApp } from "vue";
 import { createPinia } from "pinia";
 import App from "./App.vue";
 import 'virtual:uno.css';
+// #ifndef MP-WEIXIN
 import './proto-tailwind.css';
+// #endif
 
 export function createApp() {
   const app = createSSRApp(App);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>AirTrack Pro - 授权中转与唤醒</title>
+  <title>AirTrack Pro - 官方授权凭据</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -40,36 +40,45 @@
 
     <!-- 授权状态通知 -->
     <div class="space-y-2">
-      <h2 id="status-title" class="text-base font-semibold text-emerald-400">已成功获取合宙官方授权凭据</h2>
+      <h2 id="status-title" class="text-base font-semibold text-emerald-400">官方授权验证成功</h2>
       <p id="status-desc" class="text-xs text-gray-400 leading-relaxed">
-        正在尝试自动唤醒并切回 AirTrack Pro 原生应用...
+        已成功获取合宙开放平台鉴权凭据，请复制下方 Token 返回使用。
       </p>
     </div>
 
-    <!-- 凭据缩略展示 -->
-    <div id="token-box" class="bg-black/50 rounded-xl p-3 border border-gray-800 text-left space-y-1 hidden">
-      <div class="text-[10px] text-gray-500 font-mono uppercase tracking-wider">OAuth Token</div>
-      <div id="token-text" class="text-xs font-mono text-cyan-300 break-all select-all"></div>
+    <!-- 凭据展示卡片（默认醒目呈现） -->
+    <div id="token-box" class="bg-black/70 rounded-xl p-4 border border-cyan-500/30 text-left space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] text-cyan-400 font-mono uppercase tracking-wider font-semibold">● OAuth 临时凭据 (Token)</span>
+        <span class="text-[10px] text-gray-500">仅一次有效，请勿泄露</span>
+      </div>
+      <div id="token-text" class="text-xs font-mono text-cyan-200 bg-gray-950/80 p-2.5 rounded-lg border border-gray-800 break-all select-all leading-relaxed"></div>
     </div>
 
     <!-- 操作按钮组 -->
-    <div class="space-y-3 pt-2">
-      <button id="btn-open-app" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-medium text-sm shadow-lg shadow-cyan-900/30 transition flex items-center justify-center space-x-2">
-        <span>🚀 点击直接打开 AirTrack Pro App</span>
+    <div class="space-y-3 pt-1">
+      <!-- 复制按钮（主按钮，高亮呈现） -->
+      <button id="btn-copy-token" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-950/50 transition flex items-center justify-center space-x-2 active:scale-[0.98]">
+        <span id="btn-copy-text">📋 一键复制 Token（切回小程序粘贴）</span>
       </button>
 
-      <button id="btn-copy-token" class="w-full py-2.5 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-medium border border-gray-700 transition flex items-center justify-center space-x-2">
-        <span>📋 复制 Token 返回应用手动粘贴</span>
+      <!-- 打开安卓 App 按钮（仅非小程序场景或用户需要时由用户主动点击触发） -->
+      <button id="btn-open-app" class="w-full py-2.5 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-medium border border-gray-700 transition flex items-center justify-center space-x-2">
+        <span>🚀 打开 AirTrack Pro 安卓版 App</span>
       </button>
 
+      <!-- 网页版打开 -->
       <button id="btn-open-web" class="w-full py-2 px-4 rounded-xl bg-transparent hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 text-xs transition">
-        🌐 在手机浏览器中使用网页版
+        🌐 在当前浏览器中直接使用网页版
       </button>
     </div>
 
-    <!-- 贴心说明 -->
-    <div class="text-[11px] text-gray-500 leading-normal border-t border-gray-800/80 pt-4">
-      如手机浏览器拦截自动拉起，请点击上方按钮直接打开应用；或复制 Token 后返回 AirTrack Pro 的“账号管理”中心快速换票。
+    <!-- 贴心操作说明 -->
+    <div id="help-hint" class="text-[11px] text-gray-400 leading-normal border-t border-gray-800/80 pt-4 text-left space-y-1">
+      <p class="text-gray-300 font-medium">👉 下一步极速操作指引：</p>
+      <p>1. 点击上方蓝绿色按钮复制 Token；</p>
+      <p>2. 切换回微信小程序，在“粘贴 Token / 回调链接”输入框粘贴并点击“换票”；</p>
+      <p class="text-amber-400/90 text-[10px]">提示：该 Token 仅支持向合宙服务器换取一次 Session，请直接在小程序内消费。</p>
     </div>
   </div>
 
@@ -77,7 +86,7 @@
     (function () {
       function getParam(name) {
         try {
-          var re = new RegExp('[?&]' + name + '=([^&#]*)');
+          var re = new RegExp('[?&]' + name + '=([^&#?]*)');
           var m = location.search.match(re);
           if (m) return decodeURIComponent(m[1]);
           m = location.hash.match(re);
@@ -87,6 +96,11 @@
       }
 
       var token = getParam('token');
+      var rawFrom = getParam('from') || '';
+      var fromSource = rawFrom.split('?')[0].split('&')[0].trim().toLowerCase();
+      var isWeChat = fromSource === 'mp' || fromSource === 'wechat' || (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.indexOf('MicroMessenger') > -1);
+      var isAndroidApp = fromSource === 'android';
+
       var tokenBox = document.getElementById('token-box');
       var tokenText = document.getElementById('token-text');
       var statusTitle = document.getElementById('status-title');
@@ -94,23 +108,104 @@
       var statusIconBox = document.getElementById('status-icon-box');
       var btnOpenApp = document.getElementById('btn-open-app');
       var btnCopyToken = document.getElementById('btn-copy-token');
+      var btnCopyText = document.getElementById('btn-copy-text');
       var btnOpenWeb = document.getElementById('btn-open-web');
+      var helpHint = document.getElementById('help-hint');
+
+      // 微信小程序/微信环境：隐藏安卓 App 拉起按钮与网页版按钮，防止触发非法协议弹窗
+      if (isWeChat) {
+        btnOpenApp.style.display = 'none';
+        btnOpenWeb.style.display = 'none';
+      }
 
       if (!token) {
         statusTitle.textContent = '未检测到授权 Token 凭据';
         statusTitle.className = 'text-base font-semibold text-amber-400';
-        statusDesc.textContent = '您可能取消了授权或网络通信异常，请返回应用重试。';
+        statusDesc.textContent = isWeChat 
+          ? '您可能取消了授权或网络通信异常，请直接切回微信小程序重试。' 
+          : '您可能取消了授权或网络通信异常，请返回应用重试。';
         statusIconBox.textContent = '!';
         statusIconBox.className = 'w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-3xl';
-        btnOpenApp.textContent = '返回应用重新授权';
-        btnOpenApp.onclick = function () {
-          location.href = 'airtrack://oauth';
-        };
+        tokenBox.style.display = 'none';
         btnCopyToken.style.display = 'none';
+        if (isAndroidApp) {
+          btnOpenApp.textContent = '返回安卓 App 重新授权';
+          btnOpenApp.onclick = function () {
+            location.href = 'airtrack://oauth';
+          };
+        } else {
+          btnOpenApp.style.display = 'none';
+        }
         return;
       }
 
-      // 尝试向父级页面或弹窗源发送 postMessage，实现零跳转静默握手
+      // 正常流程：微信小程序引导文案
+      if (isWeChat) {
+        statusTitle.textContent = '微信小程序授权凭据已就绪';
+        statusDesc.textContent = '请点击下方按钮复制 Token，切回微信小程序即可一键换票。';
+        btnCopyText.textContent = '📋 一键复制 Token 并返回微信';
+      }
+
+      // 展示 Token
+      tokenText.textContent = token;
+
+      // 深度链接配置
+      var deepLinkUrl = 'airtrack://oauth?token=' + encodeURIComponent(token);
+      btnOpenApp.onclick = function () {
+        window.location.href = deepLinkUrl;
+      };
+
+      // 核心分流防劫持门禁：
+      // 仅当明确声明来自原生 Android App (from=android) 时，才执行自动拉起 deepLink！
+      // 微信小程序 (from=mp) 或其他来源时，严禁自动跳转，保持纯净的复制体验
+      if (isAndroidApp) {
+        try {
+          window.location.href = deepLinkUrl;
+        } catch (e) {}
+      }
+
+      // 复制功能实现
+      function copyTokenAction(showSuccessFeedback) {
+        function onCopied() {
+          if (showSuccessFeedback) {
+            btnCopyToken.className = 'w-full py-3.5 px-4 rounded-xl bg-emerald-500 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-950/50 transition flex items-center justify-center space-x-2';
+            btnCopyText.textContent = '✓ Token 已成功复制！请切回微信小程序粘贴';
+          }
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(token).then(onCopied).catch(function () {
+            fallbackCopy(onCopied);
+          });
+        } else {
+          fallbackCopy(onCopied);
+        }
+      }
+
+      function fallbackCopy(cb) {
+        var textarea = document.createElement('textarea');
+        textarea.value = token;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          if (cb) cb();
+        } catch (e) {}
+        document.body.removeChild(textarea);
+      }
+
+      btnCopyToken.onclick = function () {
+        copyTokenAction(true);
+      };
+
+      // 网页版打开
+      btnOpenWeb.onclick = function () {
+        var cleanOrigin = location.href.split('oauth-callback.html')[0];
+        location.href = cleanOrigin + 'index.html?token=' + encodeURIComponent(token);
+      };
+
+      // 仅当用户在电脑端开着同域父窗口时，尝试 postMessage 零跳转握手
       try {
         if (window.parent && window.parent !== window) {
           window.parent.postMessage({ type: 'LUAT_OAUTH_TOKEN', token: token }, '*');
@@ -119,53 +214,8 @@
       try {
         if (window.opener) {
           window.opener.postMessage({ type: 'LUAT_OAUTH_TOKEN', token: token }, '*');
-          setTimeout(function () {
-            window.close();
-          }, 800);
         }
       } catch (e) {}
-
-      // 展示 Token
-      tokenBox.classList.remove('hidden');
-      tokenText.textContent = token;
-
-      // 深度链接
-      var deepLinkUrl = 'airtrack://oauth?token=' + encodeURIComponent(token);
-
-      // 尝试自动拉起 App
-      try {
-        window.location.href = deepLinkUrl;
-      } catch (e) {}
-
-      // 手动拉起按钮
-      btnOpenApp.onclick = function () {
-        window.location.href = deepLinkUrl;
-      };
-
-      // 复制 Token
-      btnCopyToken.onclick = function () {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(token).then(function () {
-            btnCopyToken.innerHTML = '<span>✓ 已成功复制 Token！请切回应用粘贴</span>';
-            btnCopyToken.classList.add('text-emerald-400', 'border-emerald-500/40');
-          });
-        } else {
-          var textarea = document.createElement('textarea');
-          textarea.value = token;
-          document.body.appendChild(textarea);
-          textarea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textarea);
-          btnCopyToken.innerHTML = '<span>✓ 已成功复制 Token！请切回应用粘贴</span>';
-          btnCopyToken.classList.add('text-emerald-400', 'border-emerald-500/40');
-        }
-      };
-
-      // 网页版打开
-      btnOpenWeb.onclick = function () {
-        var cleanOrigin = location.href.split('oauth-callback.html')[0];
-        location.href = cleanOrigin + 'index.html?token=' + encodeURIComponent(token);
-      };
     })();
   </script>
 </body>

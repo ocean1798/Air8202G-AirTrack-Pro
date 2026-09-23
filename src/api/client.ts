@@ -25,6 +25,75 @@ import {
 import type { AccountDef } from './accounts';
 import { db, type StoredTrackPoint, type StoredDeviceProfile } from '../utils/db';
 import { voltageToPercentage } from '../utils/battery-model';
+import { safeStorage } from '../utils/storage';
+
+/** 跨端统一网络请求适配器 (H5/App 走 fetch，微信小程序走 uni.request) */
+export async function httpPlatformRequest(url: string, options: RequestInit): Promise<Response> {
+  // #ifdef MP-WEIXIN
+  return new Promise((resolve, reject) => {
+    uni.request({
+      url,
+      method: (options.method as any) || 'GET',
+      data: options.body ? (typeof options.body === 'string' ? JSON.parse(options.body) : options.body) : undefined,
+      header: options.headers as any,
+      timeout: (options as any).timeout || 10000,
+      success: (res) => {
+        resolve({
+          ok: res.statusCode >= 200 && res.statusCode < 300,
+          status: res.statusCode,
+          statusText: String(res.statusCode),
+          json: async () => typeof res.data === 'string' ? JSON.parse(res.data) : res.data,
+          text: async () => typeof res.data === 'string' ? res.data : JSON.stringify(res.data)
+        } as Response);
+      },
+      fail: (err) => reject(new Error((err && err.errMsg) || '网络请求失败'))
+    });
+  });
+  // #endif
+
+  // #ifndef MP-WEIXIN
+  return fetch(url, options);
+  // #endif
+}
+
+
+/** 跨端安全剪贴板文本写入 */
+export async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (!text) return false;
+  // #ifdef MP-WEIXIN
+  return new Promise((resolve) => {
+    uni.setClipboardData({
+      data: text,
+      showToast: true,
+      success: () => resolve(true),
+      fail: () => resolve(false)
+    });
+  });
+  // #endif
+
+  // #ifndef MP-WEIXIN
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    if (typeof document !== 'undefined') {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const res = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return !!res;
+    }
+  } catch (e) {
+    console.warn('[Clipboard] copy failed', e);
+  }
+  return false;
+  // #endif
+}
 
 /** 换算 4G 蜂窝信号中文评级描述 */
 export function getSignalLevelText(csq: number): string {
@@ -178,14 +247,14 @@ export class AirCloudClient {
    * 独立凭据获取辅助方法：获取指定手机号独立凭据，避免单例污染
    */
   public getCredentialsForPhone(phone: string): { token: string; salt: string; sid: string; projectKey: string } | null {
-    if (typeof window === 'undefined' || !window.localStorage) return null;
+    // safe storage
     let token = '';
     let salt = '';
     let sid = '336677';
     let projectKey = this.readProjectKey(phone) || '';
 
     try {
-      const authStr = window.localStorage.getItem(lsAuthKey(phone));
+      const authStr = safeStorage.getItem(lsAuthKey(phone));
       if (authStr) {
         const auth = JSON.parse(authStr);
         if (auth?.token && auth?.salt) {
@@ -193,7 +262,7 @@ export class AirCloudClient {
           salt = auth.salt;
         }
       }
-      const servStr = window.localStorage.getItem(lsServiceKey(phone));
+      const servStr = safeStorage.getItem(lsServiceKey(phone));
       if (servStr) {
         const serv = JSON.parse(servStr);
         if (serv?.sid) sid = serv.sid;
@@ -236,24 +305,32 @@ export class AirCloudClient {
       'sid': creds.sid || '336677'
     };
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let controller: any = null;
+    let timer: any = null;
+    if (typeof AbortController !== 'undefined') {
+      try {
+        controller = new AbortController();
+        timer = setTimeout(() => {
+          try { controller.abort(); } catch (_) {}
+        }, timeoutMs);
+      } catch (_) {}
+    }
 
     try {
-      const res = await fetch(url, {
+      const res = await httpPlatformRequest(url, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
-        signal: controller.signal
+        signal: controller ? controller.signal : undefined
       });
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
 
       if (!res.ok) {
         throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
       }
       return await res.json();
     } catch (err) {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       throw err;
     }
   }
@@ -424,8 +501,8 @@ export class AirCloudClient {
    */
   public setActiveAccount(phone: string): void {
     this.activePhone = phone;
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(LS_ACTIVE_ACCOUNT, phone);
+    if (true) {
+      safeStorage.setItem(LS_ACTIVE_ACCOUNT, phone);
     }
     this.resetCredentials();
     this.loadFromStorage();
@@ -445,9 +522,9 @@ export class AirCloudClient {
 
   /** 获取用户本地自定义设备名称 */
   public getCustomDeviceName(imei: string): string {
-    if (typeof window === 'undefined' || !window.localStorage) return '';
+    // safe storage
     try {
-      const raw = localStorage.getItem(LS_CUSTOM_DEVICE_NAMES);
+      const raw = safeStorage.getItem(LS_CUSTOM_DEVICE_NAMES);
       if (raw) {
         const map = JSON.parse(raw);
         return map[imei] || '';
@@ -458,16 +535,16 @@ export class AirCloudClient {
 
   /** 设置用户本地自定义设备名称 */
   public setCustomDeviceName(imei: string, name: string): void {
-    if (typeof window === 'undefined' || !window.localStorage) return;
+    // safe storage
     try {
-      const raw = localStorage.getItem(LS_CUSTOM_DEVICE_NAMES);
+      const raw = safeStorage.getItem(LS_CUSTOM_DEVICE_NAMES);
       const map = raw ? JSON.parse(raw) : {};
       if (name.trim()) {
         map[imei] = name.trim();
       } else {
         delete map[imei];
       }
-      localStorage.setItem(LS_CUSTOM_DEVICE_NAMES, JSON.stringify(map));
+      safeStorage.setItem(LS_CUSTOM_DEVICE_NAMES, JSON.stringify(map));
     } catch (_) {}
   }
 
@@ -502,13 +579,13 @@ export class AirCloudClient {
   /** 某账号是否已持有可用凭据 */
   public hasAuth(phone?: string): boolean {
     const p = phone || this.activePhone;
-    if (typeof window === 'undefined' || !window.localStorage) return false;
+    // safe storage
     try {
-      let raw = window.localStorage.getItem(lsAuthKey(p));
+      let raw = safeStorage.getItem(lsAuthKey(p));
       if (!raw && PRESET_AUTH_TOKENS[p]) {
         const preset = PRESET_AUTH_TOKENS[p];
         this.saveAuth(preset.auth, preset.service, preset.profile, p);
-        raw = window.localStorage.getItem(lsAuthKey(p));
+        raw = safeStorage.getItem(lsAuthKey(p));
       }
       if (!raw) return false;
       const auth = JSON.parse(raw);
@@ -536,9 +613,9 @@ export class AirCloudClient {
 
   /** 读取当前会话的用户 Profile */
   public getActiveProfile(): { name?: string; mobile?: string } | null {
-    if (typeof window === 'undefined' || !window.localStorage) return null;
+    // safe storage
     try {
-      const raw = window.localStorage.getItem(lsProfileKey(this.activePhone));
+      const raw = safeStorage.getItem(lsProfileKey(this.activePhone));
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
@@ -546,34 +623,129 @@ export class AirCloudClient {
   }
 
   private readProjectKey(phone: string): string {
-    if (typeof window === 'undefined' || !window.localStorage) return '';
-    return window.localStorage.getItem(lsProjectKey(phone)) || '';
+    // safe storage
+    return safeStorage.getItem(lsProjectKey(phone)) || '';
   }
 
   public writeProjectKey(phone: string, key: string): void {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(lsProjectKey(phone), key);
+    if (true) {
+      safeStorage.setItem(lsProjectKey(phone), key);
+    }
+  }
+
+  /** 通用存储自愈清洗器：启动时扫描并平滑迁移非 ASCII 历史脏键及空后缀截断键 */
+  public sanitizeStorageKeys(): void {
+    try {
+      const hasNonAscii = (s: string) => /[^\x00-\x7F]/.test(s);
+      let allKeys: string[] = [];
+
+      // #ifdef MP-WEIXIN
+      try {
+        allKeys = uni.getStorageInfoSync().keys || [];
+      } catch (_) {}
+      // #endif
+      // #ifndef MP-WEIXIN
+      if (typeof window !== 'undefined' && window.localStorage) {
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const k = window.localStorage.key(i);
+          if (k) allKeys.push(k);
+        }
+      }
+      // #endif
+
+      // 1. 非 ASCII 键名清洗与迁移
+      for (const key of allKeys) {
+        if (key.startsWith('airtrack_') && hasNonAscii(key)) {
+          const val = safeStorage.getItem(key);
+          const cleanKey = key.replace(/[^\x00-\x7F]+/g, 'master');
+          if (val && !safeStorage.getItem(cleanKey)) {
+            safeStorage.setItem(cleanKey, val);
+          }
+          safeStorage.removeItem(key);
+        }
+      }
+
+      // 2. 截断产生的空后缀键清洗与迁移 (例如 airtrack_auth_, airtrack_service_, airtrack_project_, airtrack_profile_)
+      const prefixRegex = /^airtrack_(auth|service|project|profile|projects_cache)_$/;
+      for (const key of allKeys) {
+        if (prefixRegex.test(key)) {
+          const val = safeStorage.getItem(key);
+          const cleanKey = key + 'master';
+          if (val && !safeStorage.getItem(cleanKey)) {
+            safeStorage.setItem(cleanKey, val);
+          }
+          safeStorage.removeItem(key);
+        }
+      }
+
+      // 3. 账户注册实体表深度清洗与去重
+      const rawAccounts = safeStorage.getItem('airtrack_user_accounts');
+      if (rawAccounts) {
+        try {
+          const list = JSON.parse(rawAccounts);
+          if (Array.isArray(list)) {
+            const seenPhones = new Set<string>();
+            const cleanList: any[] = [];
+            for (const item of list) {
+              if (!item) continue;
+              let p = (item.phone || '').trim();
+              if (!p || p === '主账号' || hasNonAscii(p)) {
+                p = 'master';
+                item.phone = 'master';
+                if (!item.label) item.label = '官方授权主账号';
+              }
+              if (!seenPhones.has(p)) {
+                seenPhones.add(p);
+                cleanList.push(item);
+              }
+            }
+            safeStorage.setItem('airtrack_user_accounts', JSON.stringify(cleanList));
+          }
+        } catch (_) {}
+      }
+
+      // 4. 活跃账号指针自愈
+      const active = safeStorage.getItem(LS_ACTIVE_ACCOUNT);
+      if (active && (active === '主账号' || hasNonAscii(active))) {
+        safeStorage.setItem(LS_ACTIVE_ACCOUNT, 'master');
+      }
+    } catch (e) {
+      console.warn('[Storage] sanitizeStorageKeys error', e);
     }
   }
 
   /** 从 localStorage 恢复当前账号凭据 */
   public loadFromStorage(): void {
-    if (typeof window === 'undefined' || !window.localStorage) return;
+    this.sanitizeStorageKeys();
+
     try {
-      const storedActive = window.localStorage.getItem(LS_ACTIVE_ACCOUNT);
-      if (storedActive) {
-        this.activePhone = storedActive;
+      const storedActive = safeStorage.getItem(LS_ACTIVE_ACCOUNT);
+      if (storedActive && storedActive.trim() && !/[^\x00-\x7F]/.test(storedActive) && storedActive.trim() !== '主账号') {
+        this.activePhone = storedActive.trim();
+      } else {
+        const all = getAllRegisteredAccounts();
+        this.activePhone = all.length > 0 && all[0].phone ? all[0].phone : 'master';
       }
     } catch { /* ignore */ }
 
+    // 历史空后缀凭据自愈迁移（将无手机号的临时授权资产平滑归集至主账号）
+    if (!safeStorage.getItem(lsAuthKey(this.activePhone)) && safeStorage.getItem('airtrack_auth_')) {
+      const legacyAuth = safeStorage.getItem('airtrack_auth_');
+      const legacyServ = safeStorage.getItem('airtrack_service_');
+      const legacyProj = safeStorage.getItem('airtrack_project_');
+      if (legacyAuth) safeStorage.setItem(lsAuthKey(this.activePhone), legacyAuth);
+      if (legacyServ) safeStorage.setItem(lsServiceKey(this.activePhone), legacyServ);
+      if (legacyProj) safeStorage.setItem(lsProjectKey(this.activePhone), legacyProj);
+    }
+
     // 若当前账号尚无本地凭据，优先从预置凭据库自愈补齐
-    if (!window.localStorage.getItem(lsAuthKey(this.activePhone)) && PRESET_AUTH_TOKENS[this.activePhone]) {
+    if (!safeStorage.getItem(lsAuthKey(this.activePhone)) && PRESET_AUTH_TOKENS[this.activePhone]) {
       const preset = PRESET_AUTH_TOKENS[this.activePhone];
       this.saveAuth(preset.auth, preset.service, preset.profile, this.activePhone);
     }
 
     try {
-      const authStr = window.localStorage.getItem(lsAuthKey(this.activePhone));
+      const authStr = safeStorage.getItem(lsAuthKey(this.activePhone));
       if (authStr) {
         const auth = JSON.parse(authStr);
         if (auth && auth.token && auth.salt) {
@@ -581,7 +753,7 @@ export class AirCloudClient {
           this.salt = auth.salt;
         }
       }
-      const servStr = window.localStorage.getItem(lsServiceKey(this.activePhone));
+      const servStr = safeStorage.getItem(lsServiceKey(this.activePhone));
       if (servStr) {
         const serv = JSON.parse(servStr);
         if (serv && serv.sid) this.sid = serv.sid;
@@ -595,7 +767,7 @@ export class AirCloudClient {
   /** 保存认证凭据并自动注册账号 */
   public saveAuth(auth: any, service: any, profile?: any, phone?: string): void {
     const p = phone || this.activePhone;
-    if (typeof window === 'undefined' || !window.localStorage) return;
+    // safe storage
 
     if (p === this.activePhone) {
       if (auth) {
@@ -607,10 +779,10 @@ export class AirCloudClient {
 
     if (auth) {
       this.markAuthExpired(p, false);
-      window.localStorage.setItem(lsAuthKey(p), JSON.stringify(auth));
+      safeStorage.setItem(lsAuthKey(p), JSON.stringify(auth));
     }
-    if (service) window.localStorage.setItem(lsServiceKey(p), JSON.stringify(service));
-    if (profile) window.localStorage.setItem(lsProfileKey(p), JSON.stringify(profile));
+    if (service) safeStorage.setItem(lsServiceKey(p), JSON.stringify(service));
+    if (profile) safeStorage.setItem(lsProfileKey(p), JSON.stringify(profile));
 
     // 自动纳入已注册账号列表
     registerUserAccount({ phone: p });
@@ -629,10 +801,10 @@ export class AirCloudClient {
   public clearAuth(phone?: string): void {
     const p = phone || this.activePhone;
     this.markAuthExpired(p, false);
-    if (typeof window === 'undefined' || !window.localStorage) return;
-    window.localStorage.removeItem(lsAuthKey(p));
-    window.localStorage.removeItem(lsServiceKey(p));
-    window.localStorage.removeItem(lsProfileKey(p));
+    // safe storage
+    safeStorage.removeItem(lsAuthKey(p));
+    safeStorage.removeItem(lsServiceKey(p));
+    safeStorage.removeItem(lsProfileKey(p));
     if (p === this.activePhone) {
       this.token = '';
       this.salt = '';
@@ -645,33 +817,43 @@ export class AirCloudClient {
    * 发起官方 OAuth 授权跳转
    */
   public buildOAuthUrl(phone: string, currentHref: string): string {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(LS_PENDING_ACCOUNT, phone);
+    if (true) {
+      safeStorage.setItem(LS_PENDING_ACCOUNT, phone);
     }
 
-    // 精确判定：Capacitor 原生平台、本地回环、或者非标准 http/https 协议环境
-    const isNativeOrLocal = typeof window !== 'undefined' && (
+    // 确定回调地址：
+    // 来源明确声明：Android 原生客户端透传 from=android，微信小程序透传 from=mp，Web/本地调试透传 from=web
+    let callbackUrl = 'https://ocean1798.github.io/Air8202G-AirTrack-Pro/oauth-callback.html?from=web';
+
+    // #ifdef MP-WEIXIN
+    callbackUrl = 'https://ocean1798.github.io/Air8202G-AirTrack-Pro/oauth-callback.html?from=mp';
+    // #endif
+
+    // #ifndef MP-WEIXIN
+    const isNativeAndroid = typeof window !== 'undefined' && (
       Capacitor.isNativePlatform() ||
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
       window.location.protocol === 'capacitor:' ||
-      window.location.protocol === 'file:' ||
-      !window.location.protocol.startsWith('http')
+      window.location.protocol === 'file:'
     );
 
-    // 确定回调地址：
-    // 原生 App 与本地环境必须重定向至已部署的公网高可用中转页
-    // 严禁将 http://localhost 传给外部浏览器作为回调，否则 Android 外部浏览器访问本机将报 ERR_CONNECTION_REFUSED
-    let callbackUrl = 'https://ocean1798.github.io/Air8202G-AirTrack-Pro/oauth-callback.html';
-    if (!isNativeOrLocal && typeof window !== 'undefined' && window.location.origin) {
+    if (isNativeAndroid) {
+      // 原生 Android App 必须重定向至公网并显式声明 from=android 以便中转页自动拉起 deepLink
+      callbackUrl = 'https://ocean1798.github.io/Air8202G-AirTrack-Pro/oauth-callback.html?from=android';
+    } else if (typeof window !== 'undefined' && window.location.origin) {
       try {
         const origin = window.location.origin;
         const pathname = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-        callbackUrl = `${origin}${pathname}oauth-callback.html`;
+        // 本地环境 (localhost/127.0.0.1) 外部浏览器无法直连 localhost，仍需使用公网中转页但标明 from=web
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          callbackUrl = 'https://ocean1798.github.io/Air8202G-AirTrack-Pro/oauth-callback.html?from=web';
+        } else {
+          callbackUrl = `${origin}${pathname}oauth-callback.html?from=web`;
+        }
       } catch (e) {
-        callbackUrl = 'https://ocean1798.github.io/Air8202G-AirTrack-Pro/oauth-callback.html';
+        callbackUrl = 'https://ocean1798.github.io/Air8202G-AirTrack-Pro/oauth-callback.html?from=web';
       }
     }
+    // #endif
 
     return `${OFFICIAL_API_CONFIG.oauthAuthorizeUrl}?return_to=${encodeURIComponent(callbackUrl)}`;
   }
@@ -698,7 +880,7 @@ export class AirCloudClient {
     for (let i = 1; i < demoPhones.length; i++) {
       const candidate = demoPhones[(currentIndex + i) % demoPhones.length];
       const authStr = typeof window !== 'undefined' && window.localStorage
-        ? window.localStorage.getItem(lsAuthKey(candidate))
+        ? safeStorage.getItem(lsAuthKey(candidate))
         : null;
       if (authStr) {
         try {
@@ -723,30 +905,35 @@ export class AirCloudClient {
   public extractToken(input: string): string {
     const raw = (input || '').trim();
     if (!raw) return '';
+    let candidate = raw;
     if (raw.includes('token=')) {
       try {
-        const match = raw.match(/[?&#]token=([^&#]+)/);
+        const match = raw.match(/[?&#](?:oauth_)?token=([^&#]+)/);
         if (match && match[1]) {
-          return decodeURIComponent(match[1]);
+          candidate = decodeURIComponent(match[1]).trim();
         }
       } catch (e) {}
     }
-    return raw;
+    // 严格结构断言：必须满足纯英数/下划线/中划线/点号且长度 >= 60
+    if (/^[A-Za-z0-9_\-\.]{60,}$/.test(candidate)) {
+      return candidate;
+    }
+    return '';
   }
 
   public consumePendingAccount(): string | null {
-    if (typeof window === 'undefined' || !window.localStorage) return null;
-    const p = window.localStorage.getItem(LS_PENDING_ACCOUNT);
-    if (p) window.localStorage.removeItem(LS_PENDING_ACCOUNT);
+    // safe storage
+    const p = safeStorage.getItem(LS_PENDING_ACCOUNT);
+    if (p) safeStorage.removeItem(LS_PENDING_ACCOUNT);
     return p;
   }
 
   /** 使用 OAuth token 完成授权验证 */
-  public async exchangeOAuthToken(oauthToken: string, phone?: string): Promise<boolean> {
+  public async exchangeOAuthToken(oauthToken: string, phone?: string): Promise<{ ok: boolean; message?: string }> {
     const target = phone || this.activePhone;
     try {
       const url = `${OFFICIAL_API_CONFIG.oauthLoginApi}?token=${encodeURIComponent(oauthToken)}`;
-      const res = await fetch(url, {
+      const res = await httpPlatformRequest(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: '{}'
@@ -754,33 +941,53 @@ export class AirCloudClient {
       const data = await res.json();
       if (data && data.code === 0 && data.value) {
         const profile = data.value.profile || {};
-        const realMobile = String(profile.mobile || profile.phone || profile.user || target || '').trim();
-        const finalPhone = realMobile && /^\d{11}$/.test(realMobile) ? realMobile : target;
-        registerUserAccount({ phone: finalPhone });
+        const realMobile = String(profile.mobile || profile.phone || '').trim();
+        let finalPhone = '';
+        if (realMobile && /^\d{11}$/.test(realMobile)) {
+          finalPhone = realMobile;
+        } else if (target && /^\d{11}$/.test(target)) {
+          finalPhone = target;
+        } else {
+          const rawUser = String(profile.user || profile.username || target || '').trim();
+          const cleanUser = rawUser.replace(/[^a-zA-Z0-9_\-]/g, '');
+          if (cleanUser && cleanUser !== '主账号') {
+            finalPhone = cleanUser;
+          } else {
+            const uid = profile.id || profile.uid || (data.value.auth?.token ? String(data.value.auth.token).slice(-6) : '');
+            finalPhone = uid ? `master_${uid}` : 'master';
+          }
+        }
+        if (!finalPhone || finalPhone === '') finalPhone = 'master';
+        registerUserAccount({ phone: finalPhone, label: finalPhone === 'master' ? '官方授权主账号' : '' });
         this.saveAuth(data.value.auth, data.value.service, data.value.profile, finalPhone);
         this.markAuthExpired(finalPhone, false);
         if (finalPhone !== this.activePhone) {
           this.setActiveAccount(finalPhone);
         }
         await this.ensureProjectKey();
-        return true;
+        return { ok: true };
       }
+      const errMsg = typeof data?.value === 'string' ? data.value : (data?.info || 'Token 已失效或已被消费');
       console.warn('[AirCloud] exchangeOAuthToken rejected', data?.code, data?.value);
-    } catch (e) {
+      return { ok: false, message: errMsg };
+    } catch (e: any) {
       console.error('[AirCloud] exchangeOAuthToken failed', e);
+      const msg = e?.message || '网络请求失败';
+      if (msg.includes('domain list') || msg.includes('fail url not')) {
+        return { ok: false, message: '真机未开启调试模式：请点小程序右上角 [...] 开启调试' };
+      }
+      return { ok: false, message: msg };
     }
-    return false;
   }
 
   // ============================ 项目管理 ============================
 
   public async listProjects(): Promise<Array<{ name: string; project_key: string }>> {
+    this.loadFromStorage();
     try {
       const resp = await this.postApi('/list_my_projects', { page: 1, size: 50 });
       if (resp && resp.code === 0 && Array.isArray(resp.value)) {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          window.localStorage.setItem(LS_PROJECTS_CACHE + this.activePhone, JSON.stringify(resp.value));
-        }
+        safeStorage.setItem(LS_PROJECTS_CACHE + (this.activePhone || 'master'), JSON.stringify(resp.value));
         return resp.value;
       }
     } catch (_) {}
@@ -788,11 +995,10 @@ export class AirCloudClient {
   }
 
   public getCachedProjects(): Array<{ name: string; project_key: string }> {
+    this.loadFromStorage();
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const raw = window.localStorage.getItem(LS_PROJECTS_CACHE + this.activePhone);
-        if (raw) return JSON.parse(raw);
-      }
+      const raw = safeStorage.getItem(LS_PROJECTS_CACHE + (this.activePhone || 'master'));
+      if (raw) return JSON.parse(raw);
     } catch (_) {}
     return [];
   }
@@ -828,7 +1034,7 @@ export class AirCloudClient {
       'Content-Type': 'application/json'
     };
 
-    const res = await fetch(url, {
+    const res = await httpPlatformRequest(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload)
@@ -855,6 +1061,9 @@ export class AirCloudClient {
    */
   public async getDeviceList(): Promise<DeviceInfo[]> {
     const currentReqPhone = this.activePhone;
+    if (!currentReqPhone) {
+      return [];
+    }
 
     // 1. 若当前未授权或离线，尝试直接加载本地已持久化档案
     if (!this.hasAuth(currentReqPhone)) {
@@ -1027,8 +1236,7 @@ export class AirCloudClient {
     });
   }
 
-  /**
-   * public deriveSpeedsForTrackPoints(points: StoredTrackPoint[]): StoredTrackPoint[] {
+  public deriveSpeedsForTrackPoints(points: StoredTrackPoint[]): StoredTrackPoint[] {
     if (!points || points.length === 0) return [];
     // 确保按时序单调递增
     const sorted = [...points].sort((a, b) => a.timestamp - b.timestamp);
@@ -1113,6 +1321,9 @@ export class AirCloudClient {
     customEnd?: string,
     forceCloud = true
   ): Promise<TrackPoint[]> {
+    if (!this.activePhone) {
+      return [];
+    }
     const pad = (n: number) => String(n).padStart(2, '0');
     const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 

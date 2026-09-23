@@ -1,9 +1,15 @@
 import { defineConfig, presetUno, presetAttributify } from 'unocss';
+import { presetApplet, presetRemRpx, transformerAttributify, transformerApplet } from 'unocss-applet';
+
+const isApplet = process.env?.UNI_PLATFORM?.startsWith('mp') ?? false;
 
 export default defineConfig({
   presets: [
-    presetUno(),
-    presetAttributify()
+    isApplet ? presetApplet() : presetUno(),
+    isApplet ? presetRemRpx() : presetAttributify()
+  ],
+  transformers: [
+    ...(isApplet ? [transformerApplet(), transformerAttributify()] : [])
   ],
   theme: {
     colors: {

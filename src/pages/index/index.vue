@@ -1,14 +1,31 @@
 <template>
   <div class="relative w-screen h-screen overflow-hidden bg-cyber-950 text-slate-100 font-sans antialiased select-none">
     
-    <!-- ==================== 1. 全景腾讯 WebGL 地图底座 ==================== -->
+    <!-- ==================== 1. 全域腾讯 WebGL 地图容器 / 小程序原生地图 ==================== -->
+    <!-- #ifdef MP-WEIXIN -->
+    <map
+      id="main-map-wx"
+      class="absolute inset-0 w-full h-full z-0"
+      :latitude="wxMapCenter.lat"
+      :longitude="wxMapCenter.lng"
+      :scale="14"
+      :markers="wxMarkers"
+      :polyline="wxPolylines"
+      :circles="wxCircles"
+      :show-location="false"
+      :enable-3D="false"
+      :enable-overlooking="false"
+      :enable-rotate="false"
+      style="width: 100vw; height: 100vh;"
+    ></map>
+    <!-- #endif -->
+    <!-- #ifndef MP-WEIXIN -->
     <div id="main-map" class="absolute inset-0 w-full h-full z-0 bg-cyber-950"></div>
+    <!-- #endif -->
 
     <!-- 地图时空轨迹加载胶囊 (L3 悬浮态，声明 pointer-events-none 严禁阻断地图交互，与 Toast 及顶部状态栏错开) -->
     <transition name="fade">
-      <div v-if="isTrackLoading"
-           id="map-track-loading-capsule"
-           class="fixed map-capsule-safe left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3.5 py-1.5 rounded-full glass-panel border border-cyan-400/40 bg-[#070d1d]/85 backdrop-blur-md shadow-[0_0_20px_rgba(0,240,255,0.25)] flex items-center space-x-2 text-xs font-mono text-cyan-300 animate-pulse">
+      <div v-if="isTrackLoading" id="map-track-loading-capsule" class="fixed map-capsule-safe left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3.5 py-1.5 rounded-full glass-panel border border-cyan-400/40 bg-[#070d1d]/85 backdrop-blur-md shadow-[0_0_20px_rgba(0,240,255,0.25)] flex items-center space-x-2" :style="capsuleTopStyle">
         <svg class="w-3.5 h-3.5 animate-spin text-cyan-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
         </svg>
@@ -17,7 +34,7 @@
     </transition>
 
     <!-- ==================== 2. 顶部轻量浮动 Bar (响应式双模严格隔离，移动端预留状态栏安全区) ==================== -->
-    <header class="absolute mobile-safe-header left-2 right-2 md:left-3 md:right-3 z-30 pointer-events-none">
+    <header class="absolute mobile-safe-header left-2 right-2 md:left-3 md:right-3 z-30 pointer-events-none" :style="headerTopStyle">
       
       <!-- 2.1 移动端独占顶部 Bar (< md 严格呈现，>= md 彻底隐藏) -->
       <div class="md:hidden glass-panel w-full p-1.5 rounded-2xl flex items-center shadow-xl border border-white/10 pointer-events-auto backdrop-blur-2xl bg-cyber-900/90">
@@ -50,20 +67,13 @@
              @click.stop="manualRefreshDevices"
              title="刷新设备状态"
              :class="['shrink-0 p-1.5 rounded-full border border-cyber-700/60 hover:border-cyber-primary text-slate-300 hover:text-cyber-primary bg-cyber-950/80 transition cursor-pointer mr-1', isDeviceRefreshing ? 'pointer-events-none opacity-80' : '']">
-          <svg class="w-3.5 h-3.5 transition-transform duration-300"
-               :class="isDeviceRefreshing ? 'animate-spin text-cyber-primary' : ''"
-               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-            <path d="M21 3v5h-5"/>
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-            <path d="M8 16H3v5"/>
-          </svg>
+          <image :src="SVG_ICONS.refresh" class="w-3.5 h-3.5 transition-transform duration-300" :class="isDeviceRefreshing ? 'animate-spin' : ''" mode="aspectFit" />
         </div>
 
         <!-- 移动端专享：纯用户头像 (不带电话号码) -->
         <div id="btn-mobile-account" role="button" @click="toggleOfficialModal()" title="账号管理" class="shrink-0 relative group p-0.5 rounded-full border border-cyber-primary/50 shadow-glow-cyan hover:border-cyber-primary active:scale-95 transition-all bg-cyber-950/80">
           <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-600/40 via-cyber-800 to-blue-600/50 flex items-center justify-center overflow-hidden border border-white/20">
-            <i data-lucide="user" class="w-3.5 h-3.5 text-cyber-primary"></i>
+            <image :src="SVG_ICONS.user" class="w-4 h-4" mode="aspectFit" />
           </div>
           <span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-cyber-emerald border-2 border-cyber-950"></span>
         </div>
@@ -310,34 +320,34 @@
     <!-- ==================== 4. 移动端独占：右下角悬浮回正 FAB (< md，自适应底部安全区) ==================== -->
     <div class="md:hidden fixed right-3 z-30 transition-all duration-300 mobile-fab-safe pointer-events-auto">
       <div role="button" @click="recenterVehicle()" title="定位至当前设备" class="w-10 h-10 rounded-2xl glass-panel border border-cyber-primary/60 text-cyber-primary flex items-center justify-center shadow-fab-shadow hover:bg-cyber-primary/20 hover:scale-105 active:scale-90 transition-all backdrop-blur-xl group bg-cyber-900/90">
-        <i data-lucide="crosshair" class="w-5 h-5 text-cyber-primary group-hover:rotate-45 transition-transform"></i>
+        <image :src="SVG_ICONS.crosshair" class="w-5 h-5 group-hover:rotate-45 transition-transform" mode="aspectFit" />
       </div>
     </div>
 
     <!-- ==================== 5. 核心：【双端双模感知面板】 ==================== -->
-    <aside id="inspector-drawer" class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-cyber-700/80 glass-panel shadow-sheet-shadow flex flex-col drawer-transition sheet-peek md:fixed md:inset-x-auto md:top-16 md:right-3 md:bottom-28 md:w-80 md:lg:w-96 md:rounded-2xl md:border md:border-cyber-700/60 md:z-20 md:shadow-2xl md:h-auto md:max-h-none">
+    <aside id="inspector-drawer" :class="'sheet-' + mobileSheetState" :style="drawerDynamicStyle" @touchstart="onSheetTouchStart" @touchend="onSheetTouchEnd" class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-cyber-700/80 glass-panel shadow-sheet-shadow flex flex-col drawer-transition md:fixed md:inset-x-auto md:top-16 md:right-3 md:bottom-28 md:w-80 md:lg:w-96 md:rounded-2xl md:border md:border-cyber-700/60 md:z-20 md:shadow-2xl md:h-auto md:max-h-none">
       
       <!-- 移动端把手 -->
-      <div id="sheet-drag-handle" class="w-full flex flex-col items-center pt-1.5 pb-0.5 cursor-pointer md:hidden active:opacity-75 touch-none">
+      <div id="sheet-drag-handle" @click="cycleMobileSheet" class="w-full flex flex-col items-center pt-1.5 pb-0.5 cursor-pointer md:hidden active:opacity-75 touch-none">
         <div class="w-10 h-1 bg-slate-400/50 rounded-full hover:bg-cyber-primary transition-colors"></div>
       </div>
 
       <!-- 顶部固定设备概览头 -->
-      <div id="sheet-header-bar" class="px-3.5 py-2 border-b border-cyber-700/60 bg-cyber-900/95 flex items-center justify-between shrink-0 cursor-pointer md:cursor-default select-none">
+      <div id="sheet-header-bar" @click="cycleMobileSheet" class="px-3.5 py-2 border-b border-cyber-700/60 bg-cyber-900/95 flex items-center justify-between shrink-0 cursor-pointer md:cursor-default select-none">
         <div class="flex-1">
           <div class="flex items-center space-x-2">
-            <span class="text-xs font-bold text-white tracking-wide truncate max-w-[140px] sm:max-w-none" id="drawer-vehicle-name">未选择设备</span>
-            <span class="text-[9px] font-mono text-cyber-primary bg-cyber-primary/10 border border-cyber-primary/30 px-1.5 py-0.2 rounded" id="drawer-gnss-badge">GNSS 3D</span>
+            <span class="text-xs font-bold text-white tracking-wide truncate max-w-[140px] sm:max-w-none" id="drawer-vehicle-name">{{ activeDeviceId ? (activeDeviceName || activeDeviceId) : '等待选择设备' }}</span>
+            <span :class="['text-[9px] font-mono px-1.5 py-0.2 rounded border transition-colors', activeDeviceId ? 'text-cyber-primary bg-cyber-primary/10 border-cyber-primary/30' : 'text-slate-400 bg-slate-800/40 border-slate-700/50']" id="drawer-gnss-badge">{{ activeTelemetry.gnssBadgeText }}</span>
           </div>
           <div class="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center space-x-1.5 leading-tight">
-            <span id="drawer-coord-text" class="truncate max-w-[150px] sm:max-w-none">34.7944°N, 114.3350°E</span>
-            <span class="font-bold px-1.5 py-0.2 rounded text-[10px] text-cyber-primary bg-cyber-primary/10 border border-cyber-primary/30 transition-colors" id="drawer-speed-badge">0 km/h</span>
+            <span id="drawer-coord-text" class="truncate max-w-[150px] sm:max-w-none">{{ activeTelemetry.coordsText }}</span>
+            <span :class="['font-bold px-1.5 py-0.2 rounded text-[10px] border transition-colors', activeDeviceId ? 'text-cyber-primary bg-cyber-primary/10 border-cyber-primary/30' : 'text-slate-500 bg-slate-800/20 border-slate-800/50']" id="drawer-speed-badge" :style="{ color: activeTelemetry.speedColor }">{{ activeTelemetry.speedText }}</span>
           </div>
         </div>
 
         <div class="flex items-center space-x-2">
           <div role="button" id="btn-sheet-chevron" class="md:hidden p-1 text-slate-400 hover:text-white transition-transform">
-            <i data-lucide="chevron-up" class="w-4 h-4" id="icon-sheet-chevron"></i>
+            <image :src="SVG_ICONS.chevronUp" :class="['w-4 h-4 transition-transform', mobileSheetState !== 'peek' ? 'rotate-180' : '']" mode="aspectFit" />
           </div>
 
           <!-- 桌面端独占收起按钮 -->
@@ -364,19 +374,19 @@
           <div class="space-y-1.5 font-mono text-[11px]">
             <div class="flex items-start justify-between">
               <span class="text-slate-400 shrink-0">物理地址:</span>
-              <span class="text-slate-200 text-right font-sans break-all ml-2" id="drawer-address-text">—</span>
+              <span class="text-slate-200 text-right font-sans break-all ml-2" id="drawer-address-text">{{ activeTelemetry.addressText }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400">大地坐标:</span>
-              <span class="text-slate-200" id="drawer-coord-detail">—</span>
+              <span class="text-slate-200" id="drawer-coord-detail">{{ activeTelemetry.coordsText }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400">实时航速:</span>
-              <span class="text-cyber-primary font-bold" id="drawer-speed-detail">0.0 km/h</span>
+              <span class="text-cyber-primary font-bold" id="drawer-speed-detail">{{ activeTelemetry.speedText }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400">最后上报时间:</span>
-              <span class="text-slate-200" id="tel-tag-last-time">—</span>
+              <span class="text-slate-200" id="tel-tag-last-time">{{ activeTelemetry.lastActiveText }}</span>
             </div>
           </div>
         </section>
@@ -394,19 +404,19 @@
           <div class="font-mono text-[11px] divide-y divide-cyber-700/40">
             <div class="p-2.5 flex items-center justify-between">
               <span class="text-slate-400">Tag 799 (电池供电)</span>
-              <span class="text-cyber-emerald font-bold" id="tel-tag-batt">—</span>
+              <span class="text-cyber-emerald font-bold" id="tel-tag-batt">{{ activeTelemetry.battText }}</span>
             </div>
             <div class="p-2.5 flex items-center justify-between">
               <span class="text-slate-400">Tag 782 (蜂窝信号)</span>
-              <span class="text-cyan-300 font-bold" id="tel-tag-csq">—</span>
+              <span class="text-cyan-300 font-bold" id="tel-tag-csq">{{ activeTelemetry.csqText }}</span>
             </div>
             <div class="p-2.5 flex items-center justify-between">
               <span class="text-slate-400">Tag 512/513 (定位源)</span>
-              <span class="text-slate-200" id="tel-tag-coords">—</span>
+              <span class="text-slate-200" id="tel-tag-coords">{{ activeTelemetry.coordsText }}</span>
             </div>
             <div class="p-2.5 flex items-center justify-between">
               <span class="text-slate-400">Tag 514 (行驶航速)</span>
-              <span class="text-cyber-emerald font-bold" id="tel-tag-speed">0.0 km/h</span>
+              <span class="text-cyber-emerald font-bold" id="tel-tag-speed">{{ activeTelemetry.speedText }}</span>
             </div>
           </div>
         </section>
@@ -497,8 +507,19 @@
         <div class="relative w-full">
           
           <div id="timeline-track-container" class="relative w-full h-9 sm:h-10 bg-cyber-950 rounded-xl border border-white/10 overflow-visible cursor-crosshair flex items-center shadow-inner touch-none">
+            <!-- 静态科技感微光与空态提示（消除纯黑长条的空洞感） -->
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10 opacity-70">
+              <span class="text-[10px] font-mono text-cyan-400/80 tracking-widest flex items-center space-x-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+                <span>{{ activeDeviceId ? '时空轨迹就绪' : '等待接入时空轨迹点位' }}</span>
+              </span>
+            </div>
+            <!-- 静态科技网格呼吸基准线 -->
+            <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent pointer-events-none z-0"></div>
+            <!-- 静态呼吸基线（无轨迹点位时提供静态科技微芒，消除全黑空洞感） -->
+            <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-500/35 to-transparent pointer-events-none z-0"></div>
             
-            <canvas id="speed-wave-canvas" class="absolute inset-0 w-full h-full rounded-xl pointer-events-none"></canvas>
+            <canvas id="speed-wave-canvas" canvas-id="speed-wave-canvas" class="absolute inset-0 w-full h-full rounded-xl pointer-events-none"></canvas>
 
             <div class="absolute inset-0 timeline-ticks pointer-events-none rounded-xl opacity-20"></div>
             <div class="absolute inset-0 timeline-ticks-major pointer-events-none rounded-xl opacity-30"></div>
@@ -550,12 +571,12 @@
           </div>
 
           <div class="flex items-center justify-between text-[8px] sm:text-[9px] font-mono text-slate-400 mt-1 px-1">
-            <span id="scale-tick-start">08:00</span>
-            <span id="scale-tick-1">09:30</span>
-            <span id="scale-tick-2" class="hidden sm:inline">11:00</span>
-            <span id="scale-tick-3">12:30</span>
+            <span id="scale-tick-start">{{ timelineDisplay.scaleTicks[0] }}</span>
+            <span id="scale-tick-1">{{ timelineDisplay.scaleTicks[1] }}</span>
+            <span id="scale-tick-2" class="hidden sm:inline">{{ timelineDisplay.scaleTicks[2] }}</span>
+            <span id="scale-tick-3">{{ timelineDisplay.scaleTicks[3] }}</span>
             <span id="scale-tick-end" class="text-cyber-primary font-bold flex items-center space-x-1">
-              <span>14:00 (最新)</span>
+              <span>{{ timelineDisplay.scaleTicks[4] }}</span>
               <span class="w-1 h-1 rounded-full bg-cyber-primary animate-pulse-cyan"></span>
             </span>
           </div>
@@ -572,27 +593,26 @@
                 <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
                 <span>跟随最新</span>
               </div>
-              <div role="button" @click="switchMasterMode('range')" id="btn-mode-range" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1">
-                <i data-lucide="sliders" class="w-3 h-3"></i>
+              <div role="button" @click="switchMasterMode('range')" id="btn-mode-range" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1 cursor-pointer">
+                <image :src="SVG_ICONS.sliders" class="w-3.5 h-3.5" mode="aspectFit" />
                 <span>区间回放</span>
               </div>
               
               <div id="macro-date-divider" class="h-3.5 w-px bg-white/10 mx-1 hidden"></div>
               
               <div role="button" @click="toggleDateRangePopover()" id="btn-date-trigger" class="px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-[11px] text-slate-200 hover:text-cyber-primary transition flex items-center space-x-1 group hidden">
-                <i data-lucide="calendar" class="w-3 h-3 text-cyber-primary"></i>
-                <span id="current-range-label" class="font-bold truncate max-w-[70px] sm:max-w-none">近90天</span>
-                <i data-lucide="chevron-down" class="w-2.5 h-2.5 text-slate-400"></i>
-              </div>
+                <image :src="SVG_ICONS.calendar" class="w-3.5 h-3.5" mode="aspectFit" />
+                <span id="current-range-label" class="font-bold truncate max-w-[70px] sm:max-w-none">{{ timelineDisplay.currentRangeLabel }}</span>
+                <image :src="SVG_ICONS.chevronDown" class="w-2.5 h-2.5" mode="aspectFit" /></div>
             </div>
           </div>
 
           <!-- 播放控制簇 (区间回放模式独占，彻底移除无用快速回放按钮) -->
           <div id="unified-play-cluster" class="flex items-center gap-1.5 hidden">
             <div class="flex items-center bg-cyber-950/90 p-0.5 rounded-xl border border-white/10 gap-1">
-              <div role="button" @click="toggleRangePlay()" id="btn-range-play" class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:brightness-110 transition flex items-center gap-1 shadow-glow-emerald">
-                <i data-lucide="play" class="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" id="icon-range-play"></i>
-                <span id="txt-range-play">播放</span>
+              <div role="button" @click="toggleRangePlay()" id="btn-range-play" class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:brightness-110 transition flex items-center gap-1 shadow-glow-emerald cursor-pointer active:scale-95">
+                <image :src="isPlayingState ? SVG_ICONS.pause : SVG_ICONS.play" class="w-3.5 h-3.5" mode="aspectFit" />
+                <span id="txt-range-play">{{ isPlayingState ? '暂停' : '播放' }}</span>
               </div>
               <div role="button" @click="setPlaySpeed(1, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-cyber-primary/20 text-cyber-primary font-bold">1x</div>
               <div role="button" @click="setPlaySpeed(5, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white">5x</div>
@@ -605,10 +625,10 @@
             <div id="live-status-bar" class="flex items-center space-x-1.5 sm:space-x-2">
               <div class="flex items-center space-x-1.5 px-2 py-0.5 rounded-lg border border-cyber-700/60 bg-cyber-950/80" id="live-state-badge">
                 <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan" id="live-state-dot"></span>
-                <span id="live-state-text" class="text-white font-bold">原地静止</span>
+                <span id="live-state-text" class="text-white font-bold">{{ timelineDisplay.liveStateText }}</span>
               </div>
-              <span id="live-latest-time" class="text-slate-300 font-mono hidden sm:inline">—</span>
-              <span id="live-latest-speed" class="text-cyber-primary font-bold font-mono">0.0 km/h</span>
+              <span id="live-latest-time" class="text-slate-300 font-mono hidden sm:inline">{{ timelineDisplay.liveLatestTime }}</span>
+              <span id="live-latest-speed" class="text-cyber-primary font-bold font-mono" :style="{ color: timelineDisplay.speedTagColor }">{{ timelineDisplay.liveLatestSpeed }}</span>
 
               <div id="btn-live-snap" role="button" @click="snapToLatestRealtime()" class="hidden px-2 py-0.5 rounded-md bg-cyber-primary/20 border border-cyber-primary/50 text-cyan-300 text-[9px] font-bold hover:bg-cyber-primary/30 transition flex items-center space-x-1 cursor-pointer active:scale-95">
                 <span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse"></span>
@@ -639,13 +659,13 @@
     </div>
 
     <!-- ==================== 7. 账号管理弹窗 (规范锁定版本：极简纯净 / Radio单选 / 串行探活) ==================== -->
-    <div id="official-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden" @click.self="toggleOfficialModal()">
-      <div class="glass-panel max-w-md w-full rounded-2xl shadow-2xl relative flex flex-col max-h-[85vh] overflow-hidden border border-white/10 bg-[#0b1426]/95">
+    <div id="official-modal" v-if="showAccountModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4" @click="toggleOfficialModal(false)">
+      <div class="glass-panel max-w-md w-full rounded-2xl shadow-2xl relative flex flex-col max-h-[85vh] overflow-hidden border border-white/10 bg-[#0b1426]/95" @click.stop>
         
         <!-- 1. 顶部 Header (固定吸顶) -->
         <div class="p-5 pb-3 border-b border-white/10 shrink-0 relative bg-[#070d1d]/60">
-          <div role="button" id="btn-close-official-modal" @click="toggleOfficialModal()" title="关闭" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition cursor-pointer">
-            <i data-lucide="x" class="w-4 h-4"></i>
+          <div role="button" id="btn-close-official-modal" @click.stop="toggleOfficialModal(false)" title="关闭" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer flex items-center justify-center w-7 h-7">
+            <span class="text-sm font-bold leading-none">✕</span>
           </div>
 
           <div class="flex items-center space-x-2">
@@ -662,7 +682,7 @@
         <div class="p-5 py-3 overflow-y-auto space-y-2.5 custom-scrollbar flex-1">
           <!-- 零账号空状态 -->
           <div v-if="accountStates.length === 0" class="py-12 text-center text-slate-500 text-xs font-mono">
-            <i data-lucide="user-x" class="w-8 h-8 mx-auto mb-2 text-slate-600"></i>
+            <image :src="SVG_ICONS.userX" class="w-8 h-8 mx-auto mb-2" mode="aspectFit" />
             暂无已登录账号，请点击下方登录
           </div>
 
@@ -700,7 +720,7 @@
             <div class="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-xs font-mono">
               <span :class="s.isExpired ? 'text-rose-400 font-bold flex items-center space-x-1.5' : 'text-emerald-400 flex items-center space-x-1.5'">
                 <span :class="s.isExpired ? 'w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse' : 'w-1.5 h-1.5 rounded-full bg-emerald-400'"></span>
-                <span class="text-[11px]">{{ checkingPhone === s.account.phone ? '检测中...' : (s.isExpired ? '凭据过期' : '正常') }}</span>
+                <span class="text-[11px]">{{ (Boolean(checkingPhone) && checkingPhone === s.account.phone) ? '检测中...' : (s.isExpired ? '凭据过期' : '正常') }}</span>
               </span>
 
               <div class="flex items-center space-x-1.5" @click.stop>
@@ -709,20 +729,20 @@
                           s.isExpired
                             ? 'px-2.5 py-1 rounded-lg text-xs font-sans font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition shadow-[0_0_10px_-1px_rgba(0,240,255,0.45)] flex items-center space-x-1 cursor-pointer'
                             : 'px-2.5 py-1 rounded-lg text-xs font-sans text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition flex items-center space-x-1 cursor-pointer',
-                          checkingPhone === s.account.phone ? 'pointer-events-none opacity-80' : ''
+                          (Boolean(checkingPhone) && checkingPhone === s.account.phone) ? 'pointer-events-none opacity-80' : ''
                         ]">
                   <svg class="w-3 h-3 transition-transform duration-300"
-                       :class="checkingPhone === s.account.phone ? 'animate-spin text-cyan-400' : ''"
+                       :class="(Boolean(checkingPhone) && checkingPhone === s.account.phone) ? 'animate-spin text-cyan-400' : ''"
                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
                     <path d="M21 3v5h-5"/>
                     <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
                     <path d="M8 16H3v5"/>
                   </svg>
-                  <span>{{ checkingPhone === s.account.phone ? '刷新中' : '刷新凭据' }}</span>
+                  <span>{{ (Boolean(checkingPhone) && checkingPhone === s.account.phone) ? '刷新中' : '刷新凭据' }}</span>
                 </button>
-                <button v-if="!s.active" @click="onRemoveAccount(s.account.phone)" title="从本机移除此账号" class="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer">
-                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <button @click.stop="onRemoveAccount(s.account.phone)" :title="s.active ? '退出并解绑此账号' : '从本机移除此账号'" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 border border-white/10 transition cursor-pointer flex items-center justify-center shrink-0 active:scale-95">
+                  <image :src="SVG_ICONS.trash" class="w-3.5 h-3.5" mode="aspectFit" />
                 </button>
               </div>
             </div>
@@ -732,15 +752,15 @@
 
         <!-- 3. 底部通栏主操作 (固定吸底 Sticky Footer) -->
         <div class="p-4 pt-3 border-t border-white/10 shrink-0 bg-[#070d1d]/60 space-y-2">
-          <button id="btn-login-new-account" @click="openOAuthAuthorization()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition flex items-center justify-center space-x-1.5 shadow-[0_0_20px_-2px_rgba(0,240,255,0.35)] cursor-pointer active:scale-98">
-            <i data-lucide="plus" class="w-4 h-4"></i>
+          <button id="btn-login-new-account" @click.stop="openOAuthAuthorization()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition flex items-center justify-center space-x-1.5 shadow-[0_0_20px_-2px_rgba(0,240,255,0.35)] cursor-pointer active:scale-98">
+            <image :src="SVG_ICONS.plus" class="w-4 h-4" mode="aspectFit" />
             <span>登录新账号 (官方授权)</span>
           </button>
 
           <!-- 备用通道：手动粘贴 Token 换票 (防个别 ROM 拦截自定义协议唤醒) -->
           <div class="pt-0.5">
-            <div v-if="!showManualTokenInput" @click="showManualTokenInput = true; nextTick(refreshIcons)" role="button" class="text-[11px] text-slate-400 hover:text-cyan-300 text-center cursor-pointer transition flex items-center justify-center space-x-1 py-1">
-              <i data-lucide="key-round" class="w-3 h-3 text-cyan-400"></i>
+            <div id="btn-manual-token-toggle" v-if="!showManualTokenInput" @click.stop="showManualTokenInput = true; nextTick(refreshIcons)" role="button" class="text-[11px] text-slate-400 hover:text-cyan-300 text-center cursor-pointer transition flex items-center justify-center space-x-1 py-1">
+              <image :src="SVG_ICONS.keyRound" class="w-3 h-3" mode="aspectFit" />
               <span>无法自动跳转？点击手动粘贴 Token 换票</span>
             </div>
             <div v-else class="space-y-1.5 p-2.5 rounded-xl bg-cyber-900/90 border border-cyber-700/60 shadow-inner">
@@ -758,6 +778,13 @@
                   placeholder="粘贴 Token 或完整回调 URL..."
                   class="flex-1 px-2.5 py-1.5 rounded-lg bg-cyber-950 border border-cyber-700/80 text-white font-mono text-[11px] focus:outline-none focus:border-cyan-400"
                 />
+                <button
+                  type="button"
+                  @click="readFromClipboard()"
+                  class="px-2 py-1.5 rounded-lg bg-cyber-800/90 border border-cyan-500/50 text-cyan-300 text-[11px] font-medium hover:bg-cyber-700 transition shrink-0 cursor-pointer active:scale-95"
+                >
+                  一键粘贴
+                </button>
                 <button
                   id="btn-apply-manual-token"
                   @click="applyManualToken()"
@@ -816,6 +843,37 @@
       </div>
     </div>
 
+    <!-- 微信小程序端 OAuth 步骤向导悬浮层 -->
+    <!-- #ifdef MP-WEIXIN -->
+    <div v-if="showMpOAuthGuide" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[130] flex items-center justify-center p-4">
+      <div class="w-full max-w-sm bg-slate-900 border border-cyan-500/40 rounded-2xl p-5 shadow-2xl space-y-4 text-center">
+        <div class="w-12 h-12 mx-auto rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xl font-bold">
+          ⚡
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-white">官方授权向导已开启</h3>
+          <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+            授权链接已自动复制到剪贴板！请按以下指引极速接入：
+          </p>
+        </div>
+        <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-1.5 leading-normal">
+          <p><span class="text-cyan-400 font-bold">第 1 步：</span>切至手机浏览器，在地址栏粘贴并打开；</p>
+          <p><span class="text-cyan-400 font-bold">第 2 步：</span>登录合宙账号并点击授权；</p>
+          <p><span class="text-cyan-400 font-bold">第 3 步：</span>在成功页面点击【一键复制 Token】；</p>
+          <p><span class="text-cyan-400 font-bold">第 4 步：</span>切回本小程序，系统将自动识别接入！</p>
+        </div>
+        <div class="pt-1 flex gap-2">
+          <button @click="showMpOAuthGuide = false; awaitingOAuthSince = 0" class="flex-1 py-2 rounded-xl text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+            取消等待
+          </button>
+          <button @click="openOAuthAuthorization()" class="flex-1 py-2 rounded-xl text-xs font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition">
+            重新复制链接
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- #endif -->
+
     <!-- ==================== 9. 全局悬浮通知 Toast (自适应状态栏安全区) ==================== -->
     <transition name="fade">
       <div v-if="toastMessage" class="fixed toast-safe left-1/2 -translate-x-1/2 z-[110] px-4 py-2 rounded-xl backdrop-blur-md shadow-2xl flex items-center space-x-2 text-xs font-mono border transition-all"
@@ -829,11 +887,71 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, nextTick, ref, computed } from 'vue';
+// #ifdef MP-WEIXIN
+// 微信小程序 JSCore 沙箱环境下，模块包装器传入的 window/document 为 undefined
+// 此处定义模块作用域安全桩，彻底杜绝 DOM/BOM 访问抛错
+const noop = () => {};
+const dummyElem: any = {
+  innerText: '',
+  innerHTML: '',
+  value: '',
+  style: {},
+  dataset: {},
+  classList: { add: noop, remove: noop, toggle: noop, contains: () => false },
+  setAttribute: noop,
+  getAttribute: () => '',
+  removeAttribute: noop,
+  addEventListener: noop,
+  removeEventListener: noop,
+  focus: noop,
+  blur: noop,
+  scrollIntoView: noop,
+  closest: () => null,
+  querySelector: () => dummyElem,
+  querySelectorAll: () => [],
+  getBoundingClientRect: () => ({ left: 0, top: 0, width: 375, height: 40, right: 375, bottom: 40 }),
+  getContext: () => null
+};
+let document: any = {
+  getElementById: () => dummyElem,
+  querySelector: () => dummyElem,
+  querySelectorAll: () => [],
+  createElement: () => dummyElem,
+  addEventListener: noop,
+  removeEventListener: noop,
+  body: dummyElem,
+  title: 'AirTrack Pro'
+};
+let window: any = {
+  innerWidth: 375,
+  innerHeight: 812,
+  devicePixelRatio: 2,
+  addEventListener: noop,
+  removeEventListener: noop,
+  location: { href: '', search: '', hash: '', origin: '', pathname: '' },
+  history: { pushState: noop, replaceState: noop },
+  document: document
+};
+// #endif
+
+// 安全无影子歧义的 nextTick 实现，避免 uniapp rollup 混淆变量踩踏
+function nextTick(callback?: () => void): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      if (callback) {
+        try { callback(); } catch (e) {}
+      }
+      resolve();
+    }, 0);
+  });
+}
+import '../../utils/dom-shim';
+import { onMounted, onUnmounted, ref, computed, reactive } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 import { App as CapApp } from '@capacitor/app';
 import { Browser as CapBrowser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
-import { AirCloudClient, calculateScopeWindow } from '../../api/client';
+import { AirCloudClient, calculateScopeWindow, copyTextToClipboard } from '../../api/client';
 import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-model';
 import { wgs84ToGcj02 } from '../../utils/coord-transform';
 import { stationClient } from '../../utils/station-client';
@@ -845,6 +963,39 @@ declare const echarts: any;
 
 const apiClient = AirCloudClient.getInstance();
 const isStationConnected = ref(false);
+
+// 物理遥测看板响应式数据模型
+const activeTelemetry = reactive({
+  battMv: null as number | null,
+  battPct: null as number | null,
+  battText: '—',
+  csq: null as number | null,
+  csqLevel: '—',
+  csqText: '—',
+  coordsText: '暂无定位坐标',
+  addressText: '暂无物理地址',
+  speedText: '0.0 km/h',
+  speedColor: '#00f0ff',
+  gnssBadgeText: '待机',
+  lastActiveText: '暂无上报'
+});
+
+// 时空时间轴响应式状态模型
+const timelineDisplay = reactive({
+  scaleTicks: ['08:00', '09:30', '11:00', '12:30', '14:00 (最新)'],
+  currentRangeLabel: '近90天',
+  liveLatestSpeed: '0.0 km/h',
+  liveLatestTime: '—',
+  liveStateText: '原地静止',
+  speedTagColor: '#00f0ff'
+});
+
+// 微信小程序 OAuth 授权时效状态门禁
+const awaitingOAuthSince = ref<number>(0);
+const OAUTH_AWAIT_TIMEOUT_MS = 10 * 60 * 1000; // 10分钟时效
+const showMpOAuthGuide = ref(false);
+const consumedTokens = new Set<string>();
+const ignoredTokens = new Set<string>();
 
 // 手机 APP 引导弹层状态
 const showDownloadPopover = ref(false);
@@ -944,6 +1095,33 @@ const deviceList = ref<any[]>([]);
 const deviceLoading = ref(true);
 const authError = ref('');
 const accountStates = ref<any[]>([]);
+const showAccountModal = ref(false);
+// ================= 全平台标准矢量图标 Data-URI (内联纯净编码，零依赖) =================
+const SVG_ICONS = {
+  trash: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23f43f5e%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%223%206%205%206%2021%206%22%2F%3E%3Cpath%20d%3D%22M19%206v14a2%202%200%200%201-2%202H7a2%202%200%200%201-2-2V6m3%200V4a2%202%200%200%201%202-2h4a2%202%200%200%201%202%202v2%22%2F%3E%3Cline%20x1%3D%2210%22%20y1%3D%2211%22%20x2%3D%2210%22%20y2%3D%2217%22%2F%3E%3Cline%20x1%3D%2214%22%20y1%3D%2211%22%20x2%3D%2214%22%20y2%3D%2217%22%2F%3E%3C%2Fsvg%3E",
+  crosshair: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2300f0ff%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%2210%22%2F%3E%3Cline%20x1%3D%2222%22%20y1%3D%2212%22%20x2%3D%2218%22%20y2%3D%2212%22%2F%3E%3Cline%20x1%3D%226%22%20y1%3D%2212%22%20x2%3D%222%22%20y2%3D%2212%22%2F%3E%3Cline%20x1%3D%2212%22%20y1%3D%226%22%20x2%3D%2212%22%20y2%3D%222%22%2F%3E%3Cline%20x1%3D%2212%22%20y1%3D%2222%22%20x2%3D%2212%22%20y2%3D%2218%22%2F%3E%3C%2Fsvg%3E",
+  play: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22%23020617%22%20stroke%3D%22%23020617%22%20stroke-width%3D%222%22%3E%3Cpolygon%20points%3D%225%203%2019%2012%205%2021%205%203%22%2F%3E%3C%2Fsvg%3E",
+  pause: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22%23020617%22%20stroke%3D%22%23020617%22%20stroke-width%3D%222%22%3E%3Crect%20x%3D%226%22%20y%3D%224%22%20width%3D%224%22%20height%3D%2216%22%2F%3E%3Crect%20x%3D%2214%22%20y%3D%224%22%20width%3D%224%22%20height%3D%2216%22%2F%3E%3C%2Fsvg%3E",
+  chevronUp: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%2218%2015%2012%209%206%2015%22%2F%3E%3C%2Fsvg%3E",
+  chevronDown: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%2F%3E%3C%2Fsvg%3E",
+  sliders: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2338bdf8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cline%20x1%3D%224%22%20y1%3D%2221%22%20x2%3D%224%22%20y2%3D%2214%22%2F%3E%3Cline%20x1%3D%224%22%20y1%3D%2210%22%20x2%3D%224%22%20y2%3D%223%22%2F%3E%3Cline%20x1%3D%2212%22%20y1%3D%2221%22%20x2%3D%2212%22%20y2%3D%2212%22%2F%3E%3Cline%20x1%3D%2212%22%20y1%3D%228%22%20x2%3D%2212%22%20y2%3D%223%22%2F%3E%3Cline%20x1%3D%2220%22%20y1%3D%2221%22%20x2%3D%2220%22%20y2%3D%2216%22%2F%3E%3Cline%20x1%3D%2220%22%20y1%3D%2212%22%20x2%3D%2220%22%20y2%3D%223%22%2F%3E%3Cline%20x1%3D%221%22%20y1%3D%2214%22%20x2%3D%227%22%20y2%3D%2214%22%2F%3E%3Cline%20x1%3D%229%22%20y1%3D%228%22%20x2%3D%2215%22%20y2%3D%228%22%2F%3E%3Cline%20x1%3D%2217%22%20y1%3D%2216%22%20x2%3D%2223%22%20y2%3D%2216%22%2F%3E%3C%2Fsvg%3E",
+  calendar: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2300f0ff%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%224%22%20width%3D%2218%22%20height%3D%2218%22%20rx%3D%222%22%20ry%3D%222%22%2F%3E%3Cline%20x1%3D%2216%22%20y1%3D%222%22%20x2%3D%2216%22%20y2%3D%226%22%2F%3E%3Cline%20x1%3D%228%22%20y1%3D%222%22%20x2%3D%228%22%20y2%3D%226%22%2F%3E%3Cline%20x1%3D%223%22%20y1%3D%2210%22%20x2%3D%2221%22%20y2%3D%2210%22%2F%3E%3C%2Fsvg%3E",
+  refresh: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2300f0ff%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2012a9%209%200%200%201%209-9%209.75%209.75%200%200%201%206.74%202.74L21%208%22%2F%3E%3Cpath%20d%3D%22M21%203v5h-5%22%2F%3E%3Cpath%20d%3D%22M21%2012a9%209%200%200%201-9%209%209.75%209.75%200%200%201-6.74-2.74L3%2016%22%2F%3E%3Cpath%20d%3D%22M8%2016H3v5%22%2F%3E%3C%2Fsvg%3E",
+  user: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2300f0ff%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M19%2021v-2a4%204%200%200%200-4-4H9a4%204%200%200%200-4%204v2%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%227%22%20r%3D%224%22%2F%3E%3C%2Fsvg%3E",
+  userX: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M16%2021v-2a4%204%200%200%200-4-4H6a4%204%200%200%200-4%204v2%22%2F%3E%3Ccircle%20cx%3D%229%22%20cy%3D%227%22%20r%3D%224%22%2F%3E%3Cline%20x1%3D%2217%22%20y1%3D%228%22%20x2%3D%2222%22%20y2%3D%2213%22%2F%3E%3Cline%20x1%3D%2222%22%20y1%3D%228%22%20x2%3D%2217%22%20y2%3D%2213%22%2F%3E%3C%2Fsvg%3E",
+  plus: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cline%20x1%3D%2212%22%20y1%3D%225%22%20x2%3D%2212%22%20y2%3D%2219%22%2F%3E%3Cline%20x1%3D%225%22%20y1%3D%2212%22%20x2%3D%2219%22%20y2%3D%2212%22%2F%3E%3C%2Fsvg%3E",
+  keyRound: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2322d3ee%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M21%202l-2%202m-1.5%201.5L14%209l-1.5-1.5L11%209l-1.5-1.5L8%209c-3.3%200-6%202.7-6%206s2.7%206%206%206%206-2.7%206-6l6.5-6.5L22%204l-1-2z%22%2F%3E%3C%2Fsvg%3E",
+  loader: "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2322d3ee%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M21%2012a9%209%200%201%201-6.219-8.56%22%2F%3E%3C%2Fsvg%3E"
+};
+const headerTopStyle = ref('');
+const capsuleTopStyle = ref('');
+
+const wxMapCenter = ref({ lat: 34.794375, lng: 114.335039 });
+const menuButtonRect = ref<any>(null);
+const isPlayingState = ref(false);
+const wxMarkers = ref<any[]>([]);
+const wxPolylines = ref<any[]>([]);
+const wxCircles = ref<any[]>([]);
 const activeAccountPhone = ref(apiClient.getActivePhone());
 const activeAccountLabel = ref(apiClient.getActiveAccount().label);
 const displayAccountLabel = computed(() => {
@@ -990,26 +1168,24 @@ function rebuildDeviceDb(list: any[]) {
   });
 }
 
-function copyCoordToClipboard(coord?: string) {
+async function copyCoordToClipboard(coord?: string) {
   if (!coord || coord === '暂无定位') {
-    showCyberToast('当前设备暂未上报坐标', 'warning');
+    showToast('当前设备暂未上报坐标', 'warn', 2500);
     return;
   }
-  if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(coord).then(() => {
-      showCyberToast(`已复制坐标：${coord}`, 'info');
-    }).catch(() => {
-      showCyberToast(`坐标：${coord}`, 'info');
-    });
+  const ok = await copyTextToClipboard(coord);
+  if (ok) {
+    showToast(`已复制坐标：${coord}`, 'success', 2500);
   } else {
-    showCyberToast(`坐标：${coord}`, 'info');
+    showToast(`坐标：${coord}`, 'info', 2500);
   }
 }
 
 function formatPhone(phone: string): string {
-  if (!phone) return '';
+  if (!phone || phone === 'master' || phone === '主账号') return '官方授权主账号';
+  if (phone.startsWith('master_')) return `官方主账号 (${phone.slice(7)})`;
   const clean = String(phone).replace(/\s+/g, '');
-  if (clean.length === 11) {
+  if (clean.length === 11 && /^\d+$/.test(clean)) {
     return `${clean.slice(0, 3)} ${clean.slice(3, 7)} ${clean.slice(7)}`;
   }
   return clean;
@@ -1053,12 +1229,13 @@ function saveAccountAlias(phone: string) {
   refreshAccountStates();
 }
 
-const checkingPhone = ref('');
+const checkingPhone = ref<string | null>(null);
 const isProbing = ref(false);
 let activeAccountSwitchSeq = 0;
 
 async function refreshAccountStates() {
   const states = apiClient.getAccountStates();
+  accountStates.value = states;
   for (const s of states) {
     const probed = apiClient.getProbedDeviceCount(s.account.phone);
     if (probed !== undefined) {
@@ -1110,16 +1287,50 @@ function onRefreshAccountCredential(phone: string, isExpired: boolean) {
 }
 
 function onRemoveAccount(phone: string) {
-  if (phone === apiClient.getActivePhone()) {
-    showToast('无法移除当前激活账号', 'warn');
-    return;
-  }
+  const isCur = phone === apiClient.getActivePhone();
+  const title = isCur ? '退出并解绑账号' : '移除账号';
+  const content = isCur
+    ? `确认退出并解绑当前账号 [${formatPhone(phone)}] 吗？解绑后将从本机清空，可随时重新登录接入。`
+    : `确认从本机移除账号 [${formatPhone(phone)}] 吗？`;
+
+  // #ifdef MP-WEIXIN
+  uni.showModal({
+    title,
+    content,
+    confirmText: '确认解绑',
+    confirmColor: '#f43f5e',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        performRemoveAccount(phone, isCur);
+      }
+    }
+  });
+  return;
+  // #endif
+
+  // #ifndef MP-WEIXIN
   if (typeof window !== 'undefined' && window.confirm) {
-    if (!window.confirm(`确认从本机移除账号 [${formatPhone(phone)}]？`)) return;
+    if (!window.confirm(content)) return;
+    performRemoveAccount(phone, isCur);
   }
+  // #endif
+}
+
+function performRemoveAccount(phone: string, isCur: boolean) {
   apiClient.removeAccount(phone);
+  if (isCur) {
+    activeDeviceId.value = '';
+    TRACK_POINTS = [];
+    accountDevices.value = [];
+    deviceList.value = [];
+    apiClient.setActiveAccount('');
+  }
   refreshAccountStates();
-  showToast(`已从本机移除账号 [${formatPhone(phone)}]`, 'info', 2500);
+  showToast(isCur ? '已成功解绑并退出当前账号' : `已从本机移除账号 [${formatPhone(phone)}]`, 'info', 2500);
+  if (isCur) {
+    loadRealDevices();
+  }
 }
 
 async function refreshAccountCredential(phone: string) {
@@ -1143,7 +1354,7 @@ async function refreshAccountCredential(phone: string) {
   } catch (e: any) {
     showToast(`账号 [${formatPhone(phone)}] 检测遇到网络波动，已保留离线资产`, 'warn', 3000);
   } finally {
-    checkingPhone.value = '';
+    checkingPhone.value = null;
     nextTick(refreshIcons);
   }
 }
@@ -1175,10 +1386,23 @@ function showToast(msg: string, type: 'success' | 'info' | 'warn' | 'error' = 'i
 
 async function openOAuthAuthorization(phone?: string) {
   const target = (phone || '').trim();
-  const url = apiClient.buildOAuthUrl(target, window.location.href);
-  console.info('[AirTrack] 打开合宙官方 OAuth 授权:', url);
+  const currentHref = (typeof window !== 'undefined' && window.location?.href) ? window.location.href : 'https://ocean1798.github.io/Air8202G-AirTrack-Pro/';
+  const url = apiClient.buildOAuthUrl(target, currentHref);
+  console.info('[AirTrack] 打开官方 OAuth 授权:', url);
 
-  // 1. Android 原生环境：优先调用系统内嵌 Custom Tab
+  // #ifdef MP-WEIXIN
+  awaitingOAuthSince.value = Date.now();
+  showMpOAuthGuide.value = true;
+  uni.setClipboardData({
+    data: url,
+    success: () => {
+      showToast('授权链接已复制！请在浏览器中打开，切回自动识别', 'info', 3500);
+      showManualTokenInput.value = true;
+    }
+  });
+  return;
+  // #endif
+
   if (Capacitor.isNativePlatform()) {
     try {
       await CapBrowser.open({
@@ -1203,6 +1427,48 @@ const showManualTokenInput = ref(false);
 const manualTokenText = ref('');
 const isExchangingManualToken = ref(false);
 
+function readFromClipboard() {
+  // #ifdef MP-WEIXIN
+  uni.getClipboardData({
+    success: (res) => {
+      const text = (res.data || '').trim();
+      if (text) {
+        manualTokenText.value = text;
+        const cleanToken = apiClient.extractToken(text);
+        if (cleanToken) {
+          showToast('已从剪贴板提取 Token，正在换票...', 'info', 1800);
+          applyManualToken();
+        } else {
+          showToast('已粘贴剪贴板内容', 'info', 1500);
+        }
+      } else {
+        showToast('剪贴板为空，请先在浏览器中复制 Token', 'warn', 2000);
+      }
+    },
+    fail: () => {
+      showToast('请直接长按输入框粘贴', 'info', 2000);
+    }
+  });
+  // #endif
+
+  // #ifndef MP-WEIXIN
+  if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.readText) {
+    navigator.clipboard.readText().then(text => {
+      if (text) {
+        manualTokenText.value = text.trim();
+        const cleanToken = apiClient.extractToken(text);
+        if (cleanToken) {
+          showToast('已从剪贴板提取 Token，正在换票...', 'info', 1800);
+          applyManualToken();
+        }
+      }
+    }).catch(() => {
+      showToast('请在输入框直接粘贴', 'info', 1500);
+    });
+  }
+  // #endif
+}
+
 async function applyManualToken() {
   const raw = manualTokenText.value.trim();
   if (!raw) {
@@ -1218,19 +1484,16 @@ async function applyManualToken() {
   isExchangingManualToken.value = true;
   try {
     const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
-    const ok = await apiClient.exchangeOAuthToken(cleanToken, pending);
-    if (ok) {
+    const res = await apiClient.exchangeOAuthToken(cleanToken, pending);
+    if (res.ok) {
       showToast(`✓ 账号 ${pending} 授权连接成功！`, 'success', 3000);
       manualTokenText.value = '';
       showManualTokenInput.value = false;
+      showAccountModal.value = false;
       refreshAccountStates();
       await loadRealDevices();
-      const modal = document.getElementById('official-modal');
-      if (modal && !modal.classList.contains('hidden')) {
-        modal.classList.add('hidden');
-      }
     } else {
-      showToast('Token 无效或已过期，请重新获取', 'error', 3500);
+      showToast(res.message || 'Token 无效或已过期，请重新获取', 'error', 3500);
     }
   } catch (err: any) {
     showToast(err?.message || '换票失败，请检查网络', 'error', 3000);
@@ -1501,12 +1764,18 @@ async function fetchDeviceLiveTrackAndTags(imei: string) {
       if (tagData.val_799) {
         const mv = parseInt(tagData.val_799, 10);
         const pct = voltageToPercentage(mv);
+        activeTelemetry.battMv = mv;
+        activeTelemetry.battPct = pct;
+        activeTelemetry.battText = `${mv} mV (${pct}%)`;
         const battEl = document.getElementById('tel-tag-batt');
         if (battEl) battEl.innerText = `${mv} mV (${pct}%)`;
       }
       if (tagData.val_782) {
         const csq = parseInt(tagData.val_782, 10);
         const level = csq >= 20 ? '强' : csq >= 12 ? '中' : csq >= 5 ? '弱' : '无';
+        activeTelemetry.csq = csq;
+        activeTelemetry.csqLevel = level;
+        activeTelemetry.csqText = `${level} (CSQ ${csq})`;
         const csqEl = document.getElementById('tel-tag-csq');
         if (csqEl) csqEl.innerText = `${level} (CSQ ${csq})`;
       }
@@ -1565,11 +1834,31 @@ function selectDeviceTab(imei: string) {
   const mobHeaderCoord = document.getElementById('mob-drawer-coord-text');
   if (mobHeaderCoord) mobHeaderCoord.innerText = coordText;
 
+  // 响应式遥测状态全面同步（保障小程序等无 DOM 运行环境 100% 数据呈现）
+  activeTelemetry.lastActiveText = `${dev.lastActiveTime || '未上报'} (${dev.relativeTime || '—'})`;
+  activeTelemetry.battText = dev.battPct != null ? `${dev.voltageMv} mV (${dev.battPct}%)` : (dev.voltageMv ? `${dev.voltageMv} mV` : '—');
+  activeTelemetry.csqText = dev.csqNum > 0 ? `${dev.signalLevelText || '强'} (CSQ ${dev.csqNum})` : '无信号';
+  activeTelemetry.gnssBadgeText = dev.fixType ? `${dev.fixType} 定位` : 'GNSS 3D';
+  activeTelemetry.coordsText = coordText;
+  activeTelemetry.addressText = dev.address || '未上报物理地址';
+  activeTelemetry.speedText = `${Number(dev.speed || 0).toFixed(1)} km/h`;
+
   // 仅对真实上报过定位的物理设备做地图定位；未上报设备不做任何坐标推测
   if (located) {
     if ((window as any).__map) {
       const center = new TMap.LatLng(dev.lat, dev.lng);
-      (window as any).__map.panTo(center);
+            // #ifdef MP-WEIXIN
+      wxMapCenter.value = { lat: dev.lat, lng: dev.lng };
+      wxMarkers.value = [{
+        id: 1,
+        latitude: dev.lat,
+        longitude: dev.lng,
+        title: dev.name,
+        width: 32,
+        height: 32
+      }];
+      // #endif
+(window as any).__map.panTo(center);
       if ((window as any).__vehicleMarker) {
         (window as any).__vehicleMarker.setGeometries([{
           id: 'v1',
@@ -1773,18 +2062,25 @@ function updateTimelineScaleTicks(isMultiDay?: boolean) {
     }
   };
 
+  const t0Str = fmtTime(t0, true);
+  const t1Str = fmtTime(t1);
+  const t2Str = fmtTime(t2);
+  const t3Str = fmtTime(t3);
+  const t4Str = masterMode === 'live' && !isViewportActive ? `${fmtTime(t4, true)} (最新)` : fmtTime(t4, true);
+
+  timelineDisplay.scaleTicks = [t0Str, t1Str, t2Str, t3Str, t4Str];
+
   const elStart = document.getElementById('scale-tick-start');
-  if (elStart) elStart.innerText = fmtTime(t0, true);
+  if (elStart) elStart.innerText = t0Str;
   const el1 = document.getElementById('scale-tick-1');
-  if (el1) el1.innerText = fmtTime(t1);
+  if (el1) el1.innerText = t1Str;
   const el2 = document.getElementById('scale-tick-2');
-  if (el2) el2.innerText = fmtTime(t2);
+  if (el2) el2.innerText = t2Str;
   const el3 = document.getElementById('scale-tick-3');
-  if (el3) el3.innerText = fmtTime(t3);
+  if (el3) el3.innerText = t3Str;
   const elEnd = document.getElementById('scale-tick-end');
   if (elEnd) {
-    const textLabel = masterMode === 'live' && !isViewportActive ? `${fmtTime(t4, true)} (最新)` : fmtTime(t4, true);
-    elEnd.innerHTML = `<span>${textLabel}</span><span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan"></span>`;
+    elEnd.innerHTML = `<span>${t4Str}</span><span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan"></span>`;
   }
 }
 
@@ -1799,6 +2095,11 @@ function updateLiveStatusBar() {
   const dev = imei ? DEVICES_DB[imei] : null;
 
   if (!dev || !dev.online) {
+    timelineDisplay.liveStateText = '信号中断 · 盲区';
+    timelineDisplay.liveLatestTime = dev?.lastActiveTime ? `最后上报: ${dev.lastActiveTime.slice(11, 19)}` : '未上报';
+    timelineDisplay.liveLatestSpeed = '离线';
+    timelineDisplay.speedTagColor = '#f43f5e';
+
     // 离线/盲区状态：玫瑰红指示
     if (badge) {
       badge.className = 'flex items-center space-x-1.5 px-2 py-0.5 rounded-lg border border-rose-500/40 bg-rose-950/40';
@@ -1822,6 +2123,11 @@ function updateLiveStatusBar() {
 
   const isMoving = dev.speed && dev.speed > 3;
   if (isMoving) {
+    timelineDisplay.liveStateText = '移动中';
+    timelineDisplay.liveLatestTime = dev.lastActiveTime ? dev.lastActiveTime.slice(11, 19) : '刚刚';
+    timelineDisplay.liveLatestSpeed = `${Number(dev.speed || 0).toFixed(1)} km/h`;
+    timelineDisplay.speedTagColor = '#00f0ff';
+
     // 移动中：翡翠绿高亮指示
     if (badge) {
       badge.className = 'flex items-center space-x-1.5 px-2 py-0.5 rounded-lg border border-cyber-emerald/40 bg-emerald-950/40 shadow-glow-emerald';
@@ -1841,6 +2147,11 @@ function updateLiveStatusBar() {
       speedEl.style.color = '#00f0ff';
     }
   } else {
+    timelineDisplay.liveStateText = '原地静止';
+    timelineDisplay.liveLatestTime = dev.lastActiveTime ? dev.lastActiveTime.slice(11, 19) : '刚刚';
+    timelineDisplay.liveLatestSpeed = '0.0 km/h';
+    timelineDisplay.speedTagColor = '#10b981';
+
     // 原地静止：暗蓝灰稳态指示
     if (badge) {
       badge.className = 'flex items-center space-x-1.5 px-2 py-0.5 rounded-lg border border-slate-600 bg-slate-800/80';
@@ -1906,6 +2217,9 @@ function getRealCanvas(): HTMLCanvasElement | null {
 }
 
 function drawSpeedWaveCanvas() {
+  // #ifdef MP-WEIXIN
+  return;
+  // #endif
   const canvas = getRealCanvas();
   if (!canvas) return;
   const container = document.getElementById('timeline-track-container');
@@ -2180,7 +2494,6 @@ function notifyViewportChanged(startMs: number, endMs: number) {
   requestAnimationFrame(() => {
     rAFViewportUpdatePending = false;
     const label = document.getElementById('current-range-label');
-    if (!label) return;
 
     if (!isViewportActive) {
       const mapNames: Record<string, string> = {
@@ -2191,7 +2504,9 @@ function notifyViewportChanged(startMs: number, endMs: number) {
         '30d': '近30天',
         '90d': '近90天',
       };
-      label.innerText = mapNames[currentMacroScope] || '近90天';
+      const text = mapNames[currentMacroScope] || '近90天';
+      timelineDisplay.currentRangeLabel = text;
+      if (label) label.innerText = text;
       return;
     }
 
@@ -2202,19 +2517,22 @@ function notifyViewportChanged(startMs: number, endMs: number) {
     const hmS = `${pad(dS.getHours())}:${pad(dS.getMinutes())}`;
     const hmE = `${pad(dE.getHours())}:${pad(dE.getMinutes())}`;
 
+    let text = '';
     if (isSameDay) {
       const m = pad(dS.getMonth() + 1);
       const d = pad(dS.getDate());
       const isToday = dS.toDateString() === new Date().toDateString();
       const prefix = isToday ? '今日' : `${m}-${d}`;
-      label.innerText = `${prefix} ${hmS}~${hmE}`;
+      text = `${prefix} ${hmS}~${hmE}`;
     } else {
       const mS = pad(dS.getMonth() + 1);
       const dSStr = pad(dS.getDate());
       const mE = pad(dE.getMonth() + 1);
       const dEStr = pad(dE.getDate());
-      label.innerText = `${mS}-${dSStr} ~ ${mE}-${dEStr}`;
+      text = `${mS}-${dSStr} ~ ${mE}-${dEStr}`;
     }
+    timelineDisplay.currentRangeLabel = text;
+    if (label) label.innerText = text;
   });
 }
 
@@ -2423,6 +2741,11 @@ function renderStateAtPosition(percent: number, isPreview = false) {
       liveSpeed.style.color = stInfo.type === 'moving' ? sColor.hex : '#94a3b8';
     }
 
+    const spVal = typeof pt.speed === 'number' ? pt.speed : 0;
+    timelineDisplay.liveLatestSpeed = spVal > 0 ? `${spVal.toFixed(1)} km/h` : '0.0 km/h';
+    timelineDisplay.speedTagColor = stInfo.type === 'moving' ? sColor.hex : '#94a3b8';
+    if (pt.timeStr) timelineDisplay.liveLatestTime = pt.timeStr.slice(11, 19);
+
     const drawerSpeed = document.getElementById('drawer-speed-badge');
     if (drawerSpeed) {
       const sp = typeof pt.speed === 'number' ? pt.speed : 0;
@@ -2455,7 +2778,18 @@ function renderStateAtPosition(percent: number, isPreview = false) {
     // 同步地图上车辆标点位置，实现滑块拖拽平滑跟跑
     if ((window as any).__vehicleMarker && typeof TMap !== 'undefined' && typeof pt.lat === 'number' && typeof pt.lng === 'number') {
       const pos = new TMap.LatLng(pt.lat, pt.lng);
-      (window as any).__vehicleMarker.setGeometries([{
+          // #ifdef MP-WEIXIN
+    if (typeof pt.lat === 'number' && typeof pt.lng === 'number') {
+      wxMarkers.value = [{
+        id: 1,
+        latitude: pt.lat,
+        longitude: pt.lng,
+        width: 32,
+        height: 32
+      }];
+    }
+    // #endif
+(window as any).__vehicleMarker.setGeometries([{
         id: 'v1',
         styleId: 'car_icon',
         position: pos,
@@ -2465,24 +2799,29 @@ function renderStateAtPosition(percent: number, isPreview = false) {
   }
 
   if (typeof pt.lat === 'number' && typeof pt.lng === 'number') {
+    const cText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
+    activeTelemetry.coordsText = cText;
     const elCoord = document.getElementById('drawer-coord-text');
-    if (elCoord) elCoord.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
+    if (elCoord) elCoord.innerText = cText;
     const elCoordDetail = document.getElementById('drawer-coord-detail');
-    if (elCoordDetail) elCoordDetail.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
+    if (elCoordDetail) elCoordDetail.innerText = cText;
     const elTagCoord = document.getElementById('tel-tag-coords');
-    if (elTagCoord) elTagCoord.innerText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
+    if (elTagCoord) elTagCoord.innerText = cText;
   }
   
+  const spText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
+  activeTelemetry.speedText = spText;
+  activeTelemetry.speedColor = stInfo.color;
   const drawerSpeed = document.getElementById('drawer-speed-badge');
   if (drawerSpeed) {
     drawerSpeed.style.backgroundColor = sColor.rgba(0.2);
     drawerSpeed.style.color = stInfo.color;
-    drawerSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
+    drawerSpeed.innerText = spText;
   }
   const telSpeed = document.getElementById('tel-tag-speed');
   if (telSpeed) {
     telSpeed.style.color = stInfo.color;
-    telSpeed.innerText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
+    telSpeed.innerText = spText;
   }
 
   if ((window as any).__vehicleMarker) {
@@ -2608,6 +2947,7 @@ function toggleRangePlay() {
 
 function startRangePlayback() {
   isPlaying = true;
+  isPlayingState.value = true;
   const txt = document.getElementById('txt-range-play');
   if (txt) txt.innerText = '暂停';
   const icon = document.getElementById('icon-range-play');
@@ -2632,6 +2972,7 @@ function startRangePlayback() {
 
 function stopRangePlayback() {
   isPlaying = false;
+  isPlayingState.value = false;
   if (playTimer) clearInterval(playTimer);
   const txt = document.getElementById('txt-range-play');
   const icon = document.getElementById('icon-range-play');
@@ -2982,7 +3323,12 @@ function setupSilkyTimelineInteractions() {
 }
 
 function renderFullColoredTrackOnMap() {
+  // #ifndef MP-WEIXIN
   if (!(window as any).__map || !(window as any).__trackLines || !TRACK_POINTS.length) return;
+  // #endif
+  // #ifdef MP-WEIXIN
+  if (!TRACK_POINTS.length) return;
+  // #endif
   const numPoints = TRACK_POINTS.length;
   if (numPoints < 2) {
     (window as any).__trackLines.setGeometries([]);
@@ -3005,6 +3351,18 @@ function renderFullColoredTrackOnMap() {
 
   if (isStationaryDwell) {
     (window as any).__trackLines.setGeometries([]);
+    // #ifdef MP-WEIXIN
+    wxPolylines.value = [];
+    const pCenterWx = TRACK_POINTS[Math.floor(numPoints / 2)];
+    wxCircles.value = [{
+      latitude: pCenterWx.lat,
+      longitude: pCenterWx.lng,
+      radius: 35,
+      color: 'rgba(0, 240, 255, 0.75)',
+      fillColor: 'rgba(0, 240, 255, 0.18)',
+      strokeWidth: 1.5
+    }];
+    // #endif
     if ((window as any).__stationaryCircle) {
       const pCenter = TRACK_POINTS[Math.floor(numPoints / 2)];
       (window as any).__stationaryCircle.setGeometries([{
@@ -3034,6 +3392,25 @@ function renderFullColoredTrackOnMap() {
     });
   }
 
+  // #ifdef MP-WEIXIN
+  wxCircles.value = [];
+  wxPolylines.value = [{
+    points: TRACK_POINTS.map(p => ({ latitude: p.lat, longitude: p.lng })),
+    color: '#00f0ff',
+    width: 6,
+    arrowLine: true
+  }];
+  if (TRACK_POINTS.length > 0) {
+    const lastP = TRACK_POINTS[TRACK_POINTS.length - 1];
+    wxMarkers.value = [{
+      id: 1,
+      latitude: lastP.lat,
+      longitude: lastP.lng,
+      width: 32,
+      height: 32
+    }];
+  }
+  // #endif
   (window as any).__trackLines.setGeometries([{
     id: 'track_rainbow',
     styleId: 'rainbow_style',
@@ -3042,7 +3419,12 @@ function renderFullColoredTrackOnMap() {
 }
 
 function renderRangeTrackOnMap() {
+  // #ifndef MP-WEIXIN
   if (!(window as any).__map || !(window as any).__trackLines || !TRACK_POINTS.length) return;
+  // #endif
+  // #ifdef MP-WEIXIN
+  if (!TRACK_POINTS.length) return;
+  // #endif
   const numPoints = TRACK_POINTS.length;
   if (numPoints < 2) {
     (window as any).__trackLines.setGeometries([]);
@@ -3073,6 +3455,18 @@ function renderRangeTrackOnMap() {
 
   if (isStationaryDwell) {
     (window as any).__trackLines.setGeometries([]);
+    // #ifdef MP-WEIXIN
+    wxPolylines.value = [];
+    const pCenterWx = TRACK_POINTS[Math.floor((idxStart + idxEnd) / 2)];
+    wxCircles.value = [{
+      latitude: pCenterWx.lat,
+      longitude: pCenterWx.lng,
+      radius: 35,
+      color: 'rgba(0, 240, 255, 0.75)',
+      fillColor: 'rgba(0, 240, 255, 0.18)',
+      strokeWidth: 1.5
+    }];
+    // #endif
     if ((window as any).__stationaryCircle) {
       const pCenter = TRACK_POINTS[Math.floor((idxStart + idxEnd) / 2)];
       (window as any).__stationaryCircle.setGeometries([{
@@ -3102,17 +3496,57 @@ function renderRangeTrackOnMap() {
     });
   }
 
-  (window as any).__trackLines.setGeometries([{
+  // #ifdef MP-WEIXIN
+  wxCircles.value = [];
+  wxPolylines.value = [{
+    points: TRACK_POINTS.map(p => ({ latitude: p.lat, longitude: p.lng })),
+    color: '#00f0ff',
+    width: 6,
+    arrowLine: true
+  }];
+  if (TRACK_POINTS.length > 0) {
+    const lastP = TRACK_POINTS[TRACK_POINTS.length - 1];
+    wxMarkers.value = [{
+      id: 1,
+      latitude: lastP.lat,
+      longitude: lastP.lng,
+      width: 32,
+      height: 32
+    }];
+  }
+  // #endif
+    // #ifdef MP-WEIXIN
+  wxCircles.value = [];
+  const rangePts = TRACK_POINTS.slice(idxStart, idxEnd + 1);
+  wxPolylines.value = [{
+    points: rangePts.map(p => ({ latitude: p.lat, longitude: p.lng })),
+    color: '#00f0ff',
+    width: 6,
+    arrowLine: true
+  }];
+  if (rangePts.length > 0) {
+    const curP = rangePts[Math.min(playheadIdx, rangePts.length - 1)];
+    wxMarkers.value = [{
+      id: 1,
+      latitude: curP.lat,
+      longitude: curP.lng,
+      width: 32,
+      height: 32
+    }];
+  }
+  // #endif
+(window as any).__trackLines.setGeometries([{
     id: 'track_rainbow',
     styleId: 'rainbow_style',
     rainbowPaths: rainbowPaths
   }]);
 }
 
-let mobileSheetState = 'peek';
+const mobileSheetState = ref<'peek' | 'half' | 'full'>('peek');
 
-function setMobileSheetState(state: string) {
-  mobileSheetState = state;
+function setMobileSheetState(state: 'peek' | 'half' | 'full') {
+  mobileSheetState.value = state;
+  // #ifndef MP-WEIXIN
   const drawer = document.getElementById('inspector-drawer');
   const chevron = document.getElementById('icon-sheet-chevron');
   if (!drawer) return;
@@ -3121,21 +3555,66 @@ function setMobileSheetState(state: string) {
   drawer.classList.add('sheet-' + state);
 
   if (chevron) {
-    if (state === 'peek') {
-      chevron.setAttribute('data-lucide', 'chevron-up');
-    } else if (state === 'half') {
+    if (state === 'peek' || state === 'half') {
       chevron.setAttribute('data-lucide', 'chevron-up');
     } else if (state === 'full') {
       chevron.setAttribute('data-lucide', 'chevron-down');
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
+  // #endif
+}
+
+const drawerDynamicStyle = computed(() => {
+  // #ifndef MP-WEIXIN
+  if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+    return '';
+  }
+  // #endif
+  if (mobileSheetState.value === 'peek') {
+    return 'height: calc(74px + env(safe-area-inset-bottom, 0px)) !important; overflow: hidden !important;';
+  } else if (mobileSheetState.value === 'half') {
+    return 'height: 48vh !important; overflow: hidden !important;';
+  } else {
+    return 'height: 86vh !important; overflow: hidden !important;';
+  }
+});
+
+let sheetTouchStartY = 0;
+function onSheetTouchStart(e: any) {
+  // #ifndef MP-WEIXIN
+  if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
+  // #endif
+  const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+  if (touch) {
+    sheetTouchStartY = touch.clientY;
+  }
+}
+
+function onSheetTouchEnd(e: any) {
+  // #ifndef MP-WEIXIN
+  if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
+  // #endif
+  const touch = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
+  if (!touch) return;
+  const deltaY = touch.clientY - sheetTouchStartY;
+  if (Math.abs(deltaY) > 25) {
+    if (deltaY < -25) {
+      if (mobileSheetState.value === 'peek') setMobileSheetState('half');
+      else if (mobileSheetState.value === 'half') setMobileSheetState('full');
+    } else if (deltaY > 25) {
+      if (mobileSheetState.value === 'full') setMobileSheetState('half');
+      else if (mobileSheetState.value === 'half') setMobileSheetState('peek');
+    }
+  }
 }
 
 function cycleMobileSheet() {
-  if (window.innerWidth >= 768) return;
-  if (mobileSheetState === 'peek') setMobileSheetState('half');
-  else if (mobileSheetState === 'half') setMobileSheetState('full');
+  // #ifndef MP-WEIXIN
+  if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
+  // #endif
+  if (mobileSheetState.value === 'peek') setMobileSheetState('half');
+  else if (mobileSheetState.value === 'half') setMobileSheetState('full');
   else setMobileSheetState('peek');
 }
 
@@ -3237,17 +3716,71 @@ function toggleInspectorDrawer() {
   }
 }
 
-function toggleOfficialModal() {
-  const modal = document.getElementById('official-modal');
-  if (modal) {
-    const willOpen = modal.classList.contains('hidden');
-    modal.classList.toggle('hidden');
-    if (willOpen) {
-      refreshAccountStates();
-      runSequentialHealthProbe();
-    }
+function toggleOfficialModal(forceOpen?: boolean) {
+  const willOpen = forceOpen !== undefined ? forceOpen : !showAccountModal.value;
+  showAccountModal.value = willOpen;
+  if (willOpen) {
+    refreshAccountStates();
+    runSequentialHealthProbe();
   }
 }
+
+function checkClipboardToken() {
+  // #ifdef MP-WEIXIN
+  if (awaitingOAuthSince.value <= 0) return;
+  const elapsed = Date.now() - awaitingOAuthSince.value;
+  if (elapsed > OAUTH_AWAIT_TIMEOUT_MS) {
+    awaitingOAuthSince.value = 0;
+    showMpOAuthGuide.value = false;
+    return;
+  }
+
+  uni.getClipboardData({
+    success: (res) => {
+      const raw = (res.data || '').trim();
+      const cleanToken = apiClient.extractToken(raw);
+      if (cleanToken && /^[A-Za-z0-9_\-\.]{60,}$/.test(cleanToken)) {
+        if (consumedTokens.has(cleanToken) || ignoredTokens.has(cleanToken)) {
+          return;
+        }
+        uni.showModal({
+          title: '检测到授权凭据',
+          content: '检测到您刚刚复制的合宙官方授权凭据，是否立即接入绑定？',
+          confirmText: '立即接入',
+          confirmColor: '#00f0ff',
+          cancelText: '暂不接入',
+          success: async (modalRes) => {
+            awaitingOAuthSince.value = 0;
+            showMpOAuthGuide.value = false;
+            if (modalRes.confirm) {
+              consumedTokens.add(cleanToken);
+              showToast('正在安全换取凭据...', 'info', 2500);
+              const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
+              const result = await apiClient.exchangeOAuthToken(cleanToken, pending);
+              if (result.ok) {
+                showToast('✓ 账号授权绑定成功！', 'success', 3000);
+                showAccountModal.value = false;
+                await refreshAccountStates();
+                await loadRealDevices();
+              } else {
+                showToast(result.message || '换票失败，请检查网络', 'error', 3500);
+              }
+            } else {
+              ignoredTokens.add(cleanToken);
+            }
+          }
+        });
+      }
+    }
+  });
+  // #endif
+}
+
+onShow(() => {
+  // #ifdef MP-WEIXIN
+  checkClipboardToken();
+  // #endif
+});
 
 function redirectToOfficialOAuth() {
   openOAuthAuthorization();
@@ -3259,6 +3792,17 @@ async function syncOfficialData() {
 }
 
 onMounted(() => {
+  // #ifdef MP-WEIXIN
+  try {
+    const rect = uni.getMenuButtonBoundingClientRect();
+    if (rect && rect.bottom) {
+      menuButtonRect.value = rect;
+      headerTopStyle.value = `top: ${rect.bottom + 28}px !important;`;
+      capsuleTopStyle.value = `top: ${rect.bottom + 84}px !important;`;
+    }
+  } catch (e) {}
+  // #endif
+
   refreshIcons();
   setTimeout(refreshIcons, 100);
   setTimeout(refreshIcons, 500);
@@ -3304,23 +3848,21 @@ onMounted(() => {
     }
   });
 
+  // #ifndef MP-WEIXIN
   // 注册 postMessage 监听器，接收内嵌 iframe 或弹出窗的 OAuth 回调 token（真正零跳转）
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
     window.addEventListener('message', async (event) => {
       if (event.data && event.data.type === 'LUAT_OAUTH_TOKEN' && event.data.token) {
         console.info('[AirTrack] 收到站内 postMessage 授权凭据:', event.data.token);
         closeInPageOAuth();
         const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
         showToast(`已获取授权，正在连接账号 ${pending}...`, 'info', 2000);
-        const ok = await apiClient.exchangeOAuthToken(event.data.token, pending);
-        if (ok) {
+        const res = await apiClient.exchangeOAuthToken(event.data.token, pending);
+        if (res.ok) {
           showToast(`✓ 账号 ${pending} 授权连接成功！`, 'success');
+          showAccountModal.value = false;
           refreshAccountStates();
           await loadRealDevices();
-          const modal = document.getElementById('official-modal');
-          if (modal && !modal.classList.contains('hidden')) {
-            modal.classList.add('hidden');
-          }
         } else {
           showToast('授权连接失败，请重试', 'error');
         }
@@ -3329,21 +3871,22 @@ onMounted(() => {
   }
 
   // 捕获合宙官方 OAuth 回调 token，并写入「发起登录的那个账号」
-  if (typeof window !== 'undefined') {
-    const searchStr = window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
+  if (typeof window !== 'undefined' && window.location) {
+    const searchStr = window.location.search || (window.location.hash?.includes('?') ? window.location.hash.split('?')[1] : '');
     const urlParams = new URLSearchParams(searchStr);
     const oauthToken = urlParams.get('token');
     if (oauthToken) {
       const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
       const cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
-      apiClient.exchangeOAuthToken(oauthToken, pending).then(ok => {
-        console.info(ok ? `[AirTrack] 账号 ${pending} OAuth 授权成功` : `[AirTrack] 账号 ${pending} 授权失败`);
+      apiClient.exchangeOAuthToken(oauthToken, pending).then(res => {
+        console.info(res.ok ? `[AirTrack] 账号 ${pending} OAuth 授权成功` : `[AirTrack] 账号 ${pending} 授权失败`);
         refreshAccountStates();
         loadRealDevices();
       });
     }
   }
+  // #endif
 
   // 注册 Capacitor 原生深度链接 (Deep Link) 监听器，响应 airtrack://oauth?token=xxx
   if (Capacitor.isNativePlatform()) {
@@ -3361,14 +3904,11 @@ onMounted(() => {
             const oauthToken = parsed.searchParams.get('token');
             if (oauthToken) {
               const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
-              const ok = await apiClient.exchangeOAuthToken(oauthToken, pending);
-              console.info(ok ? `[AirTrack] DeepLink 账号 ${pending} OAuth 授权成功` : `[AirTrack] DeepLink 授权失败`);
+              const res = await apiClient.exchangeOAuthToken(oauthToken, pending);
+              console.info(res.ok ? `[AirTrack] DeepLink 账号 ${pending} OAuth 授权成功` : `[AirTrack] DeepLink 授权失败`);
+              showAccountModal.value = false;
               refreshAccountStates();
               await loadRealDevices();
-              const modal = document.getElementById('official-modal');
-              if (modal && !modal.classList.contains('hidden')) {
-                modal.classList.add('hidden');
-              }
             }
           } catch (err) {
             console.error('[AirTrack] 解析 Deep Link 失败:', err);
@@ -3380,12 +3920,17 @@ onMounted(() => {
     }
   }
 
-  window.addEventListener('resize', () => {
-    drawSpeedWaveCanvas();
-  });
+  // #ifndef MP-WEIXIN
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('resize', () => {
+      drawSpeedWaveCanvas();
+    });
+  }
+  // #endif
 
+  // #ifndef MP-WEIXIN
   try {
-    if (typeof TMap !== 'undefined') {
+    if (typeof TMap !== 'undefined' && typeof document !== 'undefined' && typeof document.getElementById === 'function') {
       const center = new TMap.LatLng(34.794375, 114.335039);
       const mapEl = document.getElementById('main-map');
       if (mapEl) {
@@ -3451,24 +3996,29 @@ onMounted(() => {
   } catch (e) {
     console.warn('Map error:', e);
   }
+  // #endif
 
   // 从合宙官方网关拉取当前账号的真实设备清单
   refreshAccountStates();
+  const curAccounts = apiClient.getAccountStates();
+  if (curAccounts.length === 0) {
+    toggleOfficialModal(true);
+  } else {
+    setTimeout(() => {
+      if (isStationConnected.value) return;
+      const anyAuth = apiClient.getAccountStates().some((s: any) => s.hasAuth);
+      if (!anyAuth) {
+        toggleOfficialModal(true);
+      }
+      refreshIcons();
+    }, 1500);
+  }
   loadRealDevices();
 
-  // 首次进入且所有账号都未授权时，主动弹出账号面板，让评审直接看到授权入口
-  setTimeout(() => {
-    if (isStationConnected.value) return; // 守护站已联机，无需弹窗阻断
-    const anyAuth = apiClient.getAccountStates().some((s: any) => s.hasAuth);
-    if (!anyAuth) {
-      const modal = document.getElementById('official-modal');
-      if (modal) modal.classList.remove('hidden');
-    }
-    refreshIcons();
-  }, 1500);
-
+  // #ifndef MP-WEIXIN
   setupSilkyTimelineInteractions();
   setupMobileSheetTouchGestures();
+  // #endif
   switchMasterMode('live');
 
   // 全局点击空白处自动收起手机 APP 引导气泡
@@ -3477,7 +4027,11 @@ onMounted(() => {
       showDownloadPopover.value = false;
     }
   };
-  window.addEventListener('click', onGlobalClick);
+  // #ifndef MP-WEIXIN
+  if (typeof window !== 'undefined') {
+    window.addEventListener('click', onGlobalClick);
+  }
+  // #endif
 
   setTimeout(() => {
     drawSpeedWaveCanvas();
@@ -3495,6 +4049,34 @@ onUnmounted(() => {
 </script>
 
 <style>
+/* 跨端通用抽屉与面板类 */
+.glass-panel {
+  background: rgba(7, 13, 29, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.drawer-transition {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sheet-peek {
+  height: calc(74px + env(safe-area-inset-bottom, 0px)) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  overflow: hidden !important;
+}
+
+.sheet-half {
+  height: 48vh !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.sheet-full {
+  height: 86vh !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* 全局暗黑背景覆盖 */
 html, body, #app {
   margin: 0;
@@ -3506,6 +4088,14 @@ html, body, #app {
 }
 
 /* 移动端状态栏与安全区适配 (Safe Area Insets) */
+/* #ifdef MP-WEIXIN */
+.mobile-safe-header {
+  top: max(calc(env(safe-area-inset-top, 0px) + 72px), 96px) !important;
+}
+.map-capsule-safe {
+  top: max(calc(env(safe-area-inset-top, 0px) + 140px), 168px) !important;
+}
+/* #endif */
 .mobile-safe-header {
   top: max(calc(env(safe-area-inset-top, 0px) + 8px), 36px);
 }
@@ -3535,7 +4125,7 @@ html, body, #app {
 
 .timeline-hud-safe {
   position: fixed;
-  bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
 @media (min-width: 768px) {
   .timeline-hud-safe {
@@ -3544,7 +4134,7 @@ html, body, #app {
 }
 
 .mobile-fab-safe {
-  bottom: calc(260px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(248px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 移动端地图右上角控件（指北针与缩放）避让顶部悬浮胶囊栏 */
