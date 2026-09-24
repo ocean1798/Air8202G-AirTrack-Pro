@@ -194,3 +194,81 @@ export function unregisterUserAccount(phone: string) {
 export function findAccount(phone: string): AccountDef | undefined {
   return getAllRegisteredAccounts().find(a => a.phone === phone);
 }
+
+export interface HostInjectedSession {
+  token: string;
+  salt: string;
+  sid: string;
+  name?: string;
+  phone?: string;
+}
+
+/**
+ * 纯函数：从当前浏览器 URL (search & hash) 中提取合宙官方宿主注入参数
+ * 遵循官方《网页工具规则》第 7~8 节硬性契约：m_token, m_salt, m_sid 必须三者齐全且非空
+ * 提取后自动执行 URL 清洗，并返回纯数据结构；不产生模块循环依赖
+ */
+export function parseHostInjectedSession(): HostInjectedSession | null {
+  if (typeof window === 'undefined' || !window.location) {
+    return null;
+  }
+
+  const searchParams = new URLSearchParams(window.location.search || '');
+  const hash = window.location.hash || '';
+  const hashQueryIdx = hash.indexOf('?');
+  const hashParams = hashQueryIdx !== -1 ? new URLSearchParams(hash.slice(hashQueryIdx)) : null;
+
+  const getParam = (key: string): string => {
+    return (searchParams.get(key) || (hashParams ? hashParams.get(key) : '') || '').trim();
+  };
+
+  const mToken = getParam('m_token');
+  const mSalt = getParam('m_salt');
+  const mSid = getParam('m_sid');
+
+  // 官方硬性门禁：m_token (len>=8), m_salt, m_sid 三个字段必须全部为非空有效字符串，缺一不可
+  if (!mToken || mToken.length < 8 || !mSalt || !mSid) {
+    return null;
+  }
+
+  const mName = getParam('m_name');
+  const mPhone = getParam('m_phone');
+
+  // 记录宿主会话标签页标记
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('airtrack_host_session', '1');
+    }
+  } catch (_) {}
+
+  // 执行 URL 安全清洗，剥离全部 10 项潜在注入参数
+  try {
+    const cleanUrl = new URL(window.location.href);
+    const hostParams = [
+      'm_token', 'm_salt', 'm_sid', 'm_name', 'm_phone',
+      'm_algorithm', 'm_encryptOutput', 'm_padding', 'm_publicKey', 'm_publicKeyEncoding'
+    ];
+    hostParams.forEach(p => cleanUrl.searchParams.delete(p));
+
+    if (cleanUrl.hash && cleanUrl.hash.includes('?')) {
+      const parts = cleanUrl.hash.split('?');
+      const hParams = new URLSearchParams(parts[1]);
+      hostParams.forEach(p => hParams.delete(p));
+      const newHQuery = hParams.toString();
+      cleanUrl.hash = parts[0] + (newHQuery ? `?${newHQuery}` : '');
+    }
+
+    window.history.replaceState({}, '', cleanUrl.toString());
+  } catch (e) {
+    console.warn('[HostSession] URL sanitization failed:', e);
+  }
+
+  return {
+    token: mToken,
+    salt: mSalt,
+    sid: mSid,
+    name: mName || undefined,
+    phone: mPhone || undefined
+  };
+}
+

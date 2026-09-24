@@ -22,7 +22,7 @@ import {
   DEMO_ACCOUNTS,
   PRESET_AUTH_TOKENS
 } from './accounts';
-import type { AccountDef } from './accounts';
+import type { AccountDef, HostInjectedSession } from './accounts';
 import { db, type StoredTrackPoint, type StoredDeviceProfile } from '../utils/db';
 import { voltageToPercentage } from '../utils/battery-model';
 import { safeStorage } from '../utils/storage';
@@ -394,6 +394,14 @@ export class AirCloudClient {
           projectKey = pResp.value[0].project_key;
           creds.projectKey = projectKey;
           this.writeProjectKey(targetPhone, projectKey);
+        } else if (pResp && pResp.code === 0 && Array.isArray(pResp.value) && pResp.value.length === 0) {
+          // 官方默认工程密钥兜底 (见《AirCloud接口文档.md》第 102 行)
+          const defaultKey = await this.getDefaultProjectKey(creds);
+          if (defaultKey) {
+            projectKey = defaultKey;
+            creds.projectKey = projectKey;
+            this.writeProjectKey(targetPhone, projectKey);
+          }
         }
       }
 
@@ -829,6 +837,35 @@ export class AirCloudClient {
     this.setActiveAccount(phone);
   }
 
+  /**
+   * 接入合宙官方宿主环境通过 URL 注入的凭据会话
+   * 遵循官方《网页工具规则》第 7~8 节硬性契约
+   */
+  public applyHostInjectedSession(session: HostInjectedSession): string {
+    const tokenHash = session.token.slice(-6).toUpperCase();
+    const phone = session.phone ? session.phone.trim() : `host_${tokenHash}`;
+    const label = session.name ? session.name.trim() : `官方宿主 (${tokenHash})`;
+
+    // 1. 保存真实通信凭据（严格对齐既有签名）
+    this.saveAuth(
+      { token: session.token, salt: session.salt },
+      { sid: session.sid },
+      session.name ? { name: session.name } : {},
+      phone
+    );
+
+    // 2. 登记到用户账户池
+    registerUserAccount({
+      phone,
+      label
+    });
+
+    // 3. 激活为当前账号
+    this.setActiveAccount(phone);
+
+    return phone;
+  }
+
   /** 清除某账号登录凭据 */
   public clearAuth(phone?: string): void {
     const p = phone || this.activePhone;
@@ -1019,11 +1056,46 @@ export class AirCloudClient {
 
   // ============================ 项目管理 ============================
 
+  /**
+   * 官方标准端点：获取我的标准模块“合宙标准模块”的项目Key (见《AirCloud接口文档.md》第 102 行)
+   * 用于空项目或换票无项目时的标准权威兜底
+   */
+  public async getDefaultProjectKey(customCreds?: { token: string; salt: string; sid?: string }): Promise<string> {
+    try {
+      let resp: any;
+      if (customCreds && customCreds.token) {
+        resp = await this.rawPostApi('/get_my_default_project_key', {}, {
+          token: customCreds.token,
+          salt: customCreds.salt,
+          sid: customCreds.sid || '336677'
+        }, 5000);
+      } else {
+        resp = await this.postApi('/get_my_default_project_key', {});
+      }
+
+      if (resp && resp.code === 0 && resp.value) {
+        return String(resp.value).trim();
+      }
+    } catch (e) {
+      console.warn('[LuatClient] Failed to fetch default project key:', e);
+    }
+    return '';
+  }
+
   public async listProjects(): Promise<Array<{ name: string; project_key: string }>> {
     this.loadFromStorage();
     try {
       const resp = await this.postApi('/list_my_projects', { page: 1, size: 50 });
       if (resp && resp.code === 0 && Array.isArray(resp.value)) {
+        if (resp.value.length === 0) {
+          // 官方默认工程密钥兜底
+          const defaultKey = await this.getDefaultProjectKey();
+          if (defaultKey) {
+            const fallbackProjects = [{ name: '合宙标准模块', project_key: defaultKey }];
+            safeStorage.setItem(LS_PROJECTS_CACHE + (this.activePhone || 'master'), JSON.stringify(fallbackProjects));
+            return fallbackProjects;
+          }
+        }
         safeStorage.setItem(LS_PROJECTS_CACHE + (this.activePhone || 'master'), JSON.stringify(resp.value));
         return resp.value;
       }
@@ -1061,6 +1133,12 @@ export class AirCloudClient {
           const pResp = await this.rawPostApi('/list_my_projects', { page: 1, size: 50 }, creds, 5000);
           if (pResp && pResp.code === 0 && Array.isArray(pResp.value)) {
             projects = pResp.value;
+          }
+          if (!projects || projects.length === 0) {
+            const defaultKey = await this.getDefaultProjectKey(creds);
+            if (defaultKey) {
+              projects = [{ name: '合宙标准模块', project_key: defaultKey }];
+            }
           }
         }
       }

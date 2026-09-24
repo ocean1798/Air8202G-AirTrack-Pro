@@ -511,10 +511,10 @@
             <div class="absolute inset-0 timeline-ticks pointer-events-none rounded-xl opacity-20"></div>
             <div class="absolute inset-0 timeline-ticks-major pointer-events-none rounded-xl opacity-30"></div>
 
-            <div id="mask-left" class="absolute top-0 bottom-0 left-0 bg-cyber-950/80 backdrop-blur-[1px] rounded-l-xl pointer-events-none z-10 hidden" style="width: 15%;"></div>
-            <div id="mask-right" class="absolute top-0 bottom-0 right-0 bg-cyber-950/80 backdrop-blur-[1px] rounded-r-xl pointer-events-none z-10 hidden" style="width: 25%;"></div>
+            <div id="mask-left" v-show="masterMode === 'range'" class="absolute top-0 bottom-0 left-0 bg-cyber-950/80 backdrop-blur-[1px] rounded-l-xl pointer-events-none z-10" style="width: 15%;"></div>
+            <div id="mask-right" v-show="masterMode === 'range'" class="absolute top-0 bottom-0 right-0 bg-cyber-950/80 backdrop-blur-[1px] rounded-r-xl pointer-events-none z-10" style="width: 25%;"></div>
 
-            <div id="range-capsule" class="absolute top-0 bottom-0 z-10 hidden" style="left: 15%; width: 60%;">
+            <div id="range-capsule" v-show="masterMode === 'range'" class="absolute top-0 bottom-0 z-10" style="left: 15%; width: 60%;">
               <div id="range-body" class="w-full h-full border-t-2 border-b-2 border-cyber-primary shadow-[0_0_16px_rgba(0,240,255,0.3)] flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-cyan-400/[0.04] transition-colors touch-none">
               </div>
 
@@ -576,18 +576,24 @@
           <div class="flex items-center space-x-1.5">
             <!-- 模式切换器 -->
             <div class="flex items-center bg-cyber-950/90 rounded-xl border border-white/10 p-0.5 shadow-inner">
-              <div role="button" @click="switchMasterMode('live')" id="btn-mode-live" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan">
+              <div role="button" @click="switchMasterMode('live')" id="btn-mode-live"
+                   :class="masterMode === 'live'
+                     ? 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan cursor-pointer'
+                     : 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1 cursor-pointer'">
                 <span class="w-1.5 h-1.5 rounded-full bg-cyber-emerald animate-pulse-cyan"></span>
                 <span>跟随最新</span>
               </div>
-              <div role="button" @click="switchMasterMode('range')" id="btn-mode-range" class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1 cursor-pointer">
+              <div role="button" @click="switchMasterMode('range')" id="btn-mode-range"
+                   :class="masterMode === 'range'
+                     ? 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan cursor-pointer'
+                     : 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1 cursor-pointer'">
                 <image :src="SVG_ICONS.sliders" class="w-3.5 h-3.5" mode="aspectFit" />
                 <span>区间回放</span>
               </div>
               
-              <div id="macro-date-divider" class="h-3.5 w-px bg-white/10 mx-1 hidden"></div>
+              <div id="macro-date-divider" v-show="masterMode === 'range'" class="h-3.5 w-px bg-white/10 mx-1"></div>
               
-              <div role="button" @click="toggleDateRangePopover()" id="btn-date-trigger" class="px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-[11px] text-slate-200 hover:text-cyber-primary transition flex items-center space-x-1 group hidden">
+              <div role="button" @click="toggleDateRangePopover()" id="btn-date-trigger" v-show="masterMode === 'range'" class="px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-[11px] text-slate-200 hover:text-cyber-primary transition flex items-center space-x-1 group cursor-pointer">
                 <image :src="SVG_ICONS.calendar" class="w-3.5 h-3.5" mode="aspectFit" />
                 <span id="current-range-label" class="font-bold truncate max-w-[70px] sm:max-w-none">{{ timelineDisplay.currentRangeLabel }}</span>
                 <image :src="SVG_ICONS.chevronDown" class="w-2.5 h-2.5" mode="aspectFit" /></div>
@@ -595,7 +601,7 @@
           </div>
 
           <!-- 播放控制簇 (区间回放模式独占，彻底移除无用快速回放按钮) -->
-          <div id="unified-play-cluster" class="flex items-center gap-1.5 hidden">
+          <div id="unified-play-cluster" v-show="masterMode === 'range'" class="flex items-center gap-1.5">
             <div class="flex items-center bg-cyber-950/90 p-0.5 rounded-xl border border-white/10 gap-1">
               <div role="button" @click="toggleRangePlay()" id="btn-range-play" class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:brightness-110 transition flex items-center gap-1 shadow-glow-emerald cursor-pointer active:scale-95">
                 <image :src="isPlayingState ? SVG_ICONS.pause : SVG_ICONS.play" class="w-3.5 h-3.5" mode="aspectFit" />
@@ -609,7 +615,7 @@
           <!-- 状态呈现区：包含明确颜色指示与三态图例 -->
           <div class="flex items-center space-x-2 text-[10px] sm:text-[11px]">
             
-            <div id="live-status-bar" class="flex items-center space-x-1.5 sm:space-x-2">
+            <div id="live-status-bar" v-show="masterMode === 'live'" class="flex items-center space-x-1.5 sm:space-x-2">
               <div class="flex items-center space-x-1.5 px-2 py-0.5 rounded-lg border border-cyber-700/60 bg-cyber-950/80" id="live-state-badge">
                 <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse-cyan" id="live-state-dot"></span>
                 <span id="live-state-text" class="text-white font-bold">{{ timelineDisplay.liveStateText }}</span>
@@ -630,7 +636,7 @@
               </div>
             </div>
 
-            <div id="range-status-bar" class="flex items-center space-x-1 sm:space-x-2 hidden">
+            <div id="range-status-bar" v-show="masterMode === 'range'" class="flex items-center space-x-1 sm:space-x-2">
               <div class="flex items-center space-x-1.5">
                 <span id="current-point-time" class="text-white font-bold font-mono">—</span>
                 <span id="current-speed-tag" class="px-1.5 py-0.2 rounded text-[9px] font-bold border transition-all">
@@ -710,7 +716,7 @@
                 <span class="text-[11px]">{{ (Boolean(checkingPhone) && checkingPhone === s.account.phone) ? '检测中...' : (s.isExpired ? '凭据过期' : '正常') }}</span>
               </span>
 
-              <div class="flex items-center space-x-1.5" @click.stop>
+              <div class="flex items-center space-x-1.5">
                 <button @click="onRefreshAccountCredential(s.account.phone, s.isExpired)"
                         :class="[
                           s.isExpired
@@ -728,9 +734,12 @@
                   </svg>
                   <span>{{ (Boolean(checkingPhone) && checkingPhone === s.account.phone) ? '刷新中' : '刷新凭据' }}</span>
                 </button>
-                <button @click.stop="onRemoveAccount(s.account.phone)" :title="s.active ? '退出并解绑此账号' : '从本机移除此账号'" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 border border-white/10 transition cursor-pointer flex items-center justify-center shrink-0 active:scale-95">
-                  <image :src="SVG_ICONS.trash" class="w-3.5 h-3.5" mode="aspectFit" />
-                </button>
+                <view role="button"
+                      @click.stop="onRemoveAccount(s.account.phone)"
+                      :title="s.active ? '退出并解绑此账号' : '从本机移除此账号'"
+                      class="w-9 h-9 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 border border-white/10 transition cursor-pointer flex items-center justify-center shrink-0 active:scale-95">
+                  <image :src="SVG_ICONS.trash" class="w-4 h-4" mode="aspectFit" />
+                </view>
               </div>
             </div>
 
@@ -972,7 +981,7 @@ import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-
 import { wgs84ToGcj02 } from '../../utils/coord-transform';
 import { stationClient } from '../../utils/station-client';
 import { APK_DOWNLOAD_URL, OFFLINE_APK_QR_SVG } from '../../utils/apk-qr';
-import { getAccountDisplayTitle, formatPhone, type AccountDef } from '../../api/accounts';
+import { getAccountDisplayTitle, formatPhone, parseHostInjectedSession, type AccountDef } from '../../api/accounts';
 
 declare const TMap: any;
 declare const lucide: any;
@@ -1355,7 +1364,6 @@ function performRemoveAccount(phone: string, isCur: boolean) {
   if (isCur) {
     activeDeviceId.value = '';
     TRACK_POINTS = [];
-    accountDevices.value = [];
     deviceList.value = [];
     apiClient.setActiveAccount('');
   }
@@ -1879,20 +1887,22 @@ function selectDeviceTab(imei: string) {
 
   // 仅对真实上报过定位的物理设备做地图定位；未上报设备不做任何坐标推测
   if (located) {
-    if ((window as any).__map) {
+    // #ifdef MP-WEIXIN
+    wxMapCenter.value = { lat: dev.lat, lng: dev.lng };
+    wxMarkers.value = [{
+      id: 1,
+      latitude: dev.lat,
+      longitude: dev.lng,
+      title: dev.name,
+      width: 32,
+      height: 32
+    }];
+    // #endif
+
+    // #ifndef MP-WEIXIN
+    if (typeof TMap !== 'undefined' && (window as any).__map) {
       const center = new TMap.LatLng(dev.lat, dev.lng);
-            // #ifdef MP-WEIXIN
-      wxMapCenter.value = { lat: dev.lat, lng: dev.lng };
-      wxMarkers.value = [{
-        id: 1,
-        latitude: dev.lat,
-        longitude: dev.lng,
-        title: dev.name,
-        width: 32,
-        height: 32
-      }];
-      // #endif
-(window as any).__map.panTo(center);
+      (window as any).__map.panTo(center);
       if ((window as any).__vehicleMarker) {
         (window as any).__vehicleMarker.setGeometries([{
           id: 'v1',
@@ -1902,6 +1912,7 @@ function selectDeviceTab(imei: string) {
         }]);
       }
     }
+    // #endif
     currentBaseLat = dev.lat;
     currentBaseLng = dev.lng;
   } else if ((window as any).__vehicleMarker) {
@@ -1918,7 +1929,7 @@ function selectDeviceTab(imei: string) {
   if (elSpeedDetail) elSpeedDetail.innerText = `${Number(dev.speed || 0).toFixed(1)} km/h`;
 
   updateLiveStatusBar();
-  loadTrackDataForScope(masterMode === 'range' ? currentMacroScope : 'recent_window');
+  loadTrackDataForScope(masterMode.value === 'range' ? currentMacroScope : 'recent_window');
 
   // 触发真实云端接口同步
   fetchDeviceLiveTrackAndTags(imei);
@@ -1987,7 +1998,7 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
         drawSpeedWaveCanvas();
         updateLiveStatusBar();
 
-        if (masterMode === 'range') {
+        if (masterMode.value === 'range') {
           renderRangeTrackOnMap();
         } else {
           renderFullColoredTrackOnMap();
@@ -2013,7 +2024,7 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
       drawSpeedWaveCanvas();
       updateLiveStatusBar();
 
-      if (masterMode === 'range') {
+      if (masterMode.value === 'range') {
         renderRangeTrackOnMap();
       } else {
         renderFullColoredTrackOnMap();
@@ -2100,7 +2111,7 @@ function updateTimelineScaleTicks(isMultiDay?: boolean) {
   const t1Str = fmtTime(t1);
   const t2Str = fmtTime(t2);
   const t3Str = fmtTime(t3);
-  const t4Str = masterMode === 'live' && !isViewportActive ? `${fmtTime(t4, true)} (最新)` : fmtTime(t4, true);
+  const t4Str = masterMode.value === 'live' && !isViewportActive ? `${fmtTime(t4, true)} (最新)` : fmtTime(t4, true);
 
   timelineDisplay.scaleTicks = [t0Str, t1Str, t2Str, t3Str, t4Str];
 
@@ -2378,7 +2389,7 @@ function drawSpeedWaveCanvas() {
   ctx.fillRect(0, h - 2, w, 2);
 }
 
-let masterMode = 'live';
+const masterMode = ref<'live' | 'range'>('live');
 let isPlaying = false;
 let playTimer: any = null;
 let playSpeed = 1;
@@ -2571,7 +2582,7 @@ function notifyViewportChanged(startMs: number, endMs: number) {
 }
 
 function snapToLatestRealtime() {
-  if (masterMode !== 'live' || !TRACK_POINTS.length) return;
+  if (masterMode.value !== 'live' || !TRACK_POINTS.length) return;
   committedPlayhead = 100;
   isHovering = false;
   isViewportActive = false;
@@ -2600,7 +2611,7 @@ const customDateEnd = ref(formatYMD(todayDate));
 const customDateStart = ref(formatYMD(new Date(todayDate.getTime() - 30 * 86400000)));
 
 function toggleDateRangePopover() {
-  if (masterMode === 'live') return;
+  if (masterMode.value === 'live') return;
   const popover = document.getElementById('date-range-popover');
   if (popover) popover.classList.toggle('hidden');
 }
@@ -2633,7 +2644,7 @@ async function selectMacroPreset(preset: string) {
   await loadTrackDataForScope(preset);
 
   initViewportFromTrackPoints();
-  if (masterMode === 'range') {
+  if (masterMode.value === 'range') {
     renderRangeTrackOnMap();
   } else {
     renderFullColoredTrackOnMap();
@@ -2659,7 +2670,7 @@ async function applyCustomDateRange() {
   await loadTrackDataForScope('custom', dStart, dEnd);
 
   initViewportFromTrackPoints();
-  if (masterMode === 'range') {
+  if (masterMode.value === 'range') {
     renderRangeTrackOnMap();
   } else {
     renderFullColoredTrackOnMap();
@@ -2669,42 +2680,14 @@ async function applyCustomDateRange() {
   isApplyingScope = false;
 }
 
-function switchMasterMode(mode: string) {
-  masterMode = mode;
+function switchMasterMode(mode: 'live' | 'range') {
+  masterMode.value = mode;
   
-  const btnLive = document.getElementById('btn-mode-live');
-  const btnRange = document.getElementById('btn-mode-range');
-  
-  const dateDivider = document.getElementById('macro-date-divider');
-  const dateTrigger = document.getElementById('btn-date-trigger');
   const popover = document.getElementById('date-range-popover');
-  
-  const playCluster = document.getElementById('unified-play-cluster');
-  const rangeCapsule = document.getElementById('range-capsule');
-  const maskLeft = document.getElementById('mask-left');
-  const maskRight = document.getElementById('mask-right');
-  
-  const liveStatusBar = document.getElementById('live-status-bar');
-  const rangeStatusBar = document.getElementById('range-status-bar');
-
   stopRangePlayback();
   if (popover) popover.classList.add('hidden');
 
   if (mode === 'live') {
-    if (btnLive) btnLive.className = 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan';
-    if (btnRange) btnRange.className = 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1';
-    
-    if (dateDivider) dateDivider.classList.add('hidden');
-    if (dateTrigger) dateTrigger.classList.add('hidden');
-
-    if (playCluster) playCluster.classList.add('hidden');
-    if (rangeCapsule) rangeCapsule.classList.add('hidden');
-    if (maskLeft) maskLeft.classList.add('hidden');
-    if (maskRight) maskRight.classList.add('hidden');
-
-    if (liveStatusBar) liveStatusBar.classList.remove('hidden');
-    if (rangeStatusBar) rangeStatusBar.classList.add('hidden');
-
     loadTrackDataForScope('recent_window');
 
     committedPlayhead = 100;
@@ -2712,20 +2695,6 @@ function switchMasterMode(mode: string) {
     renderFullColoredTrackOnMap();
     recenterVehicle();
   } else {
-    if (btnLive) btnLive.className = 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-400 hover:text-white transition-all flex items-center space-x-1';
-    if (btnRange) btnRange.className = 'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold text-cyber-primary bg-cyber-primary/15 border border-cyber-primary/30 transition-all flex items-center space-x-1 shadow-glow-cyan';
-    
-    if (dateDivider) dateDivider.classList.remove('hidden');
-    if (dateTrigger) dateTrigger.classList.remove('hidden');
-
-    if (playCluster) playCluster.classList.remove('hidden');
-    if (rangeCapsule) rangeCapsule.classList.remove('hidden');
-    if (maskLeft) maskLeft.classList.remove('hidden');
-    if (maskRight) maskRight.classList.remove('hidden');
-
-    if (liveStatusBar) liveStatusBar.classList.add('hidden');
-    if (rangeStatusBar) rangeStatusBar.classList.remove('hidden');
-
     loadTrackDataForScope(currentMacroScope);
 
     committedPlayhead = rangeEnd;
@@ -2810,9 +2779,7 @@ function renderStateAtPosition(percent: number, isPreview = false) {
     }
 
     // 同步地图上车辆标点位置，实现滑块拖拽平滑跟跑
-    if ((window as any).__vehicleMarker && typeof TMap !== 'undefined' && typeof pt.lat === 'number' && typeof pt.lng === 'number') {
-      const pos = new TMap.LatLng(pt.lat, pt.lng);
-          // #ifdef MP-WEIXIN
+    // #ifdef MP-WEIXIN
     if (typeof pt.lat === 'number' && typeof pt.lng === 'number') {
       wxMarkers.value = [{
         id: 1,
@@ -2823,13 +2790,18 @@ function renderStateAtPosition(percent: number, isPreview = false) {
       }];
     }
     // #endif
-(window as any).__vehicleMarker.setGeometries([{
+
+    // #ifndef MP-WEIXIN
+    if ((window as any).__vehicleMarker && typeof TMap !== 'undefined' && typeof pt.lat === 'number' && typeof pt.lng === 'number') {
+      const pos = new TMap.LatLng(pt.lat, pt.lng);
+      (window as any).__vehicleMarker.setGeometries([{
         id: 'v1',
         styleId: 'car_icon',
         position: pos,
         properties: { title: `${pt.speed} km/h` }
       }]);
     }
+    // #endif
   }
 
   if (typeof pt.lat === 'number' && typeof pt.lng === 'number') {
@@ -2858,7 +2830,8 @@ function renderStateAtPosition(percent: number, isPreview = false) {
     telSpeed.innerText = spText;
   }
 
-  if ((window as any).__vehicleMarker) {
+  // #ifndef MP-WEIXIN
+  if (typeof TMap !== 'undefined' && (window as any).__vehicleMarker && typeof pt.lat === 'number' && typeof pt.lng === 'number') {
     (window as any).__vehicleMarker.setGeometries([{
       id: 'v1',
       styleId: 'car_icon',
@@ -2866,6 +2839,7 @@ function renderStateAtPosition(percent: number, isPreview = false) {
       properties: { title: DEVICES_DB[activeDeviceId.value]?.name || '合宙设备' }
     }]);
   }
+  // #endif
 }
 
 function onTimelineMouseMove(e: MouseEvent) {
@@ -2919,7 +2893,7 @@ function onTimelineUserClick(e: MouseEvent) {
   if (hoverNeedle) hoverNeedle.classList.add('hidden');
   renderStateAtPosition(committedPlayhead, false);
 
-  if (masterMode === 'live' && p < 98) {
+  if (masterMode.value === 'live' && p < 98) {
     const btnLiveSnap = document.getElementById('btn-live-snap');
     if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
   }
@@ -2933,7 +2907,7 @@ function onTimelineMouseLeave() {
   if (hoverNeedle) hoverNeedle.classList.add('hidden');
   renderStateAtPosition(committedPlayhead, false);
 
-  if (masterMode === 'live' && p < 98) {
+  if (masterMode.value === 'live' && committedPlayhead < 98) {
     const btnLiveSnap = document.getElementById('btn-live-snap');
     if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
   }
@@ -2952,7 +2926,7 @@ function updateRangeDOM() {
 
   const maskL = document.getElementById('mask-left');
   const maskR = document.getElementById('mask-right');
-  if (masterMode === 'range') {
+  if (masterMode.value === 'range') {
     if (maskL) maskL.style.width = rangeStart + '%';
     if (maskR) maskR.style.width = (100 - rangeEnd) + '%';
   }
@@ -3215,7 +3189,7 @@ function setupSilkyTimelineInteractions() {
       committedPlayhead = p;
       renderStateAtPosition(p, false);
 
-      if (masterMode === 'live') {
+      if (masterMode.value === 'live') {
         const btnLiveSnap = document.getElementById('btn-live-snap');
         if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
       }
@@ -3239,7 +3213,7 @@ function setupSilkyTimelineInteractions() {
       committedPlayhead = p;
       renderStateAtPosition(committedPlayhead, false);
 
-      if (masterMode === 'live' && p < 98) {
+      if (masterMode.value === 'live' && p < 98) {
         const btnLiveSnap = document.getElementById('btn-live-snap');
         if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
       }
@@ -3326,7 +3300,7 @@ function setupSilkyTimelineInteractions() {
       committedPlayhead = p;
       renderStateAtPosition(p, false);
 
-      if (masterMode === 'live') {
+      if (masterMode.value === 'live') {
         const btnLiveSnap = document.getElementById('btn-live-snap');
         if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
       }
@@ -3345,7 +3319,7 @@ function setupSilkyTimelineInteractions() {
     e.stopPropagation();
     touchMode = null;
 
-    if (masterMode === 'live') {
+    if (masterMode.value === 'live') {
       const btnLiveSnap = document.getElementById('btn-live-snap');
       if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
 
@@ -3365,7 +3339,13 @@ function renderFullColoredTrackOnMap() {
   // #endif
   const numPoints = TRACK_POINTS.length;
   if (numPoints < 2) {
-    (window as any).__trackLines.setGeometries([]);
+    // #ifdef MP-WEIXIN
+    wxPolylines.value = [];
+    wxCircles.value = [];
+    // #endif
+    // #ifndef MP-WEIXIN
+    (window as any).__trackLines?.setGeometries([]);
+    // #endif
     return;
   }
 
@@ -3384,7 +3364,6 @@ function renderFullColoredTrackOnMap() {
   const isStationaryDwell = (deltaLat < 0.0003 && deltaLng < 0.0003 && maxSpeed < 3.0);
 
   if (isStationaryDwell) {
-    (window as any).__trackLines.setGeometries([]);
     // #ifdef MP-WEIXIN
     wxPolylines.value = [];
     const pCenterWx = TRACK_POINTS[Math.floor(numPoints / 2)];
@@ -3396,7 +3375,14 @@ function renderFullColoredTrackOnMap() {
       fillColor: 'rgba(0, 240, 255, 0.18)',
       strokeWidth: 1.5
     }];
+    return;
     // #endif
+
+    // #ifndef MP-WEIXIN
+    if (typeof TMap === 'undefined' || !(window as any).__map) return;
+    if ((window as any).__trackLines) {
+      (window as any).__trackLines.setGeometries([]);
+    }
     if ((window as any).__stationaryCircle) {
       const pCenter = TRACK_POINTS[Math.floor(numPoints / 2)];
       (window as any).__stationaryCircle.setGeometries([{
@@ -3407,23 +3393,7 @@ function renderFullColoredTrackOnMap() {
       }]);
     }
     return;
-  }
-
-  if ((window as any).__stationaryCircle) {
-    (window as any).__stationaryCircle.setGeometries([]);
-  }
-
-  const rainbowPaths = [];
-  for (let i = 0; i < numPoints - 1; i++) {
-    const p1 = TRACK_POINTS[i];
-    const p2 = TRACK_POINTS[i + 1];
-    const avgSpeed = (p1.speed + p2.speed) / 2;
-    const c = getContinuousSpeedColor(avgSpeed);
-    rainbowPaths.push({
-      path: [new TMap.LatLng(p1.lat, p1.lng), new TMap.LatLng(p2.lat, p2.lng)],
-      color: c.rgb,
-      borderColor: 'rgba(7, 13, 29, 0.45)'
-    });
+    // #endif
   }
 
   // #ifdef MP-WEIXIN
@@ -3444,12 +3414,34 @@ function renderFullColoredTrackOnMap() {
       height: 32
     }];
   }
+  return;
   // #endif
+
+  // #ifndef MP-WEIXIN
+  if (typeof TMap === 'undefined' || !(window as any).__map || !(window as any).__trackLines) return;
+  if ((window as any).__stationaryCircle) {
+    (window as any).__stationaryCircle.setGeometries([]);
+  }
+
+  const rainbowPaths = [];
+  for (let i = 0; i < numPoints - 1; i++) {
+    const p1 = TRACK_POINTS[i];
+    const p2 = TRACK_POINTS[i + 1];
+    const avgSpeed = (p1.speed + p2.speed) / 2;
+    const c = getContinuousSpeedColor(avgSpeed);
+    rainbowPaths.push({
+      path: [new TMap.LatLng(p1.lat, p1.lng), new TMap.LatLng(p2.lat, p2.lng)],
+      color: c.rgb,
+      borderColor: 'rgba(7, 13, 29, 0.45)'
+    });
+  }
+
   (window as any).__trackLines.setGeometries([{
     id: 'track_rainbow',
     styleId: 'rainbow_style',
     rainbowPaths: rainbowPaths
   }]);
+  // #endif
 }
 
 function renderRangeTrackOnMap() {
@@ -3461,7 +3453,13 @@ function renderRangeTrackOnMap() {
   // #endif
   const numPoints = TRACK_POINTS.length;
   if (numPoints < 2) {
-    (window as any).__trackLines.setGeometries([]);
+    // #ifdef MP-WEIXIN
+    wxPolylines.value = [];
+    wxCircles.value = [];
+    // #endif
+    // #ifndef MP-WEIXIN
+    (window as any).__trackLines?.setGeometries([]);
+    // #endif
     return;
   }
 
@@ -3469,7 +3467,13 @@ function renderRangeTrackOnMap() {
   const idxEnd = Math.min(Math.floor((rangeEnd / 100) * (numPoints - 1)), numPoints - 1);
 
   if (idxEnd <= idxStart) {
-    (window as any).__trackLines.setGeometries([]);
+    // #ifdef MP-WEIXIN
+    wxPolylines.value = [];
+    wxCircles.value = [];
+    // #endif
+    // #ifndef MP-WEIXIN
+    (window as any).__trackLines?.setGeometries([]);
+    // #endif
     return;
   }
 
@@ -3488,7 +3492,6 @@ function renderRangeTrackOnMap() {
   const isStationaryDwell = (deltaLat < 0.0003 && deltaLng < 0.0003 && maxSpeed < 3.0);
 
   if (isStationaryDwell) {
-    (window as any).__trackLines.setGeometries([]);
     // #ifdef MP-WEIXIN
     wxPolylines.value = [];
     const pCenterWx = TRACK_POINTS[Math.floor((idxStart + idxEnd) / 2)];
@@ -3500,7 +3503,14 @@ function renderRangeTrackOnMap() {
       fillColor: 'rgba(0, 240, 255, 0.18)',
       strokeWidth: 1.5
     }];
+    return;
     // #endif
+
+    // #ifndef MP-WEIXIN
+    if (typeof TMap === 'undefined' || !(window as any).__map) return;
+    if ((window as any).__trackLines) {
+      (window as any).__trackLines.setGeometries([]);
+    }
     if ((window as any).__stationaryCircle) {
       const pCenter = TRACK_POINTS[Math.floor((idxStart + idxEnd) / 2)];
       (window as any).__stationaryCircle.setGeometries([{
@@ -3511,45 +3521,10 @@ function renderRangeTrackOnMap() {
       }]);
     }
     return;
-  }
-
-  if ((window as any).__stationaryCircle) {
-    (window as any).__stationaryCircle.setGeometries([]);
-  }
-
-  const rainbowPaths = [];
-  for (let i = idxStart; i < idxEnd; i++) {
-    const p1 = TRACK_POINTS[i];
-    const p2 = TRACK_POINTS[i + 1];
-    const avgSpeed = (p1.speed + p2.speed) / 2;
-    const c = getContinuousSpeedColor(avgSpeed);
-    rainbowPaths.push({
-      path: [new TMap.LatLng(p1.lat, p1.lng), new TMap.LatLng(p2.lat, p2.lng)],
-      color: c.rgb,
-      borderColor: 'rgba(7, 13, 29, 0.45)'
-    });
+    // #endif
   }
 
   // #ifdef MP-WEIXIN
-  wxCircles.value = [];
-  wxPolylines.value = [{
-    points: TRACK_POINTS.map(p => ({ latitude: p.lat, longitude: p.lng })),
-    color: '#00f0ff',
-    width: 6,
-    arrowLine: true
-  }];
-  if (TRACK_POINTS.length > 0) {
-    const lastP = TRACK_POINTS[TRACK_POINTS.length - 1];
-    wxMarkers.value = [{
-      id: 1,
-      latitude: lastP.lat,
-      longitude: lastP.lng,
-      width: 32,
-      height: 32
-    }];
-  }
-  // #endif
-    // #ifdef MP-WEIXIN
   wxCircles.value = [];
   const rangePts = TRACK_POINTS.slice(idxStart, idxEnd + 1);
   wxPolylines.value = [{
@@ -3568,12 +3543,34 @@ function renderRangeTrackOnMap() {
       height: 32
     }];
   }
+  return;
   // #endif
-(window as any).__trackLines.setGeometries([{
+
+  // #ifndef MP-WEIXIN
+  if (typeof TMap === 'undefined' || !(window as any).__map || !(window as any).__trackLines) return;
+  if ((window as any).__stationaryCircle) {
+    (window as any).__stationaryCircle.setGeometries([]);
+  }
+
+  const rainbowPaths = [];
+  for (let i = idxStart; i < idxEnd; i++) {
+    const p1 = TRACK_POINTS[i];
+    const p2 = TRACK_POINTS[i + 1];
+    const avgSpeed = (p1.speed + p2.speed) / 2;
+    const c = getContinuousSpeedColor(avgSpeed);
+    rainbowPaths.push({
+      path: [new TMap.LatLng(p1.lat, p1.lng), new TMap.LatLng(p2.lat, p2.lng)],
+      color: c.rgb,
+      borderColor: 'rgba(7, 13, 29, 0.45)'
+    });
+  }
+
+  (window as any).__trackLines.setGeometries([{
     id: 'track_rainbow',
     styleId: 'rainbow_style',
     rainbowPaths: rainbowPaths
   }]);
+  // #endif
 }
 
 const mobileSheetState = ref<'peek' | 'half' | 'full'>('peek');
@@ -3870,6 +3867,19 @@ async function syncOfficialData() {
 }
 
 onMounted(() => {
+  // #ifndef MP-WEIXIN
+  try {
+    const hostSession = parseHostInjectedSession();
+    if (hostSession) {
+      const activePhone = apiClient.applyHostInjectedSession(hostSession);
+      console.log('[App] 成功捕获合宙官方宿主会话注入，免密直入:', activePhone);
+      refreshAccountStates();
+    }
+  } catch (e) {
+    console.warn('[App] 宿主会话注入检测异常:', e);
+  }
+  // #endif
+
   // #ifdef MP-WEIXIN
   try {
     const rect = uni.getMenuButtonBoundingClientRect();
@@ -3894,7 +3904,7 @@ onMounted(() => {
       updateTimelineScaleTicks(pts[0]?.isMultiDay || false);
       drawSpeedWaveCanvas();
       renderStateAtPosition(committedPlayhead, false);
-      if (masterMode === 'range') {
+      if (masterMode.value === 'range') {
         renderRangeTrackOnMap();
       } else {
         renderFullColoredTrackOnMap();
@@ -3909,17 +3919,17 @@ onMounted(() => {
       // 成功接入守护站时，立即触发一次守护站本地 SQLite 设备与轨迹刷新
       await loadRealDevices();
       if (activeDeviceId.value) {
-        loadTrackDataForScope(masterMode === 'range' ? currentMacroScope : 'recent_window');
+        loadTrackDataForScope(masterMode.value === 'range' ? currentMacroScope : 'recent_window');
       }
       stationClient.subscribe((event) => {
         if (event.type === 'DEVICE_UPDATE' && event.data) {
           // 实时打卡同步
           const d = event.data;
-          const idx = accountDevices.value.findIndex(item => item.imei === d.imei);
+          const idx = deviceList.value.findIndex(item => item.imei === d.imei);
           if (idx !== -1) {
-            accountDevices.value[idx].lat = d.lat;
-            accountDevices.value[idx].lng = d.lng;
-            accountDevices.value[idx].status = d.is_online ? '在线' : '离线';
+            deviceList.value[idx].lat = d.lat;
+            deviceList.value[idx].lng = d.lng;
+            deviceList.value[idx].status = d.is_online ? '在线' : '离线';
           }
         }
       });
