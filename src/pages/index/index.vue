@@ -507,18 +507,6 @@
         <div class="relative w-full">
           
           <div id="timeline-track-container" class="relative w-full h-9 sm:h-10 bg-cyber-950 rounded-xl border border-white/10 overflow-visible cursor-crosshair flex items-center shadow-inner touch-none">
-            <!-- 静态科技感微光与空态提示（消除纯黑长条的空洞感） -->
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10 opacity-70">
-              <span class="text-[10px] font-mono text-cyan-400/80 tracking-widest flex items-center space-x-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
-                <span>{{ activeDeviceId ? '时空轨迹就绪' : '等待接入时空轨迹点位' }}</span>
-              </span>
-            </div>
-            <!-- 静态科技网格呼吸基准线 -->
-            <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent pointer-events-none z-0"></div>
-            <!-- 静态呼吸基线（无轨迹点位时提供静态科技微芒，消除全黑空洞感） -->
-            <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-500/35 to-transparent pointer-events-none z-0"></div>
-            
             <canvas id="speed-wave-canvas" canvas-id="speed-wave-canvas" class="absolute inset-0 w-full h-full rounded-xl pointer-events-none"></canvas>
 
             <div class="absolute inset-0 timeline-ticks pointer-events-none rounded-xl opacity-20"></div>
