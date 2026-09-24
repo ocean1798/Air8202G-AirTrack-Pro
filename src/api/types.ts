@@ -84,3 +84,26 @@ export interface AuthSession {
   account: string;
   expireAt: number;
 }
+
+// ==================== 空间姿态与微观动力学契约 (Change 0030) ====================
+export interface AttitudeSample {
+  offsetMs: number;     // 偏移毫秒数 (0, 50, 100, ... 950)
+  timeStr: string;      // 格式化时间 "14:00:00.050"
+  ax: number;           // X 轴左右向加速度受力分量 (g)
+  ay: number;           // Y 轴前后向加速度受力分量 (g)
+  az: number;           // Z 轴垂直向加速度受力分量 (g)
+  roll: number;         // 左右横滚倾斜角 (度, -90 ~ +90)
+  pitch: number;        // 前后俯仰角 (度, -90 ~ +90)
+  heading: number;      // 朝向方位航向角 (度, 0 ~ 360)
+}
+
+export interface AttitudeFrame {
+  trackIndex: number;
+  sampleIndex: number;
+  timeStr: string;
+  roll: number;
+  pitch: number;
+  heading: number;
+  samples: AttitudeSample[];
+}
+

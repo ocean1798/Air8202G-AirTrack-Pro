@@ -148,6 +148,46 @@ export function installDomShim() {
       (globalThis as any).window.AbortSignal = (globalThis as any).AbortSignal;
     }
   }
+
+  // 微信小程序 JSCore 及宿主环境注入健全的 requestAnimationFrame / cancelAnimationFrame 垫片
+  const origRAF = (globalThis as any).requestAnimationFrame;
+  const origCAF = (globalThis as any).cancelAnimationFrame;
+
+  const safeRAF = (callback: (time: number) => void) => {
+    if (typeof origRAF === 'function') {
+      try {
+        const ctx = (globalThis as any).window || globalThis;
+        return origRAF.call(ctx, callback);
+      } catch (e) {
+        return setTimeout(() => callback(Date.now()), 16);
+      }
+    }
+    return setTimeout(() => callback(Date.now()), 16);
+  };
+
+  const safeCAF = (id: any) => {
+    if (typeof origCAF === 'function') {
+      try {
+        const ctx = (globalThis as any).window || globalThis;
+        return origCAF.call(ctx, id);
+      } catch (e) {
+        clearTimeout(id);
+      }
+    } else {
+      clearTimeout(id);
+    }
+  };
+
+  (globalThis as any).requestAnimationFrame = safeRAF;
+  (globalThis as any).cancelAnimationFrame = safeCAF;
+  if (typeof (globalThis as any).window !== 'undefined') {
+    (globalThis as any).window.requestAnimationFrame = safeRAF;
+    (globalThis as any).window.cancelAnimationFrame = safeCAF;
+  }
+  if (typeof (globalThis as any).global !== 'undefined') {
+    (globalThis as any).global.requestAnimationFrame = safeRAF;
+    (globalThis as any).global.cancelAnimationFrame = safeCAF;
+  }
   // #endif
 }
 

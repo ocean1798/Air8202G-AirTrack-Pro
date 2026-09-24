@@ -3,6 +3,8 @@
  * 具备多端安全降级能力：在 Web/Android Webview 启用高并发时序对象库，无 IDB 时降级到 Memory/UniStorage
  */
 
+import { safeStorage } from './storage';
+
 export interface StoredTrackPoint {
   /** 复合主键: `${imei}_${timestamp}`，彻底避免云端缺省 id 的主键报错 */
   key: string;
@@ -126,8 +128,26 @@ class AirTrackDatabase {
     const db = await this.getDB();
 
     if (!db) {
+      const affectedDevices = new Set<string>();
       for (const p of points) {
+        if (!p.key) p.key = `${p.imei}_${p.timestamp}`;
         this.memoryTracks.set(p.key, p);
+        const phone = p.accountPhone || 'master';
+        affectedDevices.add(`${phone}###${p.imei}`);
+      }
+
+      // 非 IndexedDB 环境（如微信小程序）持久化：按 (phone, imei) 隔离存入 safeStorage（截取最新 300 点）
+      try {
+        for (const devKey of affectedDevices) {
+          const [phone, imei] = devKey.split('###');
+          const recentPoints = Array.from(this.memoryTracks.values())
+            .filter((p) => (!p.accountPhone || p.accountPhone === phone) && p.imei === imei)
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .slice(0, 300);
+          safeStorage.setItem(`airtrack_tracks_${phone}_${imei}`, JSON.stringify(recentPoints));
+        }
+      } catch (e) {
+        console.warn('[AirTrackDB] safeStorage putTrackPoints exception', e);
       }
       return points.length;
     }
@@ -168,6 +188,35 @@ class AirTrackDatabase {
     const db = await this.getDB();
 
     if (!db) {
+      // 设备级定向恢复：检查当前查询的 (accountPhone, imei) 是否在内存中已有点位
+      let hasDevicePoints = false;
+      for (const p of this.memoryTracks.values()) {
+        if ((!p.accountPhone || p.accountPhone === accountPhone) && p.imei === imei) {
+          hasDevicePoints = true;
+          break;
+        }
+      }
+
+      // 若内存中无该设备数据，定向从 safeStorage 恢复
+      if (!hasDevicePoints) {
+        try {
+          const phone = accountPhone || 'master';
+          const key = `airtrack_tracks_${phone}_${imei}`;
+          const raw = safeStorage.getItem(key);
+          if (raw) {
+            const list: StoredTrackPoint[] = JSON.parse(raw);
+            if (Array.isArray(list)) {
+              for (const p of list) {
+                const k = p.key || `${p.imei}_${p.timestamp}`;
+                this.memoryTracks.set(k, p);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[AirTrackDB] safeStorage getTrackPointsByRange exception', e);
+        }
+      }
+
       const results: StoredTrackPoint[] = [];
       for (const p of this.memoryTracks.values()) {
         if ((!p.accountPhone || p.accountPhone === accountPhone) && p.imei === imei && p.timestamp >= startMs && p.timestamp <= endMs) {

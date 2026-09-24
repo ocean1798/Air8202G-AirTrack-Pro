@@ -324,15 +324,15 @@
     </div>
 
     <!-- ==================== 5. 核心：【双端双模感知面板】 ==================== -->
-    <aside id="inspector-drawer" :class="'sheet-' + mobileSheetState" @touchstart="onSheetTouchStart" @touchend="onSheetTouchEnd" class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-cyber-700/80 glass-panel shadow-sheet-shadow flex flex-col drawer-transition md:fixed md:inset-x-auto md:top-16 md:right-3 md:bottom-28 md:w-80 md:lg:w-96 md:rounded-2xl md:border md:border-cyber-700/60 md:z-20 md:shadow-2xl md:h-auto md:max-h-none">
+    <aside id="inspector-drawer" :class="'sheet-' + mobileSheetState" class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-cyber-700/80 glass-panel shadow-sheet-shadow flex flex-col drawer-transition md:fixed md:inset-x-auto md:top-16 md:right-3 md:bottom-28 md:w-80 md:lg:w-96 md:rounded-2xl md:border md:border-cyber-700/60 md:z-20 md:shadow-2xl md:h-auto md:max-h-none">
       
-      <!-- 移动端把手 -->
-      <div id="sheet-drag-handle" @click="cycleMobileSheet" class="w-full flex flex-col items-center pt-1.5 pb-0.5 cursor-pointer md:hidden active:opacity-75 touch-none">
+      <!-- 移动端把手 (仅在把手和头部局部监听手势，杜绝内部滚动打架) -->
+      <div id="sheet-drag-handle" @click="cycleMobileSheet" @touchstart.stop="onSheetTouchStart" @touchend.stop="onSheetTouchEnd" class="w-full flex flex-col items-center pt-1.5 pb-0.5 cursor-pointer md:hidden active:opacity-75 touch-none">
         <div class="w-10 h-1 bg-slate-400/50 rounded-full hover:bg-cyber-primary transition-colors"></div>
       </div>
 
       <!-- 顶部固定设备概览头 -->
-      <div id="sheet-header-bar" @click="cycleMobileSheet" class="px-3.5 py-2 border-b border-cyber-700/60 bg-cyber-900/95 flex items-center justify-between shrink-0 cursor-pointer md:cursor-default select-none">
+      <div id="sheet-header-bar" @click="cycleMobileSheet" @touchstart.stop="onSheetTouchStart" @touchend.stop="onSheetTouchEnd" class="px-3.5 py-2 border-b border-cyber-700/60 bg-cyber-900/95 flex items-center justify-between shrink-0 cursor-pointer md:cursor-default select-none">
         <div class="flex-1">
           <div class="flex items-center space-x-2">
             <span class="text-xs font-bold text-white tracking-wide truncate max-w-[140px] sm:max-w-none" id="drawer-vehicle-name">{{ activeDeviceId ? (activeDeviceName || activeDeviceId) : '等待选择设备' }}</span>
@@ -345,7 +345,7 @@
         </div>
 
         <div class="flex items-center space-x-2">
-          <div role="button" id="btn-sheet-chevron" class="md:hidden p-1 text-slate-400 hover:text-white transition-transform">
+          <div role="button" id="btn-sheet-chevron" @click.stop="cycleMobileSheet" class="md:hidden p-1 text-slate-400 hover:text-white transition-transform cursor-pointer">
             <image :src="SVG_ICONS.chevronUp" :class="['w-4 h-4 transition-transform', mobileSheetState !== 'peek' ? 'rotate-180' : '']" mode="aspectFit" />
           </div>
 
@@ -464,7 +464,7 @@
       </div>
       
       <!-- 6.0 宏观历史跨度配置弹层 (0018 极简轻量直达面板) -->
-      <div id="date-range-popover" class="w-full max-w-md glass-panel p-3 sm:p-3.5 rounded-2xl border border-cyber-primary/40 shadow-popover-shadow mb-2 hidden pointer-events-auto transition-all backdrop-blur-2xl bg-cyber-950/95">
+      <div id="date-range-popover" v-show="isDateRangePopoverOpen" class="w-full max-w-md glass-panel p-3 sm:p-3.5 rounded-2xl border border-cyber-primary/40 shadow-popover-shadow mb-2 pointer-events-auto transition-all backdrop-blur-2xl bg-cyber-950/95">
         <div class="flex items-center justify-between pb-2 border-b border-white/10">
           <div class="flex items-center space-x-1.5 text-xs font-bold text-white">
             <i data-lucide="calendar-range" class="w-3.5 h-3.5 text-cyber-primary"></i>
@@ -477,12 +477,30 @@
 
         <div class="mt-2">
           <div class="grid grid-cols-3 sm:grid-cols-6 gap-1 text-[11px] font-mono">
-            <div role="button" @click="selectMacroPreset('today')" id="macro-btn-today" class="macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95">今日</div>
-            <div role="button" @click="selectMacroPreset('yesterday')" id="macro-btn-yesterday" class="macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95">昨日</div>
-            <div role="button" @click="selectMacroPreset('3d')" id="macro-btn-3d" class="macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95">近3天</div>
-            <div role="button" @click="selectMacroPreset('7d')" id="macro-btn-7d" class="macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95">近7天</div>
-            <div role="button" @click="selectMacroPreset('30d')" id="macro-btn-30d" class="macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95">近30天</div>
-            <div role="button" @click="selectMacroPreset('90d')" id="macro-btn-90d" class="macro-chip py-1 text-center rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition cursor-pointer active:scale-95">近90天</div>
+            <div role="button" @click="selectMacroPreset('today')" id="macro-btn-today"
+                 :class="currentMacroScope === 'today'
+                   ? 'macro-chip py-1 text-center rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition cursor-pointer active:scale-95'
+                   : 'macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95'">今日</div>
+            <div role="button" @click="selectMacroPreset('yesterday')" id="macro-btn-yesterday"
+                 :class="currentMacroScope === 'yesterday'
+                   ? 'macro-chip py-1 text-center rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition cursor-pointer active:scale-95'
+                   : 'macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95'">昨日</div>
+            <div role="button" @click="selectMacroPreset('3d')" id="macro-btn-3d"
+                 :class="currentMacroScope === '3d'
+                   ? 'macro-chip py-1 text-center rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition cursor-pointer active:scale-95'
+                   : 'macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95'">近3天</div>
+            <div role="button" @click="selectMacroPreset('7d')" id="macro-btn-7d"
+                 :class="currentMacroScope === '7d'
+                   ? 'macro-chip py-1 text-center rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition cursor-pointer active:scale-95'
+                   : 'macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95'">近7天</div>
+            <div role="button" @click="selectMacroPreset('30d')" id="macro-btn-30d"
+                 :class="currentMacroScope === '30d'
+                   ? 'macro-chip py-1 text-center rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition cursor-pointer active:scale-95'
+                   : 'macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95'">近30天</div>
+            <div role="button" @click="selectMacroPreset('90d')" id="macro-btn-90d"
+                 :class="currentMacroScope === '90d'
+                   ? 'macro-chip py-1 text-center rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition cursor-pointer active:scale-95'
+                   : 'macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95'">近90天</div>
           </div>
         </div>
 
@@ -505,39 +523,56 @@
         <!-- 纯净速度山脉轨道区 -->
         <div class="relative w-full">
           
-          <div id="timeline-track-container" class="relative w-full h-9 sm:h-10 bg-cyber-950 rounded-xl border border-white/10 overflow-visible cursor-crosshair flex items-center shadow-inner touch-none">
+          <div id="timeline-track-container"
+               class="relative w-full h-9 sm:h-10 bg-cyber-950 rounded-xl border border-white/10 overflow-visible cursor-crosshair flex items-center shadow-inner touch-none"
+               @touchstart="onTimelineContainerTouchStart($event)"
+               @touchmove="onTimelineContainerTouchMove($event)"
+               @touchend="onTimelineContainerTouchEnd($event)"
+               @touchcancel="onTimelineContainerTouchEnd($event)">
             <canvas id="speed-wave-canvas" canvas-id="speed-wave-canvas" class="absolute inset-0 w-full h-full rounded-xl pointer-events-none"></canvas>
 
             <div class="absolute inset-0 timeline-ticks pointer-events-none rounded-xl opacity-20"></div>
             <div class="absolute inset-0 timeline-ticks-major pointer-events-none rounded-xl opacity-30"></div>
 
-            <div id="mask-left" v-show="masterMode === 'range'" class="absolute top-0 bottom-0 left-0 bg-cyber-950/80 backdrop-blur-[1px] rounded-l-xl pointer-events-none z-10" style="width: 15%;"></div>
-            <div id="mask-right" v-show="masterMode === 'range'" class="absolute top-0 bottom-0 right-0 bg-cyber-950/80 backdrop-blur-[1px] rounded-r-xl pointer-events-none z-10" style="width: 25%;"></div>
+            <div id="mask-left" v-show="masterMode === 'range'" class="absolute top-0 bottom-0 left-0 bg-cyber-950/80 backdrop-blur-[1px] rounded-l-xl pointer-events-none z-10" :style="maskLeftStyle"></div>
+            <div id="mask-right" v-show="masterMode === 'range'" class="absolute top-0 bottom-0 right-0 bg-cyber-950/80 backdrop-blur-[1px] rounded-r-xl pointer-events-none z-10" :style="maskRightStyle"></div>
 
-            <div id="range-capsule" v-show="masterMode === 'range'" class="absolute top-0 bottom-0 z-10" style="left: 15%; width: 60%;">
-              <div id="range-body" class="w-full h-full border-t-2 border-b-2 border-cyber-primary shadow-[0_0_16px_rgba(0,240,255,0.3)] flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-cyan-400/[0.04] transition-colors touch-none">
+            <div id="range-capsule" v-show="masterMode === 'range'" class="absolute top-0 bottom-0 z-10" :style="rangeCapsuleStyle">
+              <div id="range-body" class="w-full h-full border-t-2 border-b-2 border-cyber-primary shadow-[0_0_16px_rgba(0,240,255,0.3)] flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-cyan-400/[0.04] transition-colors touch-none"
+                   @touchstart.stop="onRangeTouchStart('body', $event)"
+                   @touchmove.stop="onRangeTouchMove($event)"
+                   @touchend.stop="onRangeTouchEnd"
+                   @touchcancel.stop="onRangeTouchEnd">
               </div>
 
-              <div id="handle-left-hitbox" class="handle-hit-zone handle-hit-zone-left">
+              <div id="handle-left-hitbox" class="handle-hit-zone handle-hit-zone-left"
+                   @touchstart.stop="onRangeTouchStart('left', $event)"
+                   @touchmove.stop="onRangeTouchMove($event)"
+                   @touchend.stop="onRangeTouchEnd"
+                   @touchcancel.stop="onRangeTouchEnd">
                 <div class="w-2 h-6 sm:h-7 bg-gradient-to-r from-cyan-400 to-cyan-300 rounded-md flex items-center justify-center shadow-handle-glow border border-white/80 pointer-events-none">
                   <div class="w-0.5 h-3 rounded-full bg-cyber-950"></div>
                 </div>
-                <div id="drag-bubble-left" class="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-cyber-950/95 border border-cyan-400 rounded text-[9px] font-mono font-bold text-cyan-300 shadow-xl pointer-events-none whitespace-nowrap hidden z-40 backdrop-blur-md">
-                  07-16 18:27
+                <div id="drag-bubble-left" v-show="activeDragType === 'left' || activeDragType === 'body'" class="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-cyber-950/95 border border-cyan-400 rounded text-[9px] font-mono font-bold text-cyan-300 shadow-xl pointer-events-none whitespace-nowrap z-40 backdrop-blur-md">
+                  {{ dragBubbleLeftText || '07-16 18:27' }}
                 </div>
               </div>
 
-              <div id="handle-right-hitbox" class="handle-hit-zone handle-hit-zone-right">
+              <div id="handle-right-hitbox" class="handle-hit-zone handle-hit-zone-right"
+                   @touchstart.stop="onRangeTouchStart('right', $event)"
+                   @touchmove.stop="onRangeTouchMove($event)"
+                   @touchend.stop="onRangeTouchEnd"
+                   @touchcancel.stop="onRangeTouchEnd">
                 <div class="w-2 h-6 sm:h-7 bg-gradient-to-r from-cyan-300 to-cyan-400 rounded-md flex items-center justify-center shadow-handle-glow border border-white/80 pointer-events-none">
                   <div class="w-0.5 h-3 rounded-full bg-cyber-950"></div>
                 </div>
-                <div id="drag-bubble-right" class="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-cyber-950/95 border border-cyan-400 rounded text-[9px] font-mono font-bold text-cyan-300 shadow-xl pointer-events-none whitespace-nowrap hidden z-40 backdrop-blur-md">
-                  07-27 17:58
+                <div id="drag-bubble-right" v-show="activeDragType === 'right' || activeDragType === 'body'" class="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-cyber-950/95 border border-cyan-400 rounded text-[9px] font-mono font-bold text-cyan-300 shadow-xl pointer-events-none whitespace-nowrap z-40 backdrop-blur-md">
+                  {{ dragBubbleRightText || '07-27 17:58' }}
                 </div>
               </div>
             </div>
 
-            <div id="playhead-needle" class="absolute top-0 bottom-0 w-0.5 bg-white z-20 pointer-events-none playhead-needle" style="left: 100%;">
+            <div id="playhead-needle" class="absolute top-0 bottom-0 w-0.5 bg-white z-20 pointer-events-none playhead-needle" :style="playheadNeedleStyle">
               <div class="w-3.5 h-3.5 bg-white rounded-full absolute -top-1.5 -left-1.5 shadow-glow-cyan flex items-center justify-center border-2 border-cyber-950">
                 <div class="w-1.5 h-1.5 rounded-full bg-cyber-primary transition-colors" id="playhead-inner-dot"></div>
               </div>
@@ -607,8 +642,10 @@
                 <image :src="isPlayingState ? SVG_ICONS.pause : SVG_ICONS.play" class="w-3.5 h-3.5" mode="aspectFit" />
                 <span id="txt-range-play">{{ isPlayingState ? '暂停' : '播放' }}</span>
               </div>
-              <div role="button" @click="setPlaySpeed(1, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-cyber-primary/20 text-cyber-primary font-bold">1x</div>
-              <div role="button" @click="setPlaySpeed(5, $event)" class="speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white">5x</div>
+              <div role="button" @click="setPlaySpeed(1)"
+                   :class="currentPlaySpeed === 1 ? 'speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-cyber-primary/20 text-cyber-primary font-bold' : 'speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white'">1x</div>
+              <div role="button" @click="setPlaySpeed(5)"
+                   :class="currentPlaySpeed === 5 ? 'speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-cyber-primary/20 text-cyber-primary font-bold' : 'speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white'">5x</div>
             </div>
           </div>
 
@@ -623,7 +660,7 @@
               <span id="live-latest-time" class="text-slate-300 font-mono hidden sm:inline">{{ timelineDisplay.liveLatestTime }}</span>
               <span id="live-latest-speed" class="text-cyber-primary font-bold font-mono" :style="{ color: timelineDisplay.speedTagColor }">{{ timelineDisplay.liveLatestSpeed }}</span>
 
-              <div id="btn-live-snap" role="button" @click="snapToLatestRealtime()" class="hidden px-2 py-0.5 rounded-md bg-cyber-primary/20 border border-cyber-primary/50 text-cyan-300 text-[9px] font-bold hover:bg-cyber-primary/30 transition flex items-center space-x-1 cursor-pointer active:scale-95">
+              <div id="btn-live-snap" role="button" @click="snapToLatestRealtime()" v-show="showLiveSnapBtn" class="px-2 py-0.5 rounded-md bg-cyber-primary/20 border border-cyber-primary/50 text-cyan-300 text-[9px] font-bold hover:bg-cyber-primary/30 transition flex items-center space-x-1 cursor-pointer active:scale-95">
                 <span class="w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse"></span>
                 <span>回到实时</span>
               </div>
@@ -638,9 +675,9 @@
 
             <div id="range-status-bar" v-show="masterMode === 'range'" class="flex items-center space-x-1 sm:space-x-2">
               <div class="flex items-center space-x-1.5">
-                <span id="current-point-time" class="text-white font-bold font-mono">—</span>
-                <span id="current-speed-tag" class="px-1.5 py-0.2 rounded text-[9px] font-bold border transition-all">
-                  0.0 km/h
+                <span id="current-point-time" class="text-white font-bold font-mono">{{ timelineDisplay.currentPointTime || '—' }}</span>
+                <span id="current-speed-tag" class="px-1.5 py-0.2 rounded text-[9px] font-bold border transition-all" :style="timelineDisplay.currentSpeedTagStyle">
+                  {{ timelineDisplay.currentSpeedTagText || '0.0 km/h' }}
                 </span>
               </div>
             </div>
@@ -1013,7 +1050,14 @@ const timelineDisplay = reactive({
   liveLatestSpeed: '0.0 km/h',
   liveLatestTime: '—',
   liveStateText: '原地静止',
-  speedTagColor: '#00f0ff'
+  speedTagColor: '#00f0ff',
+  currentPointTime: '—',
+  currentSpeedTagText: '0.0 km/h',
+  currentSpeedTagStyle: {
+    backgroundColor: 'rgba(14, 116, 144, 0.28)',
+    borderColor: 'rgba(56, 189, 248, 0.6)',
+    color: '#38bdf8'
+  }
 });
 
 // 微信小程序 OAuth 授权时效状态门禁
@@ -1152,6 +1196,12 @@ const SVG_ICONS = {
 };
 const headerTopStyle = ref('');
 const capsuleTopStyle = ref('');
+
+// 0032 响应式交互状态机
+const isDateRangePopoverOpen = ref(false);
+const currentMacroScope = ref<'today' | 'yesterday' | '3d' | '7d' | '30d' | '90d' | 'custom'>('90d');
+const currentPlaySpeed = ref<1 | 5>(1);
+const showLiveSnapBtn = ref(false);
 
 const wxMapCenter = ref({ lat: 34.794375, lng: 114.335039 });
 const menuButtonRect = ref<any>(null);
@@ -1829,6 +1879,81 @@ async function fetchDeviceLiveTrackAndTags(imei: string) {
   }
 }
 
+// ==================== 0032 微信小程序地图原生产物构造器 ====================
+function calculateHeading(p1: { lat: number; lng: number }, p2: { lat: number; lng: number }): number {
+  if (!p1 || !p2 || (p1.lat === p2.lat && p1.lng === p2.lng)) return 0;
+  const rad = Math.PI / 180;
+  const lat1 = p1.lat * rad;
+  const lat2 = p2.lat * rad;
+  const dLng = (p2.lng - p1.lng) * rad;
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(dLng);
+  const brng = Math.atan2(y, x) * (180 / Math.PI);
+  return (brng + 360) % 360;
+}
+
+function buildWxVehicleMarker(pt: { lat: number; lng: number; heading?: number; speed?: number }, title?: string, prevPt?: { lat: number; lng: number }): any {
+  let heading = typeof pt.heading === 'number' ? pt.heading : 0;
+  if (!heading && prevPt) {
+    heading = calculateHeading(prevPt, pt);
+  }
+  return {
+    id: 1,
+    latitude: pt.lat,
+    longitude: pt.lng,
+    title: title || (typeof pt.speed === 'number' ? `${pt.speed} km/h` : '车辆'),
+    iconPath: '/static/car_marker.png',
+    width: 36,
+    height: 36,
+    rotate: Math.round(heading),
+    anchor: { x: 0.5, y: 0.5 }
+  };
+}
+
+function getSpeedSegmentColor(speed: number): string {
+  if (speed < 15) return '#10b981'; // 翠绿 低速
+  if (speed < 40) return '#00f0ff'; // 青蓝 巡航
+  if (speed < 80) return '#eab308'; // 亮黄 通畅
+  return '#f43f5e'; // 玫红 高速
+}
+
+function buildSpeedPolylines(pts: any[]): any[] {
+  if (!pts || pts.length < 2) return [];
+  const lines: any[] = [];
+  let curPoints: { latitude: number; longitude: number }[] = [{ latitude: pts[0].lat, longitude: pts[0].lng }];
+  let curColor = getSpeedSegmentColor((pts[0].speed + pts[1].speed) / 2);
+  curPoints.push({ latitude: pts[1].lat, longitude: pts[1].lng });
+
+  for (let i = 1; i < pts.length - 1; i++) {
+    const avgSpd = (pts[i].speed + pts[i + 1].speed) / 2;
+    const segColor = getSpeedSegmentColor(avgSpd);
+    if (segColor === curColor) {
+      curPoints.push({ latitude: pts[i + 1].lat, longitude: pts[i + 1].lng });
+    } else {
+      lines.push({
+        points: curPoints,
+        color: curColor,
+        width: 6,
+        arrowLine: true
+      });
+      curPoints = [
+        { latitude: pts[i].lat, longitude: pts[i].lng },
+        { latitude: pts[i + 1].lat, longitude: pts[i + 1].lng }
+      ];
+      curColor = segColor;
+    }
+  }
+  if (curPoints.length >= 2) {
+    lines.push({
+      points: curPoints,
+      color: curColor,
+      width: 6,
+      arrowLine: true
+    });
+  }
+  return lines;
+}
+
 function selectDeviceTab(imei: string) {
   const dev = DEVICES_DB[imei];
   if (!dev) return;
@@ -1889,14 +2014,7 @@ function selectDeviceTab(imei: string) {
   if (located) {
     // #ifdef MP-WEIXIN
     wxMapCenter.value = { lat: dev.lat, lng: dev.lng };
-    wxMarkers.value = [{
-      id: 1,
-      latitude: dev.lat,
-      longitude: dev.lng,
-      title: dev.name,
-      width: 32,
-      height: 32
-    }];
+    wxMarkers.value = [buildWxVehicleMarker(dev, dev.name)];
     // #endif
 
     // #ifndef MP-WEIXIN
@@ -1929,23 +2047,43 @@ function selectDeviceTab(imei: string) {
   if (elSpeedDetail) elSpeedDetail.innerText = `${Number(dev.speed || 0).toFixed(1)} km/h`;
 
   updateLiveStatusBar();
-  loadTrackDataForScope(masterMode.value === 'range' ? currentMacroScope : 'recent_window');
+  loadTrackDataForScope(masterMode.value === 'range' ? currentMacroScope.value : 'recent_window');
 
   // 触发真实云端接口同步
   fetchDeviceLiveTrackAndTags(imei);
 }
 
 function recenterVehicle() {
-  if (activeDeviceId.value) selectDeviceTab(activeDeviceId.value);
+  if (!activeDeviceId.value) return;
+  selectDeviceTab(activeDeviceId.value);
+
+  // #ifdef MP-WEIXIN
+  const dev = DEVICES_DB[activeDeviceId.value];
+  if (dev && typeof dev.lat === 'number' && typeof dev.lng === 'number') {
+    wxMapCenter.value = { lat: dev.lat, lng: dev.lng };
+    try {
+      const mapCtx = uni.createMapContext('main-map-wx');
+      if (mapCtx && typeof mapCtx.moveToLocation === 'function') {
+        mapCtx.moveToLocation({
+          latitude: dev.lat,
+          longitude: dev.lng
+        });
+      }
+    } catch (e) {
+      console.warn('[recenterVehicle] createMapContext failed:', e);
+    }
+  }
+  // #endif
 }
 
 let TRACK_POINTS: any[] = [];
 let currentBaseLat = 34.794375;
 let currentBaseLng = 114.335039;
-let currentMacroScope = '90d';
 const isTrackLoading = ref(false);
+let trackFetchSeq = 0;
 
-async function loadTrackDataForScope(scope: string, startDate: string | null = null, endDate: string | null = null) {
+async function loadTrackDataForScope(scope: string | any, startDate: string | null = null, endDate: string | null = null) {
+  const currentSeq = ++trackFetchSeq;
   const imei = activeDeviceId.value;
   if (!imei) {
     TRACK_POINTS = [];
@@ -1953,6 +2091,11 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
     updateLiveStatusBar();
     return;
   }
+
+  // 防御性解包：确保 scope 一定是 string
+  const actualScope = (typeof scope === 'object' && scope !== null && 'value' in scope)
+    ? String((scope as any).value || 'recent_window')
+    : String(scope || 'recent_window');
 
   const dev = DEVICES_DB[imei];
   isTrackLoading.value = true;
@@ -1973,8 +2116,9 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
   try {
     // 0. 若已连接独立守护站 (AirTrack Station)，优先向守护站本地高持久 SQLite 获取
     if (isStationConnected.value) {
-      const { startMs, endMs, isMultiDay } = calculateScopeWindow(scope, startDate || undefined, endDate || undefined);
+      const { startMs, endMs, isMultiDay } = calculateScopeWindow(actualScope, startDate || undefined, endDate || undefined);
       const stPoints = await stationClient.fetchHistory(imei, startMs, endMs, 2000);
+      if (currentSeq !== trackFetchSeq) return;
       if (stPoints && stPoints.length > 0) {
         const pad = (n: number) => String(n).padStart(2, '0');
         const points = stPoints.map((p: any, idx: number) => {
@@ -1998,12 +2142,16 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
         drawSpeedWaveCanvas();
         updateLiveStatusBar();
 
-        if (masterMode.value === 'range') {
-          renderRangeTrackOnMap();
-        } else {
-          renderFullColoredTrackOnMap();
+        try {
+          if (masterMode.value === 'range') {
+            renderRangeTrackOnMap();
+          } else {
+            renderFullColoredTrackOnMap();
+          }
+          renderStateAtPosition(committedPlayhead, false);
+        } catch (rErr) {
+          console.warn('[AirTrack] renderTrackOnMap after station fetch warning:', rErr);
         }
-        renderStateAtPosition(committedPlayhead, false);
         return;
       }
     }
@@ -2011,11 +2159,13 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
     // 强制触发云端同步，确保所选跨度的数据真实拉取到位
     const points = await apiClient.getHistoricalTrack(
       imei,
-      scope,
+      actualScope,
       startDate || undefined,
       endDate || undefined,
       true
     );
+
+    if (currentSeq !== trackFetchSeq) return;
 
     if (points && points.length > 0) {
       TRACK_POINTS = points;
@@ -2024,12 +2174,16 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
       drawSpeedWaveCanvas();
       updateLiveStatusBar();
 
-      if (masterMode.value === 'range') {
-        renderRangeTrackOnMap();
-      } else {
-        renderFullColoredTrackOnMap();
+      try {
+        if (masterMode.value === 'range') {
+          renderRangeTrackOnMap();
+        } else {
+          renderFullColoredTrackOnMap();
+        }
+        renderStateAtPosition(committedPlayhead, false);
+      } catch (rErr) {
+        console.warn('[AirTrack] renderTrackOnMap warning:', rErr);
       }
-      renderStateAtPosition(committedPlayhead, false);
       return;
     }
   } catch (err) {
@@ -2039,6 +2193,7 @@ async function loadTrackDataForScope(scope: string, startDate: string | null = n
   }
 
   // 兜底：若该跨度内暂无轨迹上报，但设备有最新经纬度
+  if (currentSeq !== trackFetchSeq) return;
   if (dev && typeof dev.lat === 'number' && typeof dev.lng === 'number') {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -2263,6 +2418,101 @@ function getRealCanvas(): HTMLCanvasElement | null {
 
 function drawSpeedWaveCanvas() {
   // #ifdef MP-WEIXIN
+  try {
+    const ctx = uni.createCanvasContext('speed-wave-canvas');
+    if (!ctx) return;
+    const w = trackContainerWidth || measureTrackContainerWidth();
+    const h = 36;
+    ctx.setFillStyle('#060a17');
+    ctx.fillRect(0, 0, w, h);
+
+    if (!TRACK_POINTS.length) {
+      ctx.draw();
+      return;
+    }
+    const numPoints = TRACK_POINTS.length;
+    const pts: { x: number; y: number; speed: number }[] = [];
+    const BASELINE_H = 3;
+    const MAX_WAVE_H = h - 5;
+    const sMs = isViewportActive && viewportSpanMs > 0 ? viewportStartMs : (TRACK_POINTS[0].timestamp < 1e11 ? TRACK_POINTS[0].timestamp * 1000 : TRACK_POINTS[0].timestamp);
+    const eMs = isViewportActive && viewportSpanMs > 0 ? viewportEndMs : (TRACK_POINTS[numPoints - 1].timestamp < 1e11 ? TRACK_POINTS[numPoints - 1].timestamp * 1000 : TRACK_POINTS[numPoints - 1].timestamp);
+    const curSpan = Math.max(1000, eMs - sMs);
+
+    for (let i = 0; i < numPoints; i++) {
+      const t = TRACK_POINTS[i].timestamp < 1e11 ? TRACK_POINTS[i].timestamp * 1000 : TRACK_POINTS[i].timestamp;
+      const x = isViewportActive ? ((t - sMs) / curSpan) * w : (numPoints > 1 ? (i / (numPoints - 1)) * w : w / 2);
+      const sp = TRACK_POINTS[i].speed || 0;
+      const waveH = BASELINE_H + Math.min(1, sp / 65) * (MAX_WAVE_H - BASELINE_H);
+      const y = h - waveH;
+      pts.push({ x, y, speed: sp });
+    }
+
+    let maxSp = 0;
+    for (let i = 0; i < numPoints; i++) {
+      if (TRACK_POINTS[i].speed > maxSp) maxSp = TRACK_POINTS[i].speed;
+    }
+
+    if (maxSp === 0) {
+      const dwellGrad = ctx.createLinearGradient(0, h - 10, 0, h);
+      dwellGrad.addColorStop(0, 'rgba(0, 240, 255, 0.45)');
+      dwellGrad.addColorStop(1, 'rgba(0, 240, 255, 0.08)');
+      ctx.setFillStyle(dwellGrad);
+      ctx.fillRect(0, h - 10, w, 10);
+      ctx.setFillStyle('rgba(0, 240, 255, 0.85)');
+      ctx.fillRect(0, h - 2, w, 2);
+      ctx.setFontSize(10);
+      ctx.setFillStyle('rgba(148, 163, 184, 0.65)');
+      ctx.setTextAlign('center');
+      ctx.setTextBaseline('middle');
+      ctx.fillText('⏱️ 原地静止驻留 · 0.0 km/h', w / 2, h / 2 - 2);
+      ctx.draw();
+      return;
+    }
+
+    const speedGradient = ctx.createLinearGradient(0, 0, w, 0);
+    for (let i = 0; i < numPoints; i++) {
+      const stop = numPoints > 1 ? i / (numPoints - 1) : 0;
+      speedGradient.addColorStop(stop, getContinuousSpeedColor(TRACK_POINTS[i].speed).rgb);
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    ctx.lineTo(pts[0].x, pts[0].y);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const xc = (pts[i].x + pts[i + 1].x) / 2;
+      const yc = (pts[i].y + pts[i + 1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.setFillStyle(speedGradient);
+    ctx.setGlobalAlpha(0.88);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const xc = (pts[i].x + pts[i + 1].x) / 2;
+      const yc = (pts[i].y + pts[i + 1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+    ctx.setStrokeStyle('#ffffff');
+    ctx.setShadow(0, 0, 4, '#00f0ff');
+    ctx.setLineWidth(1.5);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.setFillStyle(speedGradient);
+    ctx.fillRect(0, h - 2, w, 2);
+    ctx.draw();
+  } catch (e) {
+    console.warn('[drawSpeedWaveCanvas MP] failed:', e);
+  }
   return;
   // #endif
   const canvas = getRealCanvas();
@@ -2394,8 +2644,30 @@ let isPlaying = false;
 let playTimer: any = null;
 let playSpeed = 1;
 
-let rangeStart = 0.0;
-let rangeEnd = 100.0;
+let rangeStart = 15.0;
+let rangeEnd = 75.0;
+
+// 响应式时间轴区间与游标状态 (0031 纯数据驱动)
+const rangeStartPct = ref(15);
+const rangeEndPct = ref(75);
+const playheadPct = ref(100);
+const activeDragType = ref<string | null>(null);
+const dragBubbleLeftText = ref('');
+const dragBubbleRightText = ref('');
+
+const maskLeftStyle = computed(() => ({
+  width: `${rangeStartPct.value}%`
+}));
+const maskRightStyle = computed(() => ({
+  width: `${100 - rangeEndPct.value}%`
+}));
+const rangeCapsuleStyle = computed(() => ({
+  left: `${rangeStartPct.value}%`,
+  width: `${Math.max(0, rangeEndPct.value - rangeStartPct.value)}%`
+}));
+const playheadNeedleStyle = computed(() => ({
+  left: `${playheadPct.value}%`
+}));
 
 let committedPlayhead = 100;
 let isHovering = false;
@@ -2536,7 +2808,17 @@ let rAFViewportUpdatePending = false;
 function notifyViewportChanged(startMs: number, endMs: number) {
   if (rAFViewportUpdatePending || isApplyingScope) return;
   rAFViewportUpdatePending = true;
-  requestAnimationFrame(() => {
+  const safeRAF = (cb: any) => {
+    if (typeof (globalThis as any).requestAnimationFrame === 'function') {
+      try {
+        return (globalThis as any).requestAnimationFrame(cb);
+      } catch (e) {
+        return setTimeout(cb, 16);
+      }
+    }
+    return setTimeout(cb, 16);
+  };
+  safeRAF(() => {
     rAFViewportUpdatePending = false;
     const label = document.getElementById('current-range-label');
 
@@ -2549,7 +2831,7 @@ function notifyViewportChanged(startMs: number, endMs: number) {
         '30d': '近30天',
         '90d': '近90天',
       };
-      const text = mapNames[currentMacroScope] || '近90天';
+      const text = mapNames[currentMacroScope.value] || '近90天';
       timelineDisplay.currentRangeLabel = text;
       if (label) label.innerText = text;
       return;
@@ -2599,6 +2881,7 @@ function snapToLatestRealtime() {
     }, 250);
   }
   renderStateAtPosition(100, false);
+  showLiveSnapBtn.value = false;
   const btnLiveSnap = document.getElementById('btn-live-snap');
   if (btnLiveSnap) btnLiveSnap.classList.add('hidden');
 }
@@ -2612,17 +2895,26 @@ const customDateStart = ref(formatYMD(new Date(todayDate.getTime() - 30 * 864000
 
 function toggleDateRangePopover() {
   if (masterMode.value === 'live') return;
+  isDateRangePopoverOpen.value = !isDateRangePopoverOpen.value;
+  // 保持兼容
   const popover = document.getElementById('date-range-popover');
-  if (popover) popover.classList.toggle('hidden');
+  if (popover) {
+    if (isDateRangePopoverOpen.value) popover.classList.remove('hidden');
+    else popover.classList.add('hidden');
+  }
 }
 
-async function selectMacroPreset(preset: string) {
+async function selectMacroPreset(preset: any) {
+  isDateRangePopoverOpen.value = false;
   const popover = document.getElementById('date-range-popover');
   if (popover) popover.classList.add('hidden');
 
   isApplyingScope = true;
   isViewportActive = false;
-  currentMacroScope = preset;
+  currentMacroScope.value = preset;
+  
+  // 仅在非小程序（具备真实 DOM 时）更新 class
+  // #ifndef MP-WEIXIN
   document.querySelectorAll('.macro-chip').forEach(b => {
     b.className = 'macro-chip py-1 text-center rounded-lg bg-cyber-900 text-slate-300 border border-white/5 hover:border-cyber-primary/60 hover:text-white transition cursor-pointer active:scale-95';
   });
@@ -2630,6 +2922,7 @@ async function selectMacroPreset(preset: string) {
   if (activeBtn) {
     activeBtn.className = 'macro-chip py-1 text-center rounded-lg bg-cyber-primary/20 text-cyber-primary border border-cyber-primary/40 font-bold transition cursor-pointer active:scale-95';
   }
+  // #endif
 
   const label = document.getElementById('current-range-label');
   if (label) {
@@ -2640,6 +2933,11 @@ async function selectMacroPreset(preset: string) {
     else if (preset === '30d') label.innerText = '近30天';
     else if (preset === '90d') label.innerText = '近90天';
   }
+  const mapNames: Record<string, string> = {
+    'today': '今日', 'yesterday': '昨日', '3d': '近3天',
+    '7d': '近7天', '30d': '近30天', '90d': '近90天'
+  };
+  timelineDisplay.currentRangeLabel = mapNames[preset] || '近90天';
 
   await loadTrackDataForScope(preset);
 
@@ -2659,12 +2957,13 @@ async function applyCustomDateRange() {
   const dEnd = customDateEnd.value || (document.getElementById('input-date-end') as HTMLInputElement)?.value;
   if (!dStart || !dEnd) return;
 
+  isDateRangePopoverOpen.value = false;
   const popover = document.getElementById('date-range-popover');
   if (popover) popover.classList.add('hidden');
 
   isApplyingScope = true;
   isViewportActive = false;
-  currentMacroScope = 'custom';
+  currentMacroScope.value = 'custom';
   const label = document.getElementById('current-range-label');
   if (label) label.innerText = `${dStart.slice(5)}~${dEnd.slice(5)}`;
   await loadTrackDataForScope('custom', dStart, dEnd);
@@ -2695,7 +2994,7 @@ function switchMasterMode(mode: 'live' | 'range') {
     renderFullColoredTrackOnMap();
     recenterVehicle();
   } else {
-    loadTrackDataForScope(currentMacroScope);
+    loadTrackDataForScope(currentMacroScope.value);
 
     committedPlayhead = rangeEnd;
     updateRangeDOM();
@@ -2730,6 +3029,7 @@ function renderStateAtPosition(percent: number, isPreview = false) {
   const stInfo = getPointStateInfo(idx);
 
   if (!isPreview) {
+    playheadPct.value = percent;
     const playheadNeedle = document.getElementById('playhead-needle');
     if (playheadNeedle) playheadNeedle.style.left = percent + '%';
     const dot = document.getElementById('playhead-inner-dot');
@@ -2756,38 +3056,54 @@ function renderStateAtPosition(percent: number, isPreview = false) {
     }
 
     const timeBox = document.getElementById('current-point-time');
-    if (timeBox && pt.timeStr) timeBox.innerText = pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 16);
+    const timeFormatted = pt.timeStr ? (pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 16)) : '—';
+    timelineDisplay.currentPointTime = timeFormatted;
+    if (timeBox) timeBox.innerText = timeFormatted;
+
+    let tagText = '0.0 km/h';
+    let tagStyle = {
+      backgroundColor: 'rgba(14, 116, 144, 0.28)',
+      borderColor: 'rgba(56, 189, 248, 0.6)',
+      color: '#38bdf8'
+    };
+    if (stInfo.type === 'offline') {
+      tagText = '📡 信号中断 · 盲区';
+      tagStyle = {
+        backgroundColor: 'rgba(225, 29, 72, 0.25)',
+        borderColor: 'rgba(244, 63, 94, 0.7)',
+        color: '#fda4af'
+      };
+    } else if (stInfo.type === 'dwell') {
+      tagText = '⏱️ 原地静止 · 0 km/h';
+      tagStyle = {
+        backgroundColor: 'rgba(14, 116, 144, 0.28)',
+        borderColor: 'rgba(56, 189, 248, 0.6)',
+        color: '#38bdf8'
+      };
+    } else {
+      tagText = `🧭 移动中 · ${pt.speed} km/h`;
+      tagStyle = {
+        backgroundColor: sColor.rgba(0.25),
+        borderColor: sColor.rgba(0.65),
+        color: sColor.hex
+      };
+    }
+    timelineDisplay.currentSpeedTagText = tagText;
+    timelineDisplay.currentSpeedTagStyle = tagStyle;
 
     const speedTag = document.getElementById('current-speed-tag');
     if (speedTag) {
-      if (stInfo.type === 'offline') {
-        speedTag.style.backgroundColor = 'rgba(225, 29, 72, 0.25)';
-        speedTag.style.borderColor = 'rgba(244, 63, 94, 0.7)';
-        speedTag.style.color = '#fda4af';
-        speedTag.innerText = '📡 信号中断 · 盲区';
-      } else if (stInfo.type === 'dwell') {
-        speedTag.style.backgroundColor = 'rgba(14, 116, 144, 0.28)';
-        speedTag.style.borderColor = 'rgba(56, 189, 248, 0.6)';
-        speedTag.style.color = '#38bdf8';
-        speedTag.innerText = '⏱️ 原地静止 · 0 km/h';
-      } else {
-        speedTag.style.backgroundColor = sColor.rgba(0.25);
-        speedTag.style.borderColor = sColor.rgba(0.65);
-        speedTag.style.color = sColor.hex;
-        speedTag.innerText = `🧭 移动中 · ${pt.speed} km/h`;
-      }
+      speedTag.style.backgroundColor = tagStyle.backgroundColor;
+      speedTag.style.borderColor = tagStyle.borderColor;
+      speedTag.style.color = tagStyle.color;
+      speedTag.innerText = tagText;
     }
 
     // 同步地图上车辆标点位置，实现滑块拖拽平滑跟跑
     // #ifdef MP-WEIXIN
     if (typeof pt.lat === 'number' && typeof pt.lng === 'number') {
-      wxMarkers.value = [{
-        id: 1,
-        latitude: pt.lat,
-        longitude: pt.lng,
-        width: 32,
-        height: 32
-      }];
+      const prevP = idx > 0 ? TRACK_POINTS[idx - 1] : undefined;
+      wxMarkers.value = [buildWxVehicleMarker(pt, `${pt.speed} km/h`, prevP)];
     }
     // #endif
 
@@ -2894,6 +3210,7 @@ function onTimelineUserClick(e: MouseEvent) {
   renderStateAtPosition(committedPlayhead, false);
 
   if (masterMode.value === 'live' && p < 98) {
+    showLiveSnapBtn.value = true;
     const btnLiveSnap = document.getElementById('btn-live-snap');
     if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
   }
@@ -2908,6 +3225,7 @@ function onTimelineMouseLeave() {
   renderStateAtPosition(committedPlayhead, false);
 
   if (masterMode.value === 'live' && committedPlayhead < 98) {
+    showLiveSnapBtn.value = true;
     const btnLiveSnap = document.getElementById('btn-live-snap');
     if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
   }
@@ -2917,6 +3235,9 @@ function updateRangeDOM() {
   if (rangeStart < 0) rangeStart = 0;
   if (rangeEnd > 100) rangeEnd = 100;
   if (rangeStart > rangeEnd - 3) rangeStart = rangeEnd - 3;
+
+  rangeStartPct.value = rangeStart;
+  rangeEndPct.value = rangeEnd;
 
   const capsule = document.getElementById('range-capsule');
   if (capsule) {
@@ -2942,10 +3263,93 @@ function updateRangeDOM() {
   const tStart = pS.isMultiDay ? pS.timeStr.slice(5, 16) : pS.timeStr.slice(11, 16);
   const tEnd = pE.isMultiDay ? pE.timeStr.slice(5, 16) : pE.timeStr.slice(11, 16);
 
+  dragBubbleLeftText.value = tStart;
+  dragBubbleRightText.value = tEnd;
+
   const bL = document.getElementById('drag-bubble-left');
   if (bL) bL.innerText = tStart;
   const bR = document.getElementById('drag-bubble-right');
   if (bR) bR.innerText = tEnd;
+}
+
+let touchDragType: 'left' | 'right' | 'body' | null = null;
+let touchStartX = 0;
+let touchInitStart = 0;
+let touchInitEnd = 0;
+let trackContainerWidth = 0;
+
+function measureTrackContainerWidth(): number {
+  if (typeof window !== 'undefined' && window.innerWidth) {
+    const container = document.getElementById('timeline-track-container');
+    if (container) {
+      const w = container.getBoundingClientRect().width;
+      if (w > 0) return w;
+    }
+  }
+  try {
+    if (typeof uni !== 'undefined' && uni.getSystemInfoSync) {
+      const sys = uni.getSystemInfoSync();
+      return Math.max(280, sys.windowWidth - 32);
+    }
+  } catch (_) {}
+  return 360;
+}
+
+function onRangeTouchStart(type: 'left' | 'right' | 'body', e: any) {
+  const touches = e.touches || (e.mp && e.mp.touches) || (e.detail && e.detail.touches);
+  if (!touches || touches.length === 0) return;
+  touchDragType = type;
+  activeDragType.value = type;
+  touchStartX = touches[0].clientX;
+  touchInitStart = rangeStart;
+  touchInitEnd = rangeEnd;
+  isDragging = true;
+  trackContainerWidth = measureTrackContainerWidth();
+}
+
+function onRangeTouchMove(e: any) {
+  if (!touchDragType) return;
+  const touches = e.touches || (e.mp && e.mp.touches) || (e.detail && e.detail.touches);
+  if (!touches || touches.length === 0) return;
+  const deltaX = touches[0].clientX - touchStartX;
+  const deltaPct = (deltaX / trackContainerWidth) * 100;
+
+  if (touchDragType === 'left') {
+    let newS = touchInitStart + deltaPct;
+    if (newS < 0) newS = 0;
+    if (newS > rangeEnd - 3) newS = rangeEnd - 3;
+    rangeStart = newS;
+  } else if (touchDragType === 'right') {
+    let newE = touchInitEnd + deltaPct;
+    if (newE > 100) newE = 100;
+    if (newE < rangeStart + 3) newE = rangeStart + 3;
+    rangeEnd = newE;
+  } else if (touchDragType === 'body') {
+    const span = touchInitEnd - touchInitStart;
+    let newS = touchInitStart + deltaPct;
+    let newE = touchInitEnd + deltaPct;
+    if (newS < 0) {
+      newS = 0;
+      newE = span;
+    }
+    if (newE > 100) {
+      newE = 100;
+      newS = 100 - span;
+    }
+    rangeStart = newS;
+    rangeEnd = newE;
+  }
+  updateRangeDOM();
+}
+
+function onRangeTouchEnd() {
+  if (!touchDragType) return;
+  touchDragType = null;
+  activeDragType.value = null;
+  isDragging = false;
+  if (masterMode.value === 'range') {
+    renderRangeTrackOnMap();
+  }
 }
 
 function toggleRangePlay() {
@@ -2989,14 +3393,16 @@ function stopRangePlayback() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function setPlaySpeed(s: number, e: MouseEvent) {
-  playSpeed = s;
-  document.querySelectorAll('.speed-btn').forEach(btn => {
-    btn.className = 'speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white';
-  });
-  if (e.currentTarget) {
-    (e.currentTarget as HTMLElement).className = 'speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-cyber-primary/20 text-cyber-primary font-bold';
+function setPlaySpeed(s: any) {
+  playSpeed = Number(s) || 1;
+  currentPlaySpeed.value = playSpeed === 5 ? 5 : 1;
+  // #ifndef MP-WEIXIN
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('.speed-btn').forEach(btn => {
+      btn.className = 'speed-btn px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] text-slate-400 hover:text-white';
+    });
   }
+  // #endif
 }
 
 function setupSilkyTimelineInteractions() {
@@ -3020,7 +3426,17 @@ function setupSilkyTimelineInteractions() {
   function scheduleDOMUpdate() {
     if (!rAFPending) {
       rAFPending = true;
-      requestAnimationFrame(() => {
+      const safeSchedule = (cb: any) => {
+        if (typeof (globalThis as any).requestAnimationFrame === 'function') {
+          try {
+            return (globalThis as any).requestAnimationFrame(cb);
+          } catch (e) {
+            return setTimeout(cb, 16);
+          }
+        }
+        return setTimeout(cb, 16);
+      };
+      safeSchedule(() => {
         updateRangeDOM();
         rAFPending = false;
       });
@@ -3037,6 +3453,7 @@ function setupSilkyTimelineInteractions() {
     initStartVal = rangeStart;
     initEndVal = rangeEnd;
     isDragging = true;
+    activeDragType.value = type;
 
     containerRect = container!.getBoundingClientRect();
 
@@ -3108,6 +3525,7 @@ function setupSilkyTimelineInteractions() {
     activeDrag = null;
     activePointerId = null;
     isDragging = false;
+    activeDragType.value = null;
 
     document.body.classList.remove('is-dragging-handle');
     document.body.classList.remove('is-dragging-body');
@@ -3190,6 +3608,7 @@ function setupSilkyTimelineInteractions() {
       renderStateAtPosition(p, false);
 
       if (masterMode.value === 'live') {
+        showLiveSnapBtn.value = true;
         const btnLiveSnap = document.getElementById('btn-live-snap');
         if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
       }
@@ -3214,6 +3633,7 @@ function setupSilkyTimelineInteractions() {
       renderStateAtPosition(committedPlayhead, false);
 
       if (masterMode.value === 'live' && p < 98) {
+        showLiveSnapBtn.value = true;
         const btnLiveSnap = document.getElementById('btn-live-snap');
         if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
       }
@@ -3234,100 +3654,194 @@ function setupSilkyTimelineInteractions() {
     // 鼠标移出时消除悬停预览，还原为用户已确认的播放点位
     renderStateAtPosition(committedPlayhead, false);
   });
+}
 
-  // ==================== 0017: 移动端【策略 A】触控手势管线 ====================
-  container.addEventListener('touchstart', (e: TouchEvent) => {
-    const target = e.target as HTMLElement;
-    if (isDragging || target.closest('#range-capsule') || target.closest('.handle-hit-zone')) return;
+// ==================== 0033: 全端统一模板触控手势管线 (Web/App/小程序统一) ====================
+let cachedContainerLeft = 16;
+let touchStartTime = 0;
+let touchStartClientY = 0;
 
-    const playheadNeedle = document.getElementById('playhead-needle');
-    if (playheadNeedle) playheadNeedle.style.transition = '';
-
-    if (snapTimeout) {
-      clearTimeout(snapTimeout);
-      snapTimeout = null;
-    }
-
-    e.stopPropagation();
-
-    // 1. 双指手势 -> 缩放时间窗口 (Pinch to Zoom)
-    if (e.touches.length === 2) {
-      touchMode = 'pinch';
-      initialPinchDist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      e.preventDefault();
-      return;
-    }
-
-    // 2. 单指手势 -> 按住游标拖拽 vs 空白轨身平移
-    if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      touchStartClientX = touch.clientX;
-      const needleRect = playheadNeedle?.getBoundingClientRect();
-      const isNearNeedle = needleRect && Math.abs(touch.clientX - (needleRect.left + needleRect.width / 2)) <= 36;
-
-      if (isNearNeedle) {
-        touchMode = 'scrub';
-      } else {
-        touchMode = 'pan';
+function updateContainerMetrics() {
+  // #ifdef MP-WEIXIN
+  try {
+    const query = uni.createSelectorQuery();
+    query.select('#timeline-track-container').boundingClientRect((rect: any) => {
+      if (rect) {
+        if (rect.width > 0) trackContainerWidth = rect.width;
+        if (typeof rect.left === 'number') cachedContainerLeft = rect.left;
       }
+    }).exec();
+  } catch (_) {}
+  // #endif
+  // #ifndef MP-WEIXIN
+  if (typeof document !== 'undefined') {
+    const container = document.getElementById('timeline-track-container');
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      if (rect.width > 0) trackContainerWidth = rect.width;
+      if (typeof rect.left === 'number') cachedContainerLeft = rect.left;
     }
-  }, { passive: false });
+  }
+  // #endif
+}
 
-  container.addEventListener('touchmove', (e: TouchEvent) => {
-    if (!touchMode) return;
-    e.stopPropagation();
-    e.preventDefault();
+function extractTouchPoints(e: any): Array<{ clientX: number; clientY: number }> {
+  const touches = (e && e.touches && e.touches.length > 0)
+    ? e.touches
+    : (e && e.changedTouches && e.changedTouches.length > 0)
+      ? e.changedTouches
+      : (e && e.mp && e.mp.touches && e.mp.touches.length > 0)
+        ? e.mp.touches
+        : (e && e.mp && e.mp.changedTouches && e.mp.changedTouches.length > 0)
+          ? e.mp.changedTouches
+          : (e && e.detail && e.detail.touches && e.detail.touches.length > 0)
+            ? e.detail.touches
+            : [];
+  const res: Array<{ clientX: number; clientY: number }> = [];
+  for (let i = 0; i < touches.length; i++) {
+    const t = touches[i];
+    res.push({
+      clientX: t.clientX ?? t.pageX ?? 0,
+      clientY: t.clientY ?? t.pageY ?? 0
+    });
+  }
+  return res;
+}
 
-    const rect = container.getBoundingClientRect();
-    if (rect.width <= 0) return;
+function onTimelineContainerTouchStart(e: any) {
+  if (isDragging) return;
+  const pts = extractTouchPoints(e);
+  if (!pts.length) return;
 
-    if (touchMode === 'pinch' && e.touches.length === 2) {
-      const curDist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      if (Math.abs(curDist - initialPinchDist) > DRAG_SLOP_PX) {
-        const factor = initialPinchDist / curDist;
-        zoomTimeWindow(factor, 0.5);
-        initialPinchDist = curDist;
+  if (snapTimeout) {
+    clearTimeout(snapTimeout);
+    snapTimeout = null;
+  }
+
+  // 1. 双指手势 -> 缩放时间窗口 (Pinch to Zoom)
+  if (pts.length >= 2) {
+    touchMode = 'pinch';
+    initialPinchDist = Math.hypot(
+      pts[0].clientX - pts[1].clientX,
+      pts[0].clientY - pts[1].clientY
+    );
+    return;
+  }
+
+  // 2. 单指手势 -> 按住游标拖拽 vs 空白轨身平移
+  if (pts.length === 1) {
+    const touch = pts[0];
+    touchStartClientX = touch.clientX;
+    touchStartClientY = touch.clientY;
+    touchStartTime = Date.now();
+    trackContainerWidth = measureTrackContainerWidth();
+
+    const currentNeedleX = (committedPlayhead / 100) * trackContainerWidth;
+    let containerLeft = cachedContainerLeft || 16;
+    // #ifndef MP-WEIXIN
+    const container = document.getElementById('timeline-track-container');
+    if (container) {
+      containerLeft = container.getBoundingClientRect().left;
+    }
+    // #endif
+
+    const touchRelX = touch.clientX - containerLeft;
+    const isNearNeedle = Math.abs(touchRelX - currentNeedleX) <= 36;
+
+    if (isNearNeedle) {
+      touchMode = 'scrub';
+    } else {
+      touchMode = 'pan';
+    }
+  }
+}
+
+function onTimelineContainerTouchMove(e: any) {
+  if (!touchMode) return;
+  const pts = extractTouchPoints(e);
+  if (!pts.length) return;
+
+  const w = trackContainerWidth || measureTrackContainerWidth();
+  if (w <= 0) return;
+
+  if (touchMode === 'pinch' && pts.length >= 2) {
+    const curDist = Math.hypot(
+      pts[0].clientX - pts[1].clientX,
+      pts[0].clientY - pts[1].clientY
+    );
+    if (Math.abs(curDist - initialPinchDist) > DRAG_SLOP_PX) {
+      const factor = initialPinchDist / curDist;
+      zoomTimeWindow(factor, 0.5);
+      initialPinchDist = curDist;
+    }
+  } else if (touchMode === 'scrub' && pts.length >= 1) {
+    let containerLeft = cachedContainerLeft || 16;
+    // #ifndef MP-WEIXIN
+    const container = document.getElementById('timeline-track-container');
+    if (container) {
+      containerLeft = container.getBoundingClientRect().left;
+    }
+    // #endif
+
+    const x = pts[0].clientX;
+    const p = Math.max(0, Math.min(100, ((x - containerLeft) / w) * 100));
+    committedPlayhead = p;
+    renderStateAtPosition(p, false);
+
+    if (masterMode.value === 'live') {
+      showLiveSnapBtn.value = true;
+      const btnLiveSnap = document.getElementById('btn-live-snap');
+      if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
+    }
+  } else if (touchMode === 'pan' && pts.length >= 1) {
+    const deltaX = pts[0].clientX - touchStartClientX;
+    if (Math.abs(deltaX) > DRAG_SLOP_PX) {
+      touchStartClientX = pts[0].clientX;
+      const dtMs = -(deltaX / w) * viewportSpanMs;
+      shiftTimeWindow(dtMs);
+    }
+  }
+}
+
+function onTimelineContainerTouchEnd(e: any) {
+  if (!touchMode) return;
+  const pts = extractTouchPoints(e);
+  const clickDuration = Date.now() - touchStartTime;
+
+  if (touchMode === 'pan' && clickDuration < 300 && pts.length >= 1) {
+    const clickDist = Math.hypot(pts[0].clientX - touchStartClientX, pts[0].clientY - touchStartClientY);
+    if (clickDist < 6) {
+      const w = trackContainerWidth || measureTrackContainerWidth();
+      let containerLeft = cachedContainerLeft || 16;
+      // #ifndef MP-WEIXIN
+      const container = document.getElementById('timeline-track-container');
+      if (container) {
+        containerLeft = container.getBoundingClientRect().left;
       }
-    } else if (touchMode === 'scrub' && e.touches.length === 1) {
-      const x = e.touches[0].clientX;
-      const p = Math.max(0, Math.min(100, ((x - rect.left) / rect.width) * 100));
+      // #endif
+      const p = Math.max(0, Math.min(100, ((pts[0].clientX - containerLeft) / w) * 100));
       committedPlayhead = p;
-      renderStateAtPosition(p, false);
+      renderStateAtPosition(committedPlayhead, false);
 
-      if (masterMode.value === 'live') {
+      if (masterMode.value === 'live' && p < 98) {
+        showLiveSnapBtn.value = true;
         const btnLiveSnap = document.getElementById('btn-live-snap');
         if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
       }
-    } else if (touchMode === 'pan' && e.touches.length === 1) {
-      const deltaX = e.touches[0].clientX - touchStartClientX;
-      if (Math.abs(deltaX) > DRAG_SLOP_PX) {
-        touchStartClientX = e.touches[0].clientX;
-        const dtMs = -(deltaX / rect.width) * viewportSpanMs;
-        shiftTimeWindow(dtMs);
-      }
     }
-  }, { passive: false });
+  }
 
-  container.addEventListener('touchend', (e: TouchEvent) => {
-    if (!touchMode) return;
-    e.stopPropagation();
-    touchMode = null;
+  touchMode = null;
 
-    if (masterMode.value === 'live') {
-      const btnLiveSnap = document.getElementById('btn-live-snap');
-      if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
+  if (masterMode.value === 'live') {
+    showLiveSnapBtn.value = true;
+    const btnLiveSnap = document.getElementById('btn-live-snap');
+    if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
 
-      snapTimeout = setTimeout(() => {
-        snapToLatestRealtime();
-      }, 1500);
-    }
-  });
+    snapTimeout = setTimeout(() => {
+      snapToLatestRealtime();
+    }, 1500);
+  }
 }
 
 function renderFullColoredTrackOnMap() {
@@ -3371,9 +3885,9 @@ function renderFullColoredTrackOnMap() {
       latitude: pCenterWx.lat,
       longitude: pCenterWx.lng,
       radius: 35,
-      color: 'rgba(0, 240, 255, 0.75)',
-      fillColor: 'rgba(0, 240, 255, 0.18)',
-      strokeWidth: 1.5
+      color: '#00f0ff',
+      fillColor: '#00f0ff2e',
+      strokeWidth: 2
     }];
     return;
     // #endif
@@ -3398,21 +3912,11 @@ function renderFullColoredTrackOnMap() {
 
   // #ifdef MP-WEIXIN
   wxCircles.value = [];
-  wxPolylines.value = [{
-    points: TRACK_POINTS.map(p => ({ latitude: p.lat, longitude: p.lng })),
-    color: '#00f0ff',
-    width: 6,
-    arrowLine: true
-  }];
+  wxPolylines.value = buildSpeedPolylines(TRACK_POINTS);
   if (TRACK_POINTS.length > 0) {
     const lastP = TRACK_POINTS[TRACK_POINTS.length - 1];
-    wxMarkers.value = [{
-      id: 1,
-      latitude: lastP.lat,
-      longitude: lastP.lng,
-      width: 32,
-      height: 32
-    }];
+    const prevP = TRACK_POINTS.length > 1 ? TRACK_POINTS[TRACK_POINTS.length - 2] : undefined;
+    wxMarkers.value = [buildWxVehicleMarker(lastP, `${lastP.speed} km/h`, prevP)];
   }
   return;
   // #endif
@@ -3499,9 +4003,9 @@ function renderRangeTrackOnMap() {
       latitude: pCenterWx.lat,
       longitude: pCenterWx.lng,
       radius: 35,
-      color: 'rgba(0, 240, 255, 0.75)',
-      fillColor: 'rgba(0, 240, 255, 0.18)',
-      strokeWidth: 1.5
+      color: '#00f0ff',
+      fillColor: '#00f0ff2e',
+      strokeWidth: 2
     }];
     return;
     // #endif
@@ -3527,21 +4031,14 @@ function renderRangeTrackOnMap() {
   // #ifdef MP-WEIXIN
   wxCircles.value = [];
   const rangePts = TRACK_POINTS.slice(idxStart, idxEnd + 1);
-  wxPolylines.value = [{
-    points: rangePts.map(p => ({ latitude: p.lat, longitude: p.lng })),
-    color: '#00f0ff',
-    width: 6,
-    arrowLine: true
-  }];
+  wxPolylines.value = buildSpeedPolylines(rangePts);
   if (rangePts.length > 0) {
-    const curP = rangePts[Math.min(playheadIdx, rangePts.length - 1)];
-    wxMarkers.value = [{
-      id: 1,
-      latitude: curP.lat,
-      longitude: curP.lng,
-      width: 32,
-      height: 32
-    }];
+    const rangeSpan = Math.max(0.001, rangeEnd - rangeStart);
+    const relProgress = Math.max(0, Math.min(1, (committedPlayhead - rangeStart) / rangeSpan));
+    const pIdx = Math.max(0, Math.min(rangePts.length - 1, Math.round(relProgress * (rangePts.length - 1))));
+    const curP = rangePts[pIdx];
+    const prevP = pIdx > 0 ? rangePts[pIdx - 1] : undefined;
+    wxMarkers.value = [buildWxVehicleMarker(curP, `${curP.speed} km/h`, prevP)];
   }
   return;
   // #endif
@@ -3919,7 +4416,7 @@ onMounted(() => {
       // 成功接入守护站时，立即触发一次守护站本地 SQLite 设备与轨迹刷新
       await loadRealDevices();
       if (activeDeviceId.value) {
-        loadTrackDataForScope(masterMode.value === 'range' ? currentMacroScope : 'recent_window');
+        loadTrackDataForScope(masterMode.value === 'range' ? currentMacroScope.value : 'recent_window');
       }
       stationClient.subscribe((event) => {
         if (event.type === 'DEVICE_UPDATE' && event.data) {
@@ -4125,7 +4622,10 @@ onMounted(() => {
   }
   // #endif
 
+  updateContainerMetrics();
+
   setTimeout(() => {
+    updateContainerMetrics();
     drawSpeedWaveCanvas();
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }, 200);
@@ -4261,5 +4761,60 @@ html, body, #app {
 .fade-leave-to {
   opacity: 0;
   transform: translate(-50%, -4px);
+}
+
+/* 时间轴刻度背板网格纹理与手柄定位 (多端一致性加固 0031) */
+.timeline-ticks {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.08) 0,
+    rgba(255, 255, 255, 0.08) 1px,
+    transparent 1px,
+    transparent 2.5%
+  );
+}
+
+.timeline-ticks-major {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(0, 240, 255, 0.25) 0,
+    rgba(0, 240, 255, 0.25) 1px,
+    transparent 1px,
+    transparent 25%
+  );
+}
+
+.handle-hit-zone {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  width: 32px;
+  cursor: ew-resize !important;
+  touch-action: none;
+  user-select: none;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.handle-hit-zone-left {
+  left: -16px;
+}
+
+.handle-hit-zone-right {
+  right: -16px;
+}
+
+.playhead-needle {
+  box-shadow: 0 0 10px #ffffff, 0 0 20px rgba(0, 240, 255, 0.85);
+}
+
+.hover-needle-dashed {
+  background-image: linear-gradient(to bottom, #00f0ff 60%, rgba(255, 255, 255, 0) 0%);
+  background-position: left;
+  background-size: 1.5px 8px;
+  background-repeat: repeat-y;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
 }
 </style>

@@ -1550,14 +1550,21 @@ export class AirCloudClient {
           const withSpeeds = this.deriveSpeedsForTrackPoints(fetchedStored);
           await db.putTrackPoints(withSpeeds);
         }
-      } catch (e) {
-        if (e instanceof AuthExpiredError) throw e;
-        console.warn(`[AirCloud] Incremental track fetch failed for ${imei}`, e);
+      } catch (e: any) {
+        if (e instanceof AuthExpiredError || (e && e.name === 'AuthExpiredError')) {
+          this.markAuthExpired(this.activePhone, true);
+          console.warn(`[AirCloud] Auth expired for ${this.activePhone}, proceeding to local offline cache`);
+        } else {
+          console.warn(`[AirCloud] Incremental track fetch failed for ${imei}`, e);
+        }
       }
     }
 
-    // 2. 从本地时序库检索出当前指定时间窗口内的全部点位
+    // 2. 从本地时序库检索出当前指定时间窗口内的全部点位（即使云端鉴权失效，优先回放本地已有轨迹）
     const finalPoints = await db.getTrackPointsByRange(this.activePhone, imei, startMs, endMs);
+    if (finalPoints.length === 0 && this.isAuthExpired(this.activePhone)) {
+      throw new AuthExpiredError();
+    }
     let withDerivedSpeeds = finalPoints;
     const allZeroSpeed = finalPoints.length >= 2 && finalPoints.every(p => !p.speed || p.speed === 0);
     if (allZeroSpeed) {
