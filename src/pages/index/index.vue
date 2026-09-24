@@ -1523,10 +1523,11 @@ async function applyManualToken() {
 
   isExchangingManualToken.value = true;
   try {
-    const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
-    const res = await apiClient.exchangeOAuthToken(cleanToken, pending);
+    const pending = apiClient.consumePendingAccount();
+    const res = await apiClient.exchangeOAuthToken(cleanToken, pending || undefined);
     if (res.ok) {
-      showToast(`✓ 账号 ${pending} 授权连接成功！`, 'success', 3000);
+      const finalPhone = apiClient.getActivePhone();
+      showToast(`✓ 账号 [${formatPhone(finalPhone)}] 授权连接成功！`, 'success', 3000);
       manualTokenText.value = '';
       showManualTokenInput.value = false;
       showAccountModal.value = false;
@@ -3781,11 +3782,12 @@ async function submitTokenForExchange(rawText?: string) {
   showToast('正在验证凭据...', 'info', 2000);
 
   try {
-    const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
-    const result = await apiClient.exchangeOAuthToken(cleanToken, pending);
+    const pending = apiClient.consumePendingAccount();
+    const result = await apiClient.exchangeOAuthToken(cleanToken, pending || undefined);
     if (result.ok) {
       consumedTokens.add(cleanToken);
-      showToast('✓ 账号授权绑定成功！', 'success', 3000);
+      const finalPhone = apiClient.getActivePhone();
+      showToast(`✓ 账号 [${formatPhone(finalPhone)}] 授权绑定成功！`, 'success', 3000);
       closeMpOAuthGuide();
       showAccountModal.value = false;
       await refreshAccountStates();
@@ -3953,16 +3955,18 @@ onMounted(() => {
       if (event.data && event.data.type === 'LUAT_OAUTH_TOKEN' && event.data.token) {
         console.info('[AirTrack] 收到站内 postMessage 授权凭据:', event.data.token);
         closeInPageOAuth();
-        const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
-        showToast(`已获取授权，正在连接账号 ${pending}...`, 'info', 2000);
-        const res = await apiClient.exchangeOAuthToken(event.data.token, pending);
+        const pending = apiClient.consumePendingAccount();
+        const targetDesc = pending ? `[${formatPhone(pending)}]` : '新授权账号';
+        showToast(`已获取授权，正在连接 ${targetDesc}...`, 'info', 2000);
+        const res = await apiClient.exchangeOAuthToken(event.data.token, pending || undefined);
         if (res.ok) {
-          showToast(`✓ 账号 ${pending} 授权连接成功！`, 'success');
+          const finalPhone = apiClient.getActivePhone();
+          showToast(`✓ 账号 [${formatPhone(finalPhone)}] 授权连接成功！`, 'success');
           showAccountModal.value = false;
-          refreshAccountStates();
+          await refreshAccountStates();
           await loadRealDevices();
         } else {
-          showToast('授权连接失败，请重试', 'error');
+          showToast(res.message || '授权连接失败，请重试', 'error');
         }
       }
     });
@@ -3974,13 +3978,14 @@ onMounted(() => {
     const urlParams = new URLSearchParams(searchStr);
     const oauthToken = urlParams.get('token');
     if (oauthToken) {
-      const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
+      const pending = apiClient.consumePendingAccount();
       const cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
-      apiClient.exchangeOAuthToken(oauthToken, pending).then(res => {
-        console.info(res.ok ? `[AirTrack] 账号 ${pending} OAuth 授权成功` : `[AirTrack] 账号 ${pending} 授权失败`);
-        refreshAccountStates();
-        loadRealDevices();
+      apiClient.exchangeOAuthToken(oauthToken, pending || undefined).then(async res => {
+        const finalPhone = apiClient.getActivePhone();
+        console.info(res.ok ? `[AirTrack] 账号 [${finalPhone}] OAuth 授权成功` : `[AirTrack] 账号 [${finalPhone}] 授权失败`);
+        await refreshAccountStates();
+        await loadRealDevices();
       });
     }
   }
@@ -4001,11 +4006,12 @@ onMounted(() => {
             const parsed = new URL(raw);
             const oauthToken = parsed.searchParams.get('token');
             if (oauthToken) {
-              const pending = apiClient.consumePendingAccount() || apiClient.getActivePhone();
-              const res = await apiClient.exchangeOAuthToken(oauthToken, pending);
-              console.info(res.ok ? `[AirTrack] DeepLink 账号 ${pending} OAuth 授权成功` : `[AirTrack] DeepLink 授权失败`);
+              const pending = apiClient.consumePendingAccount();
+              const res = await apiClient.exchangeOAuthToken(oauthToken, pending || undefined);
+              const finalPhone = apiClient.getActivePhone();
+              console.info(res.ok ? `[AirTrack] DeepLink 账号 [${finalPhone}] OAuth 授权成功` : `[AirTrack] DeepLink 授权失败`);
               showAccountModal.value = false;
-              refreshAccountStates();
+              await refreshAccountStates();
               await loadRealDevices();
             }
           } catch (err) {

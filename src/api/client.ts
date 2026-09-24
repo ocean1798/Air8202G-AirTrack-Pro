@@ -392,11 +392,29 @@ export class AirCloudClient {
         };
       }
 
-      const dResp = await this.rawPostApi('/list_my_devices', {
+      let dResp = await this.rawPostApi('/list_my_devices', {
         project: projectKey,
         page: 1,
         size: 50
       }, creds, 5000);
+
+      // 自愈防线：若非 105 错误且鉴权受阻，尝试重新拉取有效 projectKey 并重试一次
+      if (dResp && dResp.code !== 0 && dResp.code !== 105) {
+        const pResp = await this.rawPostApi('/list_my_projects', { page: 1, size: 50 }, creds, 5000);
+        if (pResp && pResp.code === 0 && Array.isArray(pResp.value) && pResp.value.length > 0) {
+          const freshKey = pResp.value[0].project_key;
+          if (freshKey && freshKey !== projectKey) {
+            projectKey = freshKey;
+            creds.projectKey = freshKey;
+            this.writeProjectKey(targetPhone, freshKey);
+            dResp = await this.rawPostApi('/list_my_devices', {
+              project: projectKey,
+              page: 1,
+              size: 50
+            }, creds, 5000);
+          }
+        }
+      }
 
       if (dResp && (dResp.code === 105 || (typeof dResp.value === 'string' && dResp.value.includes('auth failed')))) {
         this.markAuthExpired(targetPhone, true);
@@ -929,8 +947,9 @@ export class AirCloudClient {
   }
 
   /** 使用 OAuth token 完成授权验证 */
-  public async exchangeOAuthToken(oauthToken: string, phone?: string): Promise<{ ok: boolean; message?: string }> {
-    const target = phone || this.activePhone;
+  public async exchangeOAuthToken(oauthToken: string, phone?: string): Promise<{ ok: boolean; message?: string; accountPhone?: string }> {
+    // 关键防冒名：只有显式传入合法的已知手机号/标识时才针对该卡片刷新，严禁拿 activePhone 兜底
+    const explicitTarget = phone && phone.trim() ? phone.trim() : '';
     try {
       const url = `${OFFICIAL_API_CONFIG.oauthLoginApi}?token=${encodeURIComponent(oauthToken)}`;
       const res = await httpPlatformRequest(url, {
@@ -945,27 +964,32 @@ export class AirCloudClient {
         let finalPhone = '';
         if (realMobile && /^\d{11}$/.test(realMobile)) {
           finalPhone = realMobile;
-        } else if (target && /^\d{11}$/.test(target)) {
-          finalPhone = target;
+        } else if (explicitTarget) {
+          finalPhone = explicitTarget;
         } else {
-          const rawUser = String(profile.user || profile.username || target || '').trim();
-          const cleanUser = rawUser.replace(/[^a-zA-Z0-9_\-]/g, '');
-          if (cleanUser && cleanUser !== '主账号') {
-            finalPhone = cleanUser;
-          } else {
-            const uid = profile.id || profile.uid || (data.value.auth?.token ? String(data.value.auth.token).slice(-6) : '');
-            finalPhone = uid ? `master_${uid}` : 'master';
-          }
+          // 官方换票不给手机号且无显式预设时：分配独立唯一纯 ASCII 标识，决不冒名覆盖已有旧账号
+          const tokenHash = data.value.auth?.token
+            ? String(data.value.auth.token).slice(-6).toUpperCase()
+            : Math.random().toString(36).slice(-6).toUpperCase();
+          finalPhone = `master_${tokenHash}`;
         }
         if (!finalPhone || finalPhone === '') finalPhone = 'master';
-        registerUserAccount({ phone: finalPhone, label: finalPhone === 'master' ? '官方授权主账号' : '' });
+
+        const isDynamicMaster = finalPhone.startsWith('master');
+        registerUserAccount({
+          phone: finalPhone,
+          label: isDynamicMaster ? (finalPhone === 'master' ? '官方授权主账号' : `官方主账号 (${finalPhone.slice(7)})`) : ''
+        });
         this.saveAuth(data.value.auth, data.value.service, data.value.profile, finalPhone);
         this.markAuthExpired(finalPhone, false);
-        if (finalPhone !== this.activePhone) {
-          this.setActiveAccount(finalPhone);
-        }
-        await this.ensureProjectKey();
-        return { ok: true };
+
+        // 核心时序：必须先设为当前激活账号，使内存 token/salt/sid 与 activePhone 统一指向新凭据
+        this.setActiveAccount(finalPhone);
+
+        // 核心强刷：强制向云端拉取该账号专属最新的第一个 projectKey，抹除旧缓存
+        await this.forceRefreshProjectKey(finalPhone);
+
+        return { ok: true, accountPhone: finalPhone };
       }
       const errMsg = typeof data?.value === 'string' ? data.value : (data?.info || 'Token 已失效或已被消费');
       console.warn('[AirCloud] exchangeOAuthToken rejected', data?.code, data?.value);
@@ -1003,8 +1027,52 @@ export class AirCloudClient {
     return [];
   }
 
-  public async ensureProjectKey(): Promise<string> {
-    if (this.projectKey) return this.projectKey;
+  /** 强制强刷指定账号的最新项目密钥（彻底绕过只读缓存短路） */
+  public async forceRefreshProjectKey(phone?: string): Promise<string> {
+    const targetPhone = phone || this.activePhone;
+    try {
+      // 1. 抹除该账号历史旧项目缓存
+      safeStorage.removeItem(LS_PROJECTS_CACHE + (targetPhone || 'master'));
+      this.writeProjectKey(targetPhone, '');
+      if (targetPhone === this.activePhone) {
+        this.projectKey = '';
+      }
+
+      let projects: Array<{ name: string; project_key: string }> = [];
+      if (targetPhone === this.activePhone) {
+        projects = await this.listProjects();
+      } else {
+        // 跨账号强刷：使用 targetPhone 专属凭据通过 rawPostApi 进行隔离查询，绝不串台
+        const creds = this.getCredentialsForPhone(targetPhone);
+        if (creds && creds.token && creds.salt) {
+          const pResp = await this.rawPostApi('/list_my_projects', { page: 1, size: 50 }, creds, 5000);
+          if (pResp && pResp.code === 0 && Array.isArray(pResp.value)) {
+            projects = pResp.value;
+          }
+        }
+      }
+
+      if (Array.isArray(projects) && projects.length > 0) {
+        const freshKey = projects[0].project_key || '';
+        if (freshKey) {
+          this.writeProjectKey(targetPhone, freshKey);
+          if (targetPhone === this.activePhone) {
+            this.projectKey = freshKey;
+          }
+          return freshKey;
+        }
+      }
+    } catch (e) {
+      console.warn('[AirCloud] forceRefreshProjectKey failed', e);
+    }
+    return '';
+  }
+
+  public async ensureProjectKey(forceRefresh = false): Promise<string> {
+    if (!forceRefresh && this.projectKey) return this.projectKey;
+    if (forceRefresh) {
+      return this.forceRefreshProjectKey();
+    }
     try {
       const projects = await this.listProjects();
       if (projects.length > 0) {
@@ -1078,7 +1146,7 @@ export class AirCloudClient {
     try {
       await this.ensureProjectKey();
 
-      const resp = await this.postApi('/list_my_devices', {
+      let resp = await this.postApi('/list_my_devices', {
         project: this.projectKey,
         page: 1,
         size: 50
@@ -1087,6 +1155,18 @@ export class AirCloudClient {
       if (resp && (resp.code === 105 || (typeof resp.value === 'string' && resp.value.includes('auth failed')))) {
         this.markAuthExpired(this.activePhone, true);
         throw new AuthExpiredError('登录鉴权已失效，请重新授权');
+      }
+
+      // 自愈防线：若拉取非正常响应（如密钥失效或跨账号残留），强制强刷重试一次
+      if (!(resp && resp.code === 0 && resp.value && Array.isArray(resp.value.records))) {
+        const freshKey = await this.forceRefreshProjectKey(currentReqPhone);
+        if (freshKey) {
+          resp = await this.postApi('/list_my_devices', {
+            project: freshKey,
+            page: 1,
+            size: 50
+          });
+        }
       }
 
       if (!(resp && resp.code === 0 && resp.value && Array.isArray(resp.value.records))) {
