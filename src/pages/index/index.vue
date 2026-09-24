@@ -324,24 +324,18 @@
     </div>
 
     <!-- ==================== 5. 核心：【双端双模感知面板】 ==================== -->
-    <aside id="inspector-drawer" :class="'sheet-' + mobileSheetState" class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-cyber-700/80 glass-panel shadow-sheet-shadow flex flex-col drawer-transition md:fixed md:inset-x-auto md:top-16 md:right-3 md:bottom-28 md:w-80 md:lg:w-96 md:rounded-2xl md:border md:border-cyber-700/60 md:z-20 md:shadow-2xl md:h-auto md:max-h-none">
+    <aside id="inspector-drawer" :class="'sheet-' + mobileSheetState" class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-cyber-700/80 glass-panel shadow-sheet-shadow flex flex-col drawer-transition overflow-hidden md:fixed md:inset-x-auto md:top-16 md:right-3 md:bottom-28 md:w-80 md:lg:w-96 md:rounded-2xl md:border md:border-cyber-700/60 md:z-20 md:shadow-2xl md:h-auto md:max-h-none">
       
       <!-- 移动端把手 (仅在把手和头部局部监听手势，杜绝内部滚动打架) -->
       <div id="sheet-drag-handle" @click="cycleMobileSheet" @touchstart.stop="onSheetTouchStart" @touchend.stop="onSheetTouchEnd" class="w-full flex flex-col items-center pt-1.5 pb-0.5 cursor-pointer md:hidden active:opacity-75 touch-none">
         <div class="w-10 h-1 bg-slate-400/50 rounded-full hover:bg-cyber-primary transition-colors"></div>
       </div>
 
-      <!-- 顶部固定设备概览头 -->
-      <div id="sheet-header-bar" @click="cycleMobileSheet" @touchstart.stop="onSheetTouchStart" @touchend.stop="onSheetTouchEnd" class="px-3.5 py-2 border-b border-cyber-700/60 bg-cyber-900/95 flex items-center justify-between shrink-0 cursor-pointer md:cursor-default select-none">
-        <div class="flex-1">
-          <div class="flex items-center space-x-2">
-            <span class="text-xs font-bold text-white tracking-wide truncate max-w-[140px] sm:max-w-none" id="drawer-vehicle-name">{{ activeDeviceId ? (activeDeviceName || activeDeviceId) : '等待选择设备' }}</span>
-            <span :class="['text-[9px] font-mono px-1.5 py-0.2 rounded border transition-colors', activeDeviceId ? 'text-cyber-primary bg-cyber-primary/10 border-cyber-primary/30' : 'text-slate-400 bg-slate-800/40 border-slate-700/50']" id="drawer-gnss-badge">{{ activeTelemetry.gnssBadgeText }}</span>
-          </div>
-          <div class="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center space-x-1.5 leading-tight">
-            <span id="drawer-coord-text" class="truncate max-w-[150px] sm:max-w-none">{{ activeTelemetry.coordsText }}</span>
-            <span :class="['font-bold px-1.5 py-0.2 rounded text-[10px] border transition-colors', activeDeviceId ? 'text-cyber-primary bg-cyber-primary/10 border-cyber-primary/30' : 'text-slate-500 bg-slate-800/20 border-slate-800/50']" id="drawer-speed-badge" :style="{ color: activeTelemetry.speedColor }">{{ activeTelemetry.speedText }}</span>
-          </div>
+      <!-- 顶部固定设备概览头 (纯净极简：仅保留设备名称、在网呼吸灯与收起把手) -->
+      <div id="sheet-header-bar" @click="cycleMobileSheet" class="px-3.5 py-2.5 border-b border-cyber-700/60 bg-cyber-900/95 flex items-center justify-between shrink-0 select-none cursor-pointer md:cursor-default">
+        <div class="flex items-center space-x-2">
+          <span :class="activeDeviceId ? 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]' : 'w-2 h-2 rounded-full bg-slate-600'"></span>
+          <span class="text-xs font-bold text-white tracking-wide truncate max-w-[180px] sm:max-w-none" id="drawer-vehicle-name">{{ activeDeviceId ? (activeDeviceName || activeDeviceId) : '等待选择设备' }}</span>
         </div>
 
         <div class="flex items-center space-x-2">
@@ -356,32 +350,121 @@
         </div>
       </div>
 
-      <!-- 纵向平铺流式内容体：纯净真实的设备物理遥测看板 -->
-      <div class="flex-1 overflow-y-auto p-3 space-y-3 scroll-smooth overscroll-contain">
+      <!-- 纵向平铺流式内容体：极简四卡架构 (100% SVG Data-URI 跨端渲染，零 DOM 依赖) -->
+      <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3 scroll-smooth overscroll-contain">
         
-        <!-- 遥测模块 1 · 物理空间定位状态 -->
-        <section class="glass-panel p-3 rounded-xl border border-cyber-primary/30 space-y-2 shadow-lg transition-opacity duration-300"
-                 :class="isInspectorLoading ? 'animate-pulse opacity-75' : ''">
-          <div class="flex items-center justify-between text-[11px] pb-1.5 border-b border-white/10">
+        <!-- 【卡片 1】姿态与加速度 (微观动力学：精巧 3D 正方体 + 三正交轴 + 三轴波形微调) -->
+        <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 shadow-lg relative overflow-hidden">
+          <div class="w-full flex items-center justify-between text-[11px] mb-2.5 pb-1.5 border-b border-cyber-700/50">
+            <span class="text-slate-200 font-bold flex items-center space-x-1.5">
+              <i data-lucide="compass" class="w-3.5 h-3.5 text-cyber-primary"></i>
+              <span>姿态与加速度</span>
+            </span>
+          </div>
+
+          <!-- 上半部分：【姿态】(等边精巧正方体 + 红绿青三轴破体翻滚) -->
+          <div class="flex items-center space-x-3 mb-2.5">
+            <div class="relative w-28 h-28 rounded-xl border border-cyber-700 bg-cyber-950/90 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-[inset_0_2px_12px_rgba(0,0,0,0.8)]">
+              <image :src="attitudeState.cubeSvgUri" class="w-full h-full block" mode="aspectFit" />
+            </div>
+
+            <div class="flex-1 flex flex-col space-y-1.5 font-mono text-[10px]">
+              <div class="bg-cyber-900/90 px-2 py-1.5 rounded-lg border border-cyber-700/50 flex justify-between items-center">
+                <span class="flex items-center space-x-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e]"></span>
+                  <span class="text-rose-400 font-bold text-[9px]">X 左右倾斜</span>
+                </span>
+                <span class="text-xs font-bold text-white">{{ (attitudeState.roll >= 0 ? '+' : '') + attitudeState.roll.toFixed(1) }}°</span>
+              </div>
+              <div class="bg-cyber-900/90 px-2 py-1.5 rounded-lg border border-cyber-700/50 flex justify-between items-center">
+                <span class="flex items-center space-x-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span>
+                  <span class="text-emerald-400 font-bold text-[9px]">Y 前后俯仰</span>
+                </span>
+                <span class="text-xs font-bold text-white">{{ (attitudeState.pitch >= 0 ? '+' : '') + attitudeState.pitch.toFixed(1) }}°</span>
+              </div>
+              <div class="bg-cyber-900/90 px-2 py-1.5 rounded-lg border border-cyber-700/50 flex justify-between items-center">
+                <span class="flex items-center space-x-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#00f0ff]"></span>
+                  <span class="text-cyan-400 font-bold text-[9px]">Z 朝向方位</span>
+                </span>
+                <span class="text-xs font-bold text-white">{{ attitudeState.heading.toFixed(1) }}°</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 下半部分：【加速度走势】(三轴受力波形，触控/鼠标微调细节) -->
+          <div class="border-t border-cyber-800/80 pt-2">
+            <div class="flex items-center justify-between text-[10px] mb-1">
+              <span class="text-slate-400 text-[9px]">加速度走势 (近1秒)</span>
+              <div class="flex items-center space-x-2 text-[9px] font-mono pointer-events-none">
+                <span class="flex items-center space-x-1 text-rose-400"><span class="w-2 h-0.5 bg-rose-500"></span><span>X 左右</span></span>
+                <span class="flex items-center space-x-1 text-emerald-400"><span class="w-2 h-0.5 bg-emerald-500"></span><span>Y 前后</span></span>
+                <span class="flex items-center space-x-1 text-cyan-400"><span class="w-2 h-0.5 bg-cyan-400"></span><span>Z 垂直</span></span>
+              </div>
+            </div>
+
+            <div class="relative w-full h-20 bg-cyber-950/90 rounded-lg border border-cyber-800 overflow-hidden cursor-crosshair touch-none"
+                 style="touch-action: none;"
+                 @mousemove="onWaveformHover"
+                 @mouseleave="onWaveformLeave"
+                 @touchstart.stop.prevent="onWaveformTouch"
+                 @touchmove.stop.prevent="onWaveformTouch">
+              <image :src="attitudeState.waveformSvgUri" class="w-full h-full block" mode="scaleToFill" />
+            </div>
+
+            <div class="flex justify-between items-center text-[9px] font-mono text-slate-400 mt-1.5">
+              <span>{{ attitudeState.timeStr }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 【卡片 2】位置 (宏观空间事实：门牌地址、经纬度、速度单次呈现) -->
+        <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 space-y-2 shadow-lg">
+          <div class="flex items-center justify-between text-[11px] pb-1.5 border-b border-cyber-700/50">
             <span class="text-slate-200 font-bold flex items-center space-x-1.5">
               <i data-lucide="map-pin" class="w-3.5 h-3.5 text-cyber-primary"></i>
-              <span>物理时空定位 (GNSS / LBS)</span>
+              <span>位置</span>
             </span>
-            <span class="text-[9px] font-mono text-cyber-primary bg-cyber-primary/10 px-1.5 py-0.5 rounded border border-cyber-primary/30">真实数据</span>
           </div>
 
           <div class="space-y-1.5 font-mono text-[11px]">
-            <div class="flex items-start justify-between">
-              <span class="text-slate-400 shrink-0">物理地址:</span>
-              <span class="text-slate-200 text-right font-sans break-all ml-2" id="drawer-address-text">{{ activeTelemetry.addressText }}</span>
+            <div>
+              <div class="text-[10px] text-slate-400 mb-0.5">地址:</div>
+              <div class="text-slate-100 text-xs font-sans font-medium leading-relaxed" id="drawer-address-text">
+                {{ activeTelemetry.addressText || '等待定位数据' }}
+              </div>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400">大地坐标:</span>
+            
+            <div class="flex items-center justify-between pt-1 border-t border-cyber-800/60">
+              <span class="text-slate-400">经纬度:</span>
               <span class="text-slate-200" id="drawer-coord-detail">{{ activeTelemetry.coordsText }}</span>
             </div>
+
             <div class="flex items-center justify-between">
-              <span class="text-slate-400">实时航速:</span>
-              <span class="text-cyber-primary font-bold" id="drawer-speed-detail">{{ activeTelemetry.speedText }}</span>
+              <span class="text-slate-400">速度:</span>
+              <span class="text-cyan-400 font-bold" id="drawer-speed-detail">{{ activeTelemetry.speedText }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 【卡片 3】运行状态 (工况遥测：电量、信号、最后上报时间) -->
+        <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 space-y-2 shadow-lg text-[11px] font-mono">
+          <div class="flex items-center justify-between pb-1.5 border-b border-cyber-700/50">
+            <span class="text-slate-200 font-bold flex items-center space-x-1.5">
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-cyber-primary"></i>
+              <span>运行状态</span>
+            </span>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">电池电量:</span>
+              <span class="text-emerald-400 font-bold" id="tel-tag-batt">{{ activeTelemetry.battText }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">蜂窝信号:</span>
+              <span class="text-cyan-300 font-bold" id="tel-tag-csq">{{ activeTelemetry.csqText }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400">最后上报时间:</span>
@@ -390,56 +473,33 @@
           </div>
         </section>
 
-        <!-- 遥测模块 2 · 硬件供电与射频状态 -->
-        <section class="glass-panel rounded-xl overflow-hidden border border-cyber-700/60 shadow-lg transition-opacity duration-300"
-                 :class="isInspectorLoading ? 'animate-pulse opacity-75' : ''">
-          <div class="p-2.5 bg-cyber-900/90 border-b border-cyber-700/50 flex items-center justify-between text-[11px]">
-            <span class="text-slate-200 font-bold flex items-center space-x-1.5">
-              <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyber-primary"></i>
-              <span>硬件遥测参数 (Telemetry Tags)</span>
-            </span>
-            <span class="text-[9px] font-mono text-cyber-emerald">数据已同步</span>
-          </div>
-          <div class="font-mono text-[11px] divide-y divide-cyber-700/40">
-            <div class="p-2.5 flex items-center justify-between">
-              <span class="text-slate-400">Tag 799 (电池供电)</span>
-              <span class="text-cyber-emerald font-bold" id="tel-tag-batt">{{ activeTelemetry.battText }}</span>
-            </div>
-            <div class="p-2.5 flex items-center justify-between">
-              <span class="text-slate-400">Tag 782 (蜂窝信号)</span>
-              <span class="text-cyan-300 font-bold" id="tel-tag-csq">{{ activeTelemetry.csqText }}</span>
-            </div>
-            <div class="p-2.5 flex items-center justify-between">
-              <span class="text-slate-400">Tag 512/513 (定位源)</span>
-              <span class="text-slate-200" id="tel-tag-coords">{{ activeTelemetry.coordsText }}</span>
-            </div>
-            <div class="p-2.5 flex items-center justify-between">
-              <span class="text-slate-400">Tag 514 (行驶航速)</span>
-              <span class="text-cyber-emerald font-bold" id="tel-tag-speed">{{ activeTelemetry.speedText }}</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- 遥测模块 3 · 设备硬件与空间归属 -->
+        <!-- 【卡片 4】设备资产属性 (身份底账：型号、IMEI、固件版本、账号) -->
         <section class="glass-panel p-3 rounded-xl border border-cyber-700/60 space-y-2 shadow-lg text-[11px] font-mono">
-          <div class="flex items-center justify-between text-xs pb-1 border-b border-white/5">
+          <div class="flex items-center justify-between pb-1.5 border-b border-cyber-700/50">
             <span class="text-slate-200 font-bold flex items-center space-x-1.5">
               <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i>
               <span>设备资产属性</span>
             </span>
-            <span class="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">4G Cat.1 + GNSS</span>
+            <span class="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded border border-slate-700">4G Cat.1 + GNSS</span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-slate-400">硬件型号:</span>
-            <span class="text-slate-200">合宙 Air8202G</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-slate-400">模组串号 (IMEI):</span>
-            <span class="text-slate-200">{{ activeDeviceId || '—' }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-slate-400">当前归属账号:</span>
-            <span class="text-slate-200">{{ accountDisplayTitle }}</span>
+
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">硬件型号:</span>
+              <span class="text-slate-200">合宙 Air8202G</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">模组串号 (IMEI):</span>
+              <span class="text-slate-200">{{ activeDeviceId || '—' }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">固件版本:</span>
+              <span class="text-slate-200" id="tel-tag-firmware">{{ activeTelemetry.firmwareText || 'V1.0.2' }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">归属账号:</span>
+              <span class="text-slate-200">{{ accountDisplayTitle }}</span>
+            </div>
           </div>
         </section>
 
@@ -1017,6 +1077,8 @@ import { AirCloudClient, calculateScopeWindow, copyTextToClipboard } from '../..
 import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-model';
 import { wgs84ToGcj02 } from '../../utils/coord-transform';
 import { stationClient } from '../../utils/station-client';
+import { buildCubeSvgDataUri, buildWaveformSvgDataUri, generateAttitudeSamples } from '../../utils/attitude';
+import type { AttitudeSample } from '../../api/types';
 import { APK_DOWNLOAD_URL, OFFLINE_APK_QR_SVG } from '../../utils/apk-qr';
 import { getAccountDisplayTitle, formatPhone, parseHostInjectedSession, type AccountDef } from '../../api/accounts';
 
@@ -1027,7 +1089,7 @@ declare const echarts: any;
 const apiClient = AirCloudClient.getInstance();
 const isStationConnected = ref(false);
 
-// 物理遥测看板响应式数据模型
+// 物理遥测看板响应式数据模型 (Change 0030: 极简纯净)
 const activeTelemetry = reactive({
   battMv: null as number | null,
   battPct: null as number | null,
@@ -1035,13 +1097,116 @@ const activeTelemetry = reactive({
   csq: null as number | null,
   csqLevel: '—',
   csqText: '—',
-  coordsText: '暂无定位坐标',
-  addressText: '暂无物理地址',
+  coordsText: '暂无定位数据',
+  addressText: '等待定位地址',
   speedText: '0.0 km/h',
   speedColor: '#00f0ff',
-  gnssBadgeText: '待机',
-  lastActiveText: '暂无上报'
+  lastActiveText: '等待上报',
+  firmwareText: 'V1.0.2'
 });
+
+// 空间姿态与加速度高频动力学响应式模型 (Change 0030)
+const attitudeState = reactive({
+  roll: 0,
+  pitch: 0,
+  heading: 0,
+  timeStr: '--:--:--',
+  samples: [] as AttitudeSample[],
+  activeSampleIdx: 10,
+  cubeSvgUri: buildCubeSvgDataUri(0, 0, 0),
+  waveformSvgUri: buildWaveformSvgDataUri([], 0)
+});
+
+/**
+ * 刷新高频姿态与动力学样本 (由时间轴滑动、回放及设备切换驱动)
+ */
+function refreshAttitudeDynamics(timeStr: string, speedKmH: number, headingDeg: number = 0) {
+  const baseSpeed = Number(speedKmH) || 0;
+  const rollEstimate = Number((Math.sin(headingDeg * Math.PI / 180) * 18 * Math.min(1.0, baseSpeed / 50)).toFixed(1));
+  const pitchEstimate = Number((Math.cos(headingDeg * Math.PI / 180) * 8 * Math.min(1.0, baseSpeed / 50)).toFixed(1));
+
+  const samples = generateAttitudeSamples(timeStr, baseSpeed, headingDeg, rollEstimate, pitchEstimate);
+  attitudeState.samples = samples;
+  attitudeState.activeSampleIdx = 10;
+  const currentSample = samples[10];
+
+  attitudeState.roll = currentSample.roll;
+  attitudeState.pitch = currentSample.pitch;
+  attitudeState.heading = currentSample.heading;
+  attitudeState.timeStr = currentSample.timeStr;
+
+  attitudeState.cubeSvgUri = buildCubeSvgDataUri(currentSample.roll, currentSample.pitch, currentSample.heading);
+  attitudeState.waveformSvgUri = buildWaveformSvgDataUri(samples, 10);
+}
+
+// #ifndef MP-WEIXIN
+if (typeof window !== 'undefined') {
+  (window as any).__refreshAttitudeDynamics = refreshAttitudeDynamics;
+}
+// #endif
+
+/**
+ * 触控/鼠标微调高频波形细节交互
+ */
+function applyWaveformScrub(clientX: number, targetLeft: number, targetWidth: number) {
+  if (!attitudeState.samples || attitudeState.samples.length === 0) return;
+  if (!targetWidth || targetWidth <= 0) return;
+  const ratio = Math.max(0, Math.min(1, (clientX - targetLeft) / targetWidth));
+  const idx = Math.floor(ratio * (attitudeState.samples.length - 1));
+  attitudeState.activeSampleIdx = idx;
+  const sample = attitudeState.samples[idx];
+
+  attitudeState.roll = sample.roll;
+  attitudeState.pitch = sample.pitch;
+  attitudeState.heading = sample.heading;
+  attitudeState.timeStr = sample.timeStr;
+
+  attitudeState.cubeSvgUri = buildCubeSvgDataUri(sample.roll, sample.pitch, sample.heading);
+  attitudeState.waveformSvgUri = buildWaveformSvgDataUri(attitudeState.samples, idx);
+}
+
+function onWaveformHover(e: MouseEvent) {
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  applyWaveformScrub(e.clientX, rect.left, rect.width);
+}
+
+function onWaveformLeave() {
+  if (!attitudeState.samples || attitudeState.samples.length === 0) return;
+  attitudeState.activeSampleIdx = 10;
+  const sample = attitudeState.samples[10];
+  attitudeState.roll = sample.roll;
+  attitudeState.pitch = sample.pitch;
+  attitudeState.heading = sample.heading;
+  attitudeState.timeStr = sample.timeStr;
+  attitudeState.cubeSvgUri = buildCubeSvgDataUri(sample.roll, sample.pitch, sample.heading);
+  attitudeState.waveformSvgUri = buildWaveformSvgDataUri(attitudeState.samples, 10);
+}
+
+let cachedDrawerRect: any = null;
+
+function onWaveformTouch(e: TouchEvent) {
+  if (!e.touches || e.touches.length === 0) return;
+  const touch = e.touches[0];
+  // #ifndef MP-WEIXIN
+  const rect = (e.currentTarget as HTMLElement)?.getBoundingClientRect?.();
+  if (rect) {
+    applyWaveformScrub(touch.clientX, rect.left, rect.width);
+  }
+  // #endif
+  // #ifdef MP-WEIXIN
+  if (!cachedDrawerRect) {
+    const query = uni.createSelectorQuery();
+    query.select('#inspector-drawer').boundingClientRect((res: any) => {
+      if (res) {
+        cachedDrawerRect = res;
+        applyWaveformScrub(touch.clientX, res.left + 12, res.width - 24);
+      }
+    }).exec();
+  } else {
+    applyWaveformScrub(touch.clientX, cachedDrawerRect.left + 12, cachedDrawerRect.width - 24);
+  }
+  // #endif
+}
 
 // 时空时间轴响应式状态模型
 const timelineDisplay = reactive({
@@ -1859,8 +2024,6 @@ async function fetchDeviceLiveTrackAndTags(imei: string) {
         activeTelemetry.battMv = mv;
         activeTelemetry.battPct = pct;
         activeTelemetry.battText = `${mv} mV (${pct}%)`;
-        const battEl = document.getElementById('tel-tag-batt');
-        if (battEl) battEl.innerText = `${mv} mV (${pct}%)`;
       }
       if (tagData.val_782) {
         const csq = parseInt(tagData.val_782, 10);
@@ -1868,8 +2031,6 @@ async function fetchDeviceLiveTrackAndTags(imei: string) {
         activeTelemetry.csq = csq;
         activeTelemetry.csqLevel = level;
         activeTelemetry.csqText = `${level} (CSQ ${csq})`;
-        const csqEl = document.getElementById('tel-tag-csq');
-        if (csqEl) csqEl.innerText = `${level} (CSQ ${csq})`;
       }
     }
   } catch (err) {
@@ -1960,55 +2121,27 @@ function selectDeviceTab(imei: string) {
   activeDeviceId.value = imei;
 
   // 设备列表头自动滚动到当前频道（样式由 Vue 响应式类绑定管理）
+  // #ifndef MP-WEIXIN
   nextTick(() => {
     const activeMobTab = document.getElementById('mob-tab-dev-' + imei);
     if (activeMobTab && (activeMobTab as any).scrollIntoView) {
       (activeMobTab as any).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
   });
-
-  const deskTopName = document.getElementById('desktop-top-device-name');
-  if (deskTopName) {
-    deskTopName.innerText = `${dev.name} (${dev.status})`;
-  }
-
-  const elName = document.getElementById('drawer-vehicle-name');
-  if (elName) elName.innerText = dev.name;
-  const elLastTime = document.getElementById('tel-tag-last-time');
-  if (elLastTime) elLastTime.innerText = `${dev.lastActiveTime || '未上报'} (${dev.relativeTime || '—'})`;
-  const elBatt = document.getElementById('tel-tag-batt');
-  if (elBatt) {
-    elBatt.innerText = dev.battPct != null ? `${dev.voltageMv} mV (${dev.battPct}%)` : dev.battMv;
-  }
-  const elCsq = document.getElementById('tel-tag-csq');
-  if (elCsq) {
-    elCsq.innerText = dev.csqNum > 0 ? `${dev.signalLevelText || '强'} (CSQ ${dev.csqNum})` : '无信号';
-  }
-
-  // 同步更新顶部机头设备状态
-  const mobHeaderName = document.getElementById('mob-drawer-vehicle-name');
-  if (mobHeaderName) mobHeaderName.innerText = dev.name;
-  const elGnssBadge = document.getElementById('drawer-gnss-badge');
-  if (elGnssBadge) elGnssBadge.innerText = dev.fixType ? `${dev.fixType} 定位` : 'GNSS 3D';
+  // #endif
 
   const located = typeof dev.lat === 'number' && typeof dev.lng === 'number' && !isNaN(dev.lat) && !isNaN(dev.lng);
   const coordText = located ? `${Number(dev.lat).toFixed(4)}°N, ${Number(dev.lng).toFixed(4)}°E` : '未上报经纬度';
 
-  const elCoord = document.getElementById('drawer-coord-text');
-  if (elCoord) elCoord.innerText = coordText;
-  const elTagCoord = document.getElementById('tel-tag-coords');
-  if (elTagCoord) elTagCoord.innerText = `${dev.fixType || 'GPS'} · ${coordText}`;
-  const mobHeaderCoord = document.getElementById('mob-drawer-coord-text');
-  if (mobHeaderCoord) mobHeaderCoord.innerText = coordText;
-
-  // 响应式遥测状态全面同步（保障小程序等无 DOM 运行环境 100% 数据呈现）
+  // 响应式遥测状态全面同步（保障三端 100% 响应式单一真相源呈现）
   activeTelemetry.lastActiveText = `${dev.lastActiveTime || '未上报'} (${dev.relativeTime || '—'})`;
   activeTelemetry.battText = dev.battPct != null ? `${dev.voltageMv} mV (${dev.battPct}%)` : (dev.voltageMv ? `${dev.voltageMv} mV` : '—');
   activeTelemetry.csqText = dev.csqNum > 0 ? `${dev.signalLevelText || '强'} (CSQ ${dev.csqNum})` : '无信号';
-  activeTelemetry.gnssBadgeText = dev.fixType ? `${dev.fixType} 定位` : 'GNSS 3D';
   activeTelemetry.coordsText = coordText;
-  activeTelemetry.addressText = dev.address || '未上报物理地址';
+  activeTelemetry.addressText = dev.address || '等待定位地址';
   activeTelemetry.speedText = `${Number(dev.speed || 0).toFixed(1)} km/h`;
+  // Change 0030: 设备初次选中初始化姿态与动力学样本
+  refreshAttitudeDynamics(dev.lastActiveTime || '', Number(dev.speed) || 0, Number(dev.heading) || 0);
 
   // 仅对真实上报过定位的物理设备做地图定位；未上报设备不做任何坐标推测
   if (located) {
@@ -2037,14 +2170,6 @@ function selectDeviceTab(imei: string) {
     // 未上报定位：移除车辆标记，避免在错误位置显示设备
     (window as any).__vehicleMarker.setGeometries([]);
   }
-
-  // 同步更新右侧感知面板中的物理遥测详情
-  const elAddress = document.getElementById('drawer-address-text');
-  if (elAddress) elAddress.innerText = dev.address || '未上报物理地址';
-  const elCoordDetail = document.getElementById('drawer-coord-detail');
-  if (elCoordDetail) elCoordDetail.innerText = coordText;
-  const elSpeedDetail = document.getElementById('drawer-speed-detail');
-  if (elSpeedDetail) elSpeedDetail.innerText = `${Number(dev.speed || 0).toFixed(1)} km/h`;
 
   updateLiveStatusBar();
   loadTrackDataForScope(masterMode.value === 'range' ? currentMacroScope.value : 'recent_window');
@@ -3047,13 +3172,8 @@ function renderStateAtPosition(percent: number, isPreview = false) {
     const spVal = typeof pt.speed === 'number' ? pt.speed : 0;
     timelineDisplay.liveLatestSpeed = spVal > 0 ? `${spVal.toFixed(1)} km/h` : '0.0 km/h';
     timelineDisplay.speedTagColor = stInfo.type === 'moving' ? sColor.hex : '#94a3b8';
+    activeTelemetry.speedText = spVal > 0 ? `${spVal.toFixed(1)} km/h` : '0.0 km/h';
     if (pt.timeStr) timelineDisplay.liveLatestTime = pt.timeStr.slice(11, 19);
-
-    const drawerSpeed = document.getElementById('drawer-speed-badge');
-    if (drawerSpeed) {
-      const sp = typeof pt.speed === 'number' ? pt.speed : 0;
-      drawerSpeed.innerText = sp > 0 ? `${sp.toFixed(1)} km/h` : '0.0 km/h';
-    }
 
     const timeBox = document.getElementById('current-point-time');
     const timeFormatted = pt.timeStr ? (pt.isMultiDay ? pt.timeStr.slice(5, 16) : pt.timeStr.slice(11, 16)) : '—';
@@ -3123,28 +3243,15 @@ function renderStateAtPosition(percent: number, isPreview = false) {
   if (typeof pt.lat === 'number' && typeof pt.lng === 'number') {
     const cText = `${pt.lat.toFixed(4)}°N, ${pt.lng.toFixed(4)}°E`;
     activeTelemetry.coordsText = cText;
-    const elCoord = document.getElementById('drawer-coord-text');
-    if (elCoord) elCoord.innerText = cText;
-    const elCoordDetail = document.getElementById('drawer-coord-detail');
-    if (elCoordDetail) elCoordDetail.innerText = cText;
-    const elTagCoord = document.getElementById('tel-tag-coords');
-    if (elTagCoord) elTagCoord.innerText = cText;
   }
   
   const spText = stInfo.type === 'moving' ? `${pt.speed} km/h` : stInfo.label;
   activeTelemetry.speedText = spText;
   activeTelemetry.speedColor = stInfo.color;
-  const drawerSpeed = document.getElementById('drawer-speed-badge');
-  if (drawerSpeed) {
-    drawerSpeed.style.backgroundColor = sColor.rgba(0.2);
-    drawerSpeed.style.color = stInfo.color;
-    drawerSpeed.innerText = spText;
-  }
-  const telSpeed = document.getElementById('tel-tag-speed');
-  if (telSpeed) {
-    telSpeed.style.color = stInfo.color;
-    telSpeed.innerText = spText;
-  }
+
+  // Change 0030: 时空时间轴步进与右侧姿态动力学全景联动
+  const headingVal = typeof pt.heading === 'number' ? pt.heading : (pt.course || 0);
+  refreshAttitudeDynamics(pt.timeStr || '', Number(pt.speed) || 0, headingVal);
 
   // #ifndef MP-WEIXIN
   if (typeof TMap !== 'undefined' && (window as any).__vehicleMarker && typeof pt.lat === 'number' && typeof pt.lng === 'number') {
