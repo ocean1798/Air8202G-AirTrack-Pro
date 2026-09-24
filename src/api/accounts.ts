@@ -32,15 +32,66 @@ const LS_USER_ACCOUNTS = 'airtrack_user_accounts';
 
 export const DEFAULT_ACCOUNT_PHONE = '';
 
-/** 人性化格式化手机号或账号标识显示（如 "138 0000 0000" 或 "官方授权主账号"） */
+/** 人性化格式化手机号或账号标识显示（如 "138 0000 0000" 或 "官方授权 (PVASX7)"） */
 export function formatPhone(phone: string): string {
   if (!phone) return '未命名账号';
   if (phone === 'master' || phone === '主账号') return '官方授权主账号';
-  if (phone.startsWith('master_')) return `官方主账号 (${phone.slice(7)})`;
+  if (phone.startsWith('master_')) {
+    const hash = phone.slice(7).trim().toUpperCase();
+    return hash ? `官方授权 (${hash})` : '官方授权主账号';
+  }
   if (/^\d{11}$/.test(phone)) {
     return `${phone.slice(0, 3)} ${phone.slice(3, 7)} ${phone.slice(7, 11)}`;
   }
   return phone;
+}
+
+export interface AccountDisplayContext {
+  phone: string;
+  label?: string;
+  cloudProfileName?: string;
+}
+
+/** 工业级单值账号展示标题解析管道（Tier 1~7 阶梯降级，消除重复冒号拼接） */
+export function getAccountDisplayTitle(ctx: AccountDisplayContext): string {
+  const p = (ctx.phone || '').trim();
+  const rawLbl = (ctx.label || '').trim();
+  const cName = (ctx.cloudProfileName || '').trim();
+
+  // Tier 1: 真实云端用户名 (若合宙云端或历史透出用户名)
+  if (cName) return cName;
+
+  // Tier 2: 用户自定义的非模板别名
+  const isTemplateLabel =
+    !rawLbl ||
+    /^账号\s*\d+$/i.test(rawLbl) ||
+    /^官方((主)?账号|授权(主账号)?)(\s*\(?[A-Z0-9]*\)?)?$/i.test(rawLbl) ||
+    rawLbl === p;
+  if (!isTemplateLabel) {
+    return rawLbl;
+  }
+
+  // Tier 3: 11 位数字手机号
+  if (/^\d{11}$/.test(p)) {
+    return `${p.slice(0, 3)} ${p.slice(3, 7)} ${p.slice(7, 11)}`;
+  }
+
+  // Tier 4: 动态 master 指纹
+  if (p.startsWith('master_')) {
+    const hash = p.slice(7).trim().toUpperCase();
+    return hash ? `官方授权 (${hash})` : '官方授权主账号';
+  }
+
+  // Tier 5: 静态 master
+  if (p === 'master' || p === '主账号') {
+    return '官方授权主账号';
+  }
+
+  // Tier 6: 其他有效字符串原文
+  if (p) return p;
+
+  // Tier 7: 空兜底
+  return '未接入账号';
 }
 
 /** 读取所有已绑定的用户账号列表 */

@@ -239,6 +239,20 @@ export class AirCloudClient {
     return this.activePhone;
   }
 
+  /** 获取云端返回并持久化的用户 Profile 名称（若有） */
+  public getCloudProfileName(phone?: string): string {
+    const target = phone || this.activePhone;
+    if (!target) return '';
+    try {
+      const raw = safeStorage.getItem(lsProfileKey(target));
+      if (raw) {
+        const p = JSON.parse(raw);
+        return String(p?.name || p?.nickName || p?.nickname || p?.user_name || '').trim();
+      }
+    } catch (_) {}
+    return '';
+  }
+
   public getProbedDeviceCount(phone: string): number | undefined {
     return this.probedDeviceCounts.get(phone);
   }
@@ -975,10 +989,9 @@ export class AirCloudClient {
         }
         if (!finalPhone || finalPhone === '') finalPhone = 'master';
 
-        const isDynamicMaster = finalPhone.startsWith('master');
         registerUserAccount({
           phone: finalPhone,
-          label: isDynamicMaster ? (finalPhone === 'master' ? '官方授权主账号' : `官方主账号 (${finalPhone.slice(7)})`) : ''
+          label: ''
         });
         this.saveAuth(data.value.auth, data.value.service, data.value.profile, finalPhone);
         this.markAuthExpired(finalPhone, false);

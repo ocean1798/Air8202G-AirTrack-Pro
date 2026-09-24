@@ -104,10 +104,9 @@
           </div>
 
           <!-- 桌面端：工作空间多账号切换胶囊 -->
-          <div id="btn-account-switcher" role="button" @click="toggleOfficialModal()" title="切换IoT工作空间" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
+          <div id="btn-account-switcher" role="button" @click="toggleOfficialModal()" :title="accountTooltip" class="glass-panel px-3 py-1.5 rounded-2xl text-xs font-mono text-cyber-primary border border-cyber-primary/40 hover:bg-cyber-primary/15 transition flex items-center space-x-1.5 shadow-glow-cyan">
             <span :class="activeAccountHasAuth ? 'w-1.5 h-1.5 rounded-full bg-cyber-primary animate-pulse-cyan' : 'w-1.5 h-1.5 rounded-full bg-amber-400'"></span>
-            <span v-if="displayAccountLabel" class="text-slate-400">{{ displayAccountLabel }}:</span>
-            <span class="font-bold text-white tracking-wider">{{ formatPhone(activeAccountPhone) }}</span>
+            <span class="font-bold text-white tracking-wider font-mono">{{ accountDisplayTitle }}</span>
             <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
           </div>
 
@@ -325,7 +324,7 @@
     </div>
 
     <!-- ==================== 5. 核心：【双端双模感知面板】 ==================== -->
-    <aside id="inspector-drawer" :class="'sheet-' + mobileSheetState" :style="drawerDynamicStyle" @touchstart="onSheetTouchStart" @touchend="onSheetTouchEnd" class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-cyber-700/80 glass-panel shadow-sheet-shadow flex flex-col drawer-transition md:fixed md:inset-x-auto md:top-16 md:right-3 md:bottom-28 md:w-80 md:lg:w-96 md:rounded-2xl md:border md:border-cyber-700/60 md:z-20 md:shadow-2xl md:h-auto md:max-h-none">
+    <aside id="inspector-drawer" :class="'sheet-' + mobileSheetState" @touchstart="onSheetTouchStart" @touchend="onSheetTouchEnd" class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-cyber-700/80 glass-panel shadow-sheet-shadow flex flex-col drawer-transition md:fixed md:inset-x-auto md:top-16 md:right-3 md:bottom-28 md:w-80 md:lg:w-96 md:rounded-2xl md:border md:border-cyber-700/60 md:z-20 md:shadow-2xl md:h-auto md:max-h-none">
       
       <!-- 移动端把手 -->
       <div id="sheet-drag-handle" @click="cycleMobileSheet" class="w-full flex flex-col items-center pt-1.5 pb-0.5 cursor-pointer md:hidden active:opacity-75 touch-none">
@@ -440,7 +439,7 @@
           </div>
           <div class="flex items-center justify-between">
             <span class="text-slate-400">当前归属账号:</span>
-            <span class="text-slate-200">{{ formatPhone(activeAccountPhone) }}</span>
+            <span class="text-slate-200">{{ accountDisplayTitle }}</span>
           </div>
         </section>
 
@@ -690,7 +689,7 @@
                 <div :class="s.active ? 'w-4 h-4 rounded-full border-2 border-cyan-400 flex items-center justify-center shrink-0' : 'w-4 h-4 rounded-full border border-slate-600 shrink-0'">
                   <div v-if="s.active" class="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
                 </div>
-                <span class="text-sm font-bold font-mono text-white tracking-wide">{{ formatPhone(s.account.phone) }}</span>
+                <span class="text-sm font-bold font-mono text-white tracking-wide">{{ getAccountTitle(s.account) }}</span>
                 <span v-if="s.active" class="text-[10px] px-1.5 py-0.2 rounded bg-cyan-400/20 text-cyan-300 font-mono font-medium border border-cyan-400/30">
                   当前账号
                 </span>
@@ -973,6 +972,7 @@ import { voltageToPercentage, estimateRemainingDays } from '../../utils/battery-
 import { wgs84ToGcj02 } from '../../utils/coord-transform';
 import { stationClient } from '../../utils/station-client';
 import { APK_DOWNLOAD_URL, OFFLINE_APK_QR_SVG } from '../../utils/apk-qr';
+import { getAccountDisplayTitle, formatPhone, type AccountDef } from '../../api/accounts';
 
 declare const TMap: any;
 declare const lucide: any;
@@ -1152,11 +1152,26 @@ const wxPolylines = ref<any[]>([]);
 const wxCircles = ref<any[]>([]);
 const activeAccountPhone = ref(apiClient.getActivePhone());
 const activeAccountLabel = ref(apiClient.getActiveAccount().label);
-const displayAccountLabel = computed(() => {
-  const lbl = activeAccountLabel.value?.trim();
-  if (!lbl || /^账号\s*\d+$/.test(lbl)) return '';
-  return lbl;
+
+const accountDisplayTitle = computed(() => {
+  return getAccountDisplayTitle({
+    phone: activeAccountPhone.value,
+    label: activeAccountLabel.value,
+    cloudProfileName: apiClient.getCloudProfileName(activeAccountPhone.value)
+  });
 });
+
+const accountTooltip = computed(() => {
+  return `当前工作空间: ${accountDisplayTitle.value} · 点击切换或管理`;
+});
+
+function getAccountTitle(acc: AccountDef): string {
+  return getAccountDisplayTitle({
+    phone: acc.phone,
+    label: acc.label,
+    cloudProfileName: apiClient.getCloudProfileName(acc.phone)
+  });
+}
 const activeAccountHasAuth = ref(apiClient.hasAuth());
 const activeProjectKey = ref('');
 const activeDeviceId = ref('');
@@ -1207,16 +1222,6 @@ async function copyCoordToClipboard(coord?: string) {
   } else {
     showToast(`坐标：${coord}`, 'info', 2500);
   }
-}
-
-function formatPhone(phone: string): string {
-  if (!phone || phone === 'master' || phone === '主账号') return '官方授权主账号';
-  if (phone.startsWith('master_')) return `官方主账号 (${phone.slice(7)})`;
-  const clean = String(phone).replace(/\s+/g, '');
-  if (clean.length === 11 && /^\d+$/.test(clean)) {
-    return `${clean.slice(0, 3)} ${clean.slice(3, 7)} ${clean.slice(7)}`;
-  }
-  return clean;
 }
 
 const editingPhone = ref('');
@@ -3594,21 +3599,6 @@ function setMobileSheetState(state: 'peek' | 'half' | 'full') {
   // #endif
 }
 
-const drawerDynamicStyle = computed(() => {
-  // #ifndef MP-WEIXIN
-  if (typeof window !== 'undefined' && window.innerWidth >= 768) {
-    return '';
-  }
-  // #endif
-  if (mobileSheetState.value === 'peek') {
-    return 'height: calc(74px + env(safe-area-inset-bottom, 0px)) !important; overflow: hidden !important;';
-  } else if (mobileSheetState.value === 'half') {
-    return 'height: 48vh !important; overflow: hidden !important;';
-  } else {
-    return 'height: 86vh !important; overflow: hidden !important;';
-  }
-});
-
 let sheetTouchStartY = 0;
 function onSheetTouchStart(e: any) {
   // #ifndef MP-WEIXIN
@@ -4153,20 +4143,32 @@ onUnmounted(() => {
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.sheet-peek {
-  height: calc(74px + env(safe-area-inset-bottom, 0px)) !important;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  overflow: hidden !important;
+/* 移动端专属底部抽屉高度形态 (Bottom Sheet Snap Points) */
+@media (max-width: 767px) {
+  .sheet-peek {
+    height: calc(74px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    overflow: hidden !important;
+  }
+
+  .sheet-half {
+    height: 48vh !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .sheet-full {
+    height: 86vh !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
-.sheet-half {
-  height: 48vh !important;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-.sheet-full {
-  height: 86vh !important;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+/* 桌面端独占侧边坞高度与安全边界重置 (Desktop Inspector Reset) */
+@media (min-width: 768px) {
+  #inspector-drawer {
+    height: auto !important;
+    bottom: 7rem !important; /* bottom-28 (112px)，避免遮挡底部时间轴 */
+    overflow: hidden !important; /* 保持外壳圆角裁剪，内部 flex-1 overflow-y-auto 独立滚动 */
+  }
 }
 
 /* 全局暗黑背景覆盖 */
