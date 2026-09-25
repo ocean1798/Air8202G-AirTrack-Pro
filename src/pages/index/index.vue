@@ -589,7 +589,10 @@
                @touchmove="onTimelineContainerTouchMove($event)"
                @touchend="onTimelineContainerTouchEnd($event)"
                @touchcancel="onTimelineContainerTouchEnd($event)">
-            <canvas id="speed-wave-canvas" canvas-id="speed-wave-canvas" class="absolute inset-0 w-full h-full rounded-xl pointer-events-none"></canvas>
+            <!-- 静态科技网格微光地平线（纯几何无文字，在无轨迹或静止透明时提供物理地平线底垫，消除死黑空洞） -->
+            <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent pointer-events-none z-0"></div>
+
+            <canvas id="speed-wave-canvas" canvas-id="speed-wave-canvas" class="absolute inset-0 w-full h-full rounded-xl pointer-events-none z-0"></canvas>
 
             <div class="absolute inset-0 timeline-ticks pointer-events-none rounded-xl opacity-20"></div>
             <div class="absolute inset-0 timeline-ticks-major pointer-events-none rounded-xl opacity-30"></div>
@@ -2548,8 +2551,7 @@ function drawSpeedWaveCanvas() {
     if (!ctx) return;
     const w = trackContainerWidth || measureTrackContainerWidth();
     const h = 36;
-    ctx.setFillStyle('#060a17');
-    ctx.fillRect(0, 0, w, h);
+    ctx.clearRect(0, 0, w, h);
 
     if (!TRACK_POINTS.length) {
       ctx.draw();
@@ -2557,7 +2559,7 @@ function drawSpeedWaveCanvas() {
     }
     const numPoints = TRACK_POINTS.length;
     const pts: { x: number; y: number; speed: number }[] = [];
-    const BASELINE_H = 3;
+    const BASELINE_H = 6;
     const MAX_WAVE_H = h - 5;
     const sMs = isViewportActive && viewportSpanMs > 0 ? viewportStartMs : (TRACK_POINTS[0].timestamp < 1e11 ? TRACK_POINTS[0].timestamp * 1000 : TRACK_POINTS[0].timestamp);
     const eMs = isViewportActive && viewportSpanMs > 0 ? viewportEndMs : (TRACK_POINTS[numPoints - 1].timestamp < 1e11 ? TRACK_POINTS[numPoints - 1].timestamp * 1000 : TRACK_POINTS[numPoints - 1].timestamp);
@@ -2572,32 +2574,19 @@ function drawSpeedWaveCanvas() {
       pts.push({ x, y, speed: sp });
     }
 
-    let maxSp = 0;
-    for (let i = 0; i < numPoints; i++) {
-      if (TRACK_POINTS[i].speed > maxSp) maxSp = TRACK_POINTS[i].speed;
-    }
-
-    if (maxSp === 0) {
-      const dwellGrad = ctx.createLinearGradient(0, h - 10, 0, h);
-      dwellGrad.addColorStop(0, 'rgba(0, 240, 255, 0.45)');
-      dwellGrad.addColorStop(1, 'rgba(0, 240, 255, 0.08)');
-      ctx.setFillStyle(dwellGrad);
-      ctx.fillRect(0, h - 10, w, 10);
-      ctx.setFillStyle('rgba(0, 240, 255, 0.85)');
-      ctx.fillRect(0, h - 2, w, 2);
-      ctx.setFontSize(10);
-      ctx.setFillStyle('rgba(148, 163, 184, 0.65)');
-      ctx.setTextAlign('center');
-      ctx.setTextBaseline('middle');
-      ctx.fillText('⏱️ 原地静止驻留 · 0.0 km/h', w / 2, h / 2 - 2);
-      ctx.draw();
-      return;
-    }
-
     const speedGradient = ctx.createLinearGradient(0, 0, w, 0);
-    for (let i = 0; i < numPoints; i++) {
-      const stop = numPoints > 1 ? i / (numPoints - 1) : 0;
-      speedGradient.addColorStop(stop, getContinuousSpeedColor(TRACK_POINTS[i].speed).rgb);
+    if (numPoints === 1) {
+      const sp = TRACK_POINTS[0].speed || 0;
+      const col = sp <= 0.5 ? 'rgba(56, 189, 248, 0.45)' : getContinuousSpeedColor(sp).rgb;
+      speedGradient.addColorStop(0, col);
+      speedGradient.addColorStop(1, col);
+    } else {
+      for (let i = 0; i < numPoints; i++) {
+        const stop = i / (numPoints - 1);
+        const sp = TRACK_POINTS[i].speed || 0;
+        const col = sp <= 0.5 ? 'rgba(56, 189, 248, 0.45)' : getContinuousSpeedColor(sp).rgb;
+        speedGradient.addColorStop(stop, col);
+      }
     }
 
     ctx.save();
@@ -2627,7 +2616,7 @@ function drawSpeedWaveCanvas() {
     }
     ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
     ctx.setStrokeStyle('#ffffff');
-    ctx.setShadow(0, 0, 4, '#00f0ff');
+    ctx.setShadow(0, 0, 4, '#38bdf8');
     ctx.setLineWidth(1.5);
     ctx.stroke();
     ctx.restore();
@@ -2656,16 +2645,15 @@ function drawSpeedWaveCanvas() {
   const w = rect.width;
   const h = rect.height;
 
-  // 1. 底板纯净深黑填充，提供夜空呼吸感
-  ctx.fillStyle = '#060a17';
-  ctx.fillRect(0, 0, w, h);
+  // 1. 透明清屏，保留容器夜空黑底与底垫地平线呼吸微芒
+  ctx.clearRect(0, 0, w, h);
 
   if (!TRACK_POINTS.length) return;
   const numPoints = TRACK_POINTS.length;
 
-  // 2. 点位波高归一化（静止 3px 微芒，飞驰最高占据 (h - 5)）
+  // 2. 点位波高归一化（静止 6px 冰蓝微光能量带，飞驰最高占据 (h - 5)）
   const pts: { x: number; y: number; speed: number }[] = [];
-  const BASELINE_H = 3;
+  const BASELINE_H = 6;
   const MAX_WAVE_H = h - 5;
   const sMs = isViewportActive && viewportSpanMs > 0 ? viewportStartMs : (TRACK_POINTS[0].timestamp < 1e11 ? TRACK_POINTS[0].timestamp * 1000 : TRACK_POINTS[0].timestamp);
   const eMs = isViewportActive && viewportSpanMs > 0 ? viewportEndMs : (TRACK_POINTS[numPoints - 1].timestamp < 1e11 ? TRACK_POINTS[numPoints - 1].timestamp * 1000 : TRACK_POINTS[numPoints - 1].timestamp);
@@ -2680,41 +2668,26 @@ function drawSpeedWaveCanvas() {
     pts.push({ x, y, speed: sp });
   }
 
-  // 检查是否为纯静止状态 (maxSpeed === 0)
-  let maxSp = 0;
-  for (let i = 0; i < numPoints; i++) {
-    if (TRACK_POINTS[i].speed > maxSp) maxSp = TRACK_POINTS[i].speed;
-  }
-
-  if (maxSp === 0) {
-    // 原地静止驻留态：绘制 8px 青蓝微光平稳能量带，居中标注文字
-    const dwellGrad = ctx.createLinearGradient(0, h - 10, 0, h);
-    dwellGrad.addColorStop(0, 'rgba(0, 240, 255, 0.45)');
-    dwellGrad.addColorStop(1, 'rgba(0, 240, 255, 0.08)');
-    ctx.fillStyle = dwellGrad;
-    ctx.fillRect(0, h - 10, w, 10);
-
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.85)';
-    ctx.fillRect(0, h - 2, w, 2);
-
-    ctx.save();
-    ctx.font = '10px monospace';
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.65)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('⏱️ 原地静止驻留 · 0.0 km/h', w / 2, h / 2 - 2);
-    ctx.restore();
-    return;
-  }
-
-  // 3. 全局横向速度色谱渐变
+  // 3. 全局横向速度色谱渐变 (0 速采用独立深空冰蓝微光，杜绝死黑且不撞色)
   const speedGradient = ctx.createLinearGradient(0, 0, w, 0);
-  for (let i = 0; i < numPoints; i++) {
-    const stop = numPoints > 1 ? i / (numPoints - 1) : 0;
-    speedGradient.addColorStop(stop, getContinuousSpeedColor(TRACK_POINTS[i].speed).rgb);
+  let maxSp = 0;
+  if (numPoints === 1) {
+    const sp = TRACK_POINTS[0].speed || 0;
+    maxSp = sp;
+    const col = sp <= 0.5 ? 'rgba(56, 189, 248, 0.45)' : getContinuousSpeedColor(sp).rgb;
+    speedGradient.addColorStop(0, col);
+    speedGradient.addColorStop(1, col);
+  } else {
+    for (let i = 0; i < numPoints; i++) {
+      const stop = i / (numPoints - 1);
+      const sp = TRACK_POINTS[i].speed || 0;
+      if (sp > maxSp) maxSp = sp;
+      const col = sp <= 0.5 ? 'rgba(56, 189, 248, 0.45)' : getContinuousSpeedColor(sp).rgb;
+      speedGradient.addColorStop(stop, col);
+    }
   }
 
-  // 4. 贝塞尔速度山脉实体填充（仅填充在波峰下方闭合区域，上方全透黑底）
+  // 4. 贝塞尔速度山脉实体填充（仅填充在波峰下方闭合区域，上方全透）
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(0, h);
@@ -2732,17 +2705,19 @@ function drawSpeedWaveCanvas() {
   ctx.globalAlpha = 0.88;
   ctx.fill();
 
-  // 5. 纵向玻璃微光叠加 (Overlay)，消除死板色块，呈现液态通透质感
-  const verticalLight = ctx.createLinearGradient(0, 0, 0, h);
-  verticalLight.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
-  verticalLight.addColorStop(0.4, 'rgba(255, 255, 255, 0.1)');
-  verticalLight.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
-  ctx.fillStyle = verticalLight;
-  ctx.globalCompositeOperation = 'overlay';
-  ctx.fill();
+  // 5. 纵向玻璃微光叠加 (Overlay)，仅在有波峰起伏时增强立体通透质感，静止平态不强压底色
+  if (maxSp > 1) {
+    const verticalLight = ctx.createLinearGradient(0, 0, 0, h);
+    verticalLight.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+    verticalLight.addColorStop(0.4, 'rgba(255, 255, 255, 0.1)');
+    verticalLight.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+    ctx.fillStyle = verticalLight;
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.fill();
+  }
   ctx.restore();
 
-  // 6. 纯白带青色霓虹发光的波峰脊线 (Crest Line)
+  // 6. 纯白带冰蓝霓虹发光的波峰脊线 (Crest Line)
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pts[0].y);
@@ -2753,7 +2728,7 @@ function drawSpeedWaveCanvas() {
   }
   ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
   ctx.strokeStyle = '#ffffff';
-  ctx.shadowColor = '#00f0ff';
+  ctx.shadowColor = '#38bdf8';
   ctx.shadowBlur = 4;
   ctx.lineWidth = 1.5;
   ctx.stroke();
@@ -3394,9 +3369,15 @@ function measureTrackContainerWidth(): number {
     }
   }
   try {
-    if (typeof uni !== 'undefined' && uni.getSystemInfoSync) {
-      const sys = uni.getSystemInfoSync();
-      return Math.max(280, sys.windowWidth - 32);
+    if (typeof uni !== 'undefined') {
+      const win = (uni as any).getWindowInfo
+        ? (uni as any).getWindowInfo()
+        : (typeof wx !== 'undefined' && (wx as any).getWindowInfo
+          ? (wx as any).getWindowInfo()
+          : (uni.getSystemInfoSync ? uni.getSystemInfoSync() : null));
+      if (win && win.windowWidth) {
+        return Math.max(280, win.windowWidth - 32);
+      }
     }
   } catch (_) {}
   return 360;

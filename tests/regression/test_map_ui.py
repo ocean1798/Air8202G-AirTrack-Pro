@@ -144,6 +144,7 @@ CANVAS_DRAW_OBSERVER = r"""(() => {
   const proto = CanvasRenderingContext2D.prototype;
   const fillText = proto.fillText;
   const fillRect = proto.fillRect;
+  const clearRect = proto.clearRect;
   proto.fillText = function(text, ...args) {
     const result = fillText.call(this, text, ...args);
     this.__mapRegressionText = String(text);
@@ -153,6 +154,11 @@ CANVAS_DRAW_OBSERVER = r"""(() => {
     if (x === 0 && y === 0 && w >= this.canvas.width / devicePixelRatio
         && h >= this.canvas.height / devicePixelRatio) this.__mapRegressionText = '';
     return fillRect.call(this, x, y, w, h);
+  };
+  proto.clearRect = function(x, y, w, h) {
+    if (x === 0 && y === 0 && w >= this.canvas.width / devicePixelRatio
+        && h >= this.canvas.height / devicePixelRatio) this.__mapRegressionText = '';
+    return clearRect.call(this, x, y, w, h);
   };
 })();"""
 
@@ -280,30 +286,30 @@ class MapUIRegression(unittest.TestCase):
                            'Stationary timeline must contain a band, not only a thin baseline')
         self.assertLessEqual(max(profile['heights']) - min(profile['heights']), 1,
                              'Stationary speed band must be flat')
-        self.assertIn('原地静止驻留', profile['watermarkText'],
-                      'The actual canvas draw must label the stationary state')
-        self.assertIn('0.0 km/h', profile['watermarkText'])
-        self.assertGreater(profile['watermarkInk'], 20,
-                           'The stationary watermark must leave visible central canvas pixels')
+        self.assertEqual(profile['watermarkText'], '',
+                         'The stationary timeline canvas must not contain any text watermark')
+        self.assertEqual(profile['watermarkInk'], 0,
+                         'The central canvas region must remain pure and free from text watermark ink')
 
     def test_stationary_visible_and_singleton(self):
         # Alter only this context's SDK output, then use the normal assertion.
         if os.environ.get('AIRTRACK_TEST_FAULT') == 'missing-dwell':
             self.page.locator('[data-map-style="dwell_style"]').evaluate('el => el.replaceChildren()')
-        if os.environ.get('AIRTRACK_TEST_FAULT') in ('thin-band', 'missing-watermark'):
+        if os.environ.get('AIRTRACK_TEST_FAULT') in ('thin-band', 'illegal-watermark'):
             self.page.evaluate(r"""fault => {
               const host = document.getElementById('speed-wave-canvas');
               const canvas = host.tagName === 'CANVAS' ? host : host.querySelector('canvas');
               const ctx = canvas.getContext('2d');
               ctx.save();
               ctx.setTransform(1, 0, 0, 1, 0, 0);
-              ctx.fillStyle = '#060a17';
               if (fault === 'thin-band') {
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = '#00f0ff';
                 ctx.fillRect(0, canvas.height - 2, canvas.width, 2);
-              } else {
-                ctx.fillRect(0, 0, canvas.width, canvas.height * 0.7);
+              } else if (fault === 'illegal-watermark') {
+                ctx.font = '14px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText('违规水印', canvas.width / 2, canvas.height / 2);
               }
               ctx.restore();
             }""", os.environ['AIRTRACK_TEST_FAULT'])
@@ -410,7 +416,7 @@ def run_required_suite(suite, required):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--gate-probe', choices=('empty', 'all-skipped', 'partial-skipped'))
-    parser.add_argument('--fault', choices=('missing-dwell', 'thin-band', 'missing-watermark', 'offscreen-control'))
+    parser.add_argument('--fault', choices=('missing-dwell', 'thin-band', 'missing-watermark', 'illegal-watermark', 'offscreen-control'))
     args = parser.parse_args()
     if args.gate_probe:
         # Disposable runner-only samples. Business counterexamples use --fault.
