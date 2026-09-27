@@ -159,7 +159,7 @@ export interface AccountRuntimeState {
 }
 
 export function calculateScopeWindow(
-  scope: string = '90d',
+  scope: string = '7d',
   customStart?: string,
   customEnd?: string
 ): { startMs: number; endMs: number; isMultiDay: boolean; startDate: Date; endDate: Date } {
@@ -187,11 +187,14 @@ export function calculateScopeWindow(
   } else if (scope === '30d') {
     startDate = new Date();
     startDate.setDate(startDate.getDate() - 30);
+  } else if (scope === '90d') {
+    startDate = new Date();
+    startDate.setDate(startDate.getDate() - 90);
   } else if (scope === 'recent_window') {
     startDate = new Date(Date.now() - 48 * 3600 * 1000);
   } else {
     startDate = new Date();
-    startDate.setDate(startDate.getDate() - 90);
+    startDate.setDate(startDate.getDate() - 7);
   }
 
   const startMs = startDate.getTime();
@@ -948,9 +951,7 @@ export class AirCloudClient {
     // 优先寻找池中持有已缓存有效凭据的备用节点
     for (let i = 1; i < demoPhones.length; i++) {
       const candidate = demoPhones[(currentIndex + i) % demoPhones.length];
-      const authStr = typeof window !== 'undefined' && window.localStorage
-        ? safeStorage.getItem(lsAuthKey(candidate))
-        : null;
+      const authStr = safeStorage.getItem(lsAuthKey(candidate));
       if (authStr) {
         try {
           const parsed = JSON.parse(authStr);
@@ -1487,7 +1488,7 @@ export class AirCloudClient {
    */
   public async getHistoricalTrack(
     imei: string,
-    scope: string = '90d',
+    scope: string = '7d',
     customStart?: string,
     customEnd?: string,
     forceCloud = true

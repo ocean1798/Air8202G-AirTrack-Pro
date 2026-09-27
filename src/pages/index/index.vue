@@ -660,7 +660,7 @@
             <span id="scale-tick-1">{{ timelineDisplay.scaleTicks[1] }}</span>
             <span id="scale-tick-2" class="hidden sm:inline">{{ timelineDisplay.scaleTicks[2] }}</span>
             <span id="scale-tick-3">{{ timelineDisplay.scaleTicks[3] }}</span>
-            <span id="scale-tick-end" class="text-cyber-primary font-bold flex items-center space-x-1">
+            <span id="scale-tick-end" class="text-cyber-primary font-bold flex items-center space-x-1 pr-1.5">
               <span>{{ timelineDisplay.scaleTicks[4] }}</span>
               <span class="w-1 h-1 rounded-full bg-cyber-primary animate-pulse-cyan"></span>
             </span>
@@ -1214,7 +1214,7 @@ function onWaveformTouch(e: TouchEvent) {
 // 时空时间轴响应式状态模型
 const timelineDisplay = reactive({
   scaleTicks: ['08:00', '09:30', '11:00', '12:30', '14:00 (最新)'],
-  currentRangeLabel: '近90天',
+  currentRangeLabel: '近7天',
   liveLatestSpeed: '0.0 km/h',
   liveLatestTime: '—',
   liveStateText: '原地静止',
@@ -1367,7 +1367,7 @@ const capsuleTopStyle = ref('');
 
 // 0032 响应式交互状态机
 const isDateRangePopoverOpen = ref(false);
-const currentMacroScope = ref<'today' | 'yesterday' | '3d' | '7d' | '30d' | '90d' | 'custom'>('90d');
+const currentMacroScope = ref<'today' | 'yesterday' | '3d' | '7d' | '30d' | '90d' | 'custom'>('7d');
 const currentPlaySpeed = ref<1 | 5>(1);
 const showLiveSnapBtn = ref(false);
 
@@ -2931,7 +2931,7 @@ function notifyViewportChanged(startMs: number, endMs: number) {
         '30d': '近30天',
         '90d': '近90天',
       };
-      const text = mapNames[currentMacroScope.value] || '近90天';
+      const text = mapNames[currentMacroScope.value] || '近7天';
       timelineDisplay.currentRangeLabel = text;
       if (label) label.innerText = text;
       return;
@@ -3037,7 +3037,7 @@ async function selectMacroPreset(preset: any) {
     'today': '今日', 'yesterday': '昨日', '3d': '近3天',
     '7d': '近7天', '30d': '近30天', '90d': '近90天'
   };
-  timelineDisplay.currentRangeLabel = mapNames[preset] || '近90天';
+  timelineDisplay.currentRangeLabel = mapNames[preset] || '近7天';
 
   await loadTrackDataForScope(preset);
 
@@ -3951,7 +3951,7 @@ function renderFullColoredTrackOnMap() {
     return;
   }
 
-  // 1. 判断是否属于室内静止驻留 (最大经纬度跨度 < 0.0003 即 ~30米，且无运动速度)
+  // 1. 判断是否属于室内静止驻留 (最大经纬度跨度 < 0.0008 即 ~80米，且无运动速度)
   let minLat = 999, maxLat = -999, minLng = 999, maxLng = -999, maxSpeed = 0;
   for (let i = 0; i < numPoints; i++) {
     const p = TRACK_POINTS[i];
@@ -3963,7 +3963,7 @@ function renderFullColoredTrackOnMap() {
   }
   const deltaLat = maxLat - minLat;
   const deltaLng = maxLng - minLng;
-  const isStationaryDwell = (deltaLat < 0.0003 && deltaLng < 0.0003 && maxSpeed < 3.0);
+  const isStationaryDwell = (deltaLat < 0.0008 && deltaLng < 0.0008 && maxSpeed < 3.0);
 
   if (isStationaryDwell) {
     // #ifdef MP-WEIXIN
@@ -4081,7 +4081,7 @@ function renderRangeTrackOnMap() {
   }
   const deltaLat = maxLat - minLat;
   const deltaLng = maxLng - minLng;
-  const isStationaryDwell = (deltaLat < 0.0003 && deltaLng < 0.0003 && maxSpeed < 3.0);
+  const isStationaryDwell = (deltaLat < 0.0008 && deltaLng < 0.0008 && maxSpeed < 3.0);
 
   if (isStationaryDwell) {
     // #ifdef MP-WEIXIN
@@ -4744,7 +4744,7 @@ onUnmounted(() => {
 /* 移动端专属底部抽屉高度形态 (Bottom Sheet Snap Points) */
 @media (max-width: 767px) {
   .sheet-peek {
-    height: calc(74px + env(safe-area-inset-bottom, 0px)) !important;
+    height: calc(50px + env(safe-area-inset-bottom, 0px)) !important;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     overflow: hidden !important;
   }
@@ -4817,7 +4817,7 @@ html, body, #app {
 
 .timeline-hud-safe {
   position: fixed;
-  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(118px + env(safe-area-inset-bottom, 0px));
 }
 @media (min-width: 768px) {
   .timeline-hud-safe {
@@ -4826,7 +4826,7 @@ html, body, #app {
 }
 
 .mobile-fab-safe {
-  bottom: calc(248px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(268px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 移动端地图右上角控件（指北针与缩放）避让顶部悬浮胶囊栏 */
