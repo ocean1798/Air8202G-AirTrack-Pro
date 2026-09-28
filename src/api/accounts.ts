@@ -50,6 +50,7 @@ export interface AccountDisplayContext {
   phone: string;
   label?: string;
   cloudProfileName?: string;
+  hasAuth?: boolean;
 }
 
 /** 工业级单值账号展示标题解析管道（Tier 1~7 阶梯降级，消除重复冒号拼接） */
@@ -79,19 +80,19 @@ export function getAccountDisplayTitle(ctx: AccountDisplayContext): string {
   // Tier 4: 动态 master 指纹
   if (p.startsWith('master_')) {
     const hash = p.slice(7).trim().toUpperCase();
-    return hash ? `官方授权 (${hash})` : '官方授权主账号';
+    return hash ? `官方授权 (${hash})` : (ctx.hasAuth ? '官方授权' : '接入账号');
   }
 
   // Tier 5: 静态 master
-  if (p === 'master' || p === '主账号') {
-    return '官方授权主账号';
+  if (p === 'master' || p === '主账号' || !p) {
+    return ctx.hasAuth ? '官方授权' : '接入账号';
   }
 
   // Tier 6: 其他有效字符串原文
   if (p) return p;
 
   // Tier 7: 空兜底
-  return '未接入账号';
+  return '接入账号';
 }
 
 /** 读取所有已绑定的用户账号列表 */
@@ -120,7 +121,7 @@ export function getAllRegisteredAccounts(): AccountDef[] {
           cleanList.push({
             ...a,
             phone: p,
-            label: a.label || (p === 'master' ? '官方授权主账号' : '')
+            label: a.label || ''
           });
         }
 
@@ -148,7 +149,7 @@ export function registerUserAccount(account: { phone: string; label?: string; pr
     const item: AccountDef = {
       phone: targetPhone,
       password: account.password || (existing?.password || ''),
-      label: account.label ? account.label.trim() : (existing?.label || (targetPhone === 'master' ? '官方授权主账号' : '')),
+      label: account.label ? account.label.trim() : (existing?.label || ''),
       projectKey: account.projectKey || (existing?.projectKey || ''),
       nameHints: existing?.nameHints || {}
     };

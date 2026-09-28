@@ -161,8 +161,17 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.0.3
-          name: AirTrack Pro v1.0.3 (Android APK)
+          tag_name: v1.0.4
+          name: AirTrack Pro v1.0.4 (Android APK)
+          body: |
+            ## AirTrack Pro v1.0.4 发布说明
+
+            ### 🌟 核心新特性与优化
+            1. **3D 姿态与动力学全景联动**：内置 3D 姿态正方体渲染，Roll / Pitch / Heading 动态欧拉角与三轴加速度波形与时空轨迹实时 60FPS 联动。
+            2. **时间轴静止态与微光地平线**：彻底消除占位文字与黑板遮挡，升级深空冰蓝微光能量带与纯白发光脊线。
+            3. **时空时间窗口优化**：默认时空窗口 7 天减负提速，提升日分辨率 12.8 倍，完美兼容 90 天完整回放。
+            4. **移动端/微信小程序全功能对齐**：微信端多指触控手势闭环（单指平移/探针拖拽/双指缩放）、离线轨迹本地持久化、无缝故障轮换。
+            5. **白板态真实文案与状态收敛**：根除未登录虚假主账号伪装，直观展示“接入账号”，状态灯动态分流，未选设备遥测真实留空。
           draft: false
           prerelease: false
           files: |

@@ -735,7 +735,7 @@ export class AirCloudClient {
               if (!p || p === '主账号' || hasNonAscii(p)) {
                 p = 'master';
                 item.phone = 'master';
-                if (!item.label) item.label = '官方授权主账号';
+                if (item.label === '官方授权主账号') item.label = '';
               }
               if (!seenPhones.has(p)) {
                 seenPhones.add(p);

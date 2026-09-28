@@ -75,7 +75,7 @@
           <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-600/40 via-cyber-800 to-blue-600/50 flex items-center justify-center overflow-hidden border border-white/20">
             <image :src="SVG_ICONS.user" class="w-4 h-4" mode="aspectFit" />
           </div>
-          <span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-cyber-emerald border-2 border-cyber-950"></span>
+          <span :class="activeAccountHasAuth ? 'absolute bottom-0 right-0 w-2 h-2 rounded-full bg-cyber-emerald border-2 border-cyber-950' : 'absolute bottom-0 right-0 w-2 h-2 rounded-full bg-amber-400 border-2 border-cyber-950'"></span>
         </div>
 
       </div>
@@ -132,7 +132,7 @@
                   <span class="text-xs font-bold text-white">Android 原生客户端</span>
                 </div>
                 <div class="flex items-center space-x-1.5">
-                  <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1 py-0.2 rounded">v1.0.2</span>
+                  <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1 py-0.2 rounded">v1.0.4</span>
                   <div role="button" @click="showDownloadPopover = false" class="text-slate-400 hover:text-white p-0.5 cursor-pointer">
                     <i data-lucide="x" class="w-3.5 h-3.5"></i>
                   </div>
@@ -443,7 +443,7 @@
 
             <div class="flex items-center justify-between">
               <span class="text-slate-400">速度:</span>
-              <span class="text-cyan-400 font-bold" id="drawer-speed-detail">{{ activeTelemetry.speedText }}</span>
+              <span :class="activeDeviceId ? 'text-cyan-400 font-bold' : 'text-slate-400 font-medium'" id="drawer-speed-detail">{{ activeDeviceId ? activeTelemetry.speedText : '—' }}</span>
             </div>
           </div>
         </section>
@@ -460,15 +460,15 @@
           <div class="space-y-1.5">
             <div class="flex items-center justify-between">
               <span class="text-slate-400">电池电量:</span>
-              <span class="text-emerald-400 font-bold" id="tel-tag-batt">{{ activeTelemetry.battText }}</span>
+              <span :class="activeDeviceId ? 'text-emerald-400 font-bold' : 'text-slate-400'" id="tel-tag-batt">{{ activeDeviceId ? activeTelemetry.battText : '—' }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400">蜂窝信号:</span>
-              <span class="text-cyan-300 font-bold" id="tel-tag-csq">{{ activeTelemetry.csqText }}</span>
+              <span :class="activeDeviceId ? 'text-cyan-300 font-bold' : 'text-slate-400'" id="tel-tag-csq">{{ activeDeviceId ? activeTelemetry.csqText : '—' }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400">最后上报时间:</span>
-              <span class="text-slate-200" id="tel-tag-last-time">{{ activeTelemetry.lastActiveText }}</span>
+              <span class="text-slate-200" id="tel-tag-last-time">{{ activeDeviceId ? activeTelemetry.lastActiveText : '—' }}</span>
             </div>
           </div>
         </section>
@@ -486,7 +486,7 @@
           <div class="space-y-1.5">
             <div class="flex items-center justify-between">
               <span class="text-slate-400">硬件型号:</span>
-              <span class="text-slate-200">合宙 Air8202G</span>
+              <span class="text-slate-200">{{ activeDeviceId ? '合宙 Air8202G' : '—' }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400">模组串号 (IMEI):</span>
@@ -494,11 +494,11 @@
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400">固件版本:</span>
-              <span class="text-slate-200" id="tel-tag-firmware">{{ activeTelemetry.firmwareText || 'V1.0.2' }}</span>
+              <span class="text-slate-200" id="tel-tag-firmware">{{ activeDeviceId ? (activeTelemetry.firmwareText || 'V1.0.2') : '—' }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400">归属账号:</span>
-              <span class="text-slate-200">{{ accountDisplayTitle }}</span>
+              <span class="text-slate-200">{{ activeAccountHasAuth ? accountDisplayTitle : '未登录' }}</span>
             </div>
           </div>
         </section>
@@ -795,13 +795,14 @@
                 <div :class="s.active ? 'w-4 h-4 rounded-full border-2 border-cyan-400 flex items-center justify-center shrink-0' : 'w-4 h-4 rounded-full border border-slate-600 shrink-0'">
                   <div v-if="s.active" class="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
                 </div>
-                <span class="text-sm font-bold font-mono text-white tracking-wide">{{ getAccountTitle(s.account) }}</span>
+                <span class="text-sm font-bold font-mono text-white tracking-wide">{{ getAccountTitle(s.account, s.hasAuth) }}</span>
                 <span v-if="s.active" class="text-[10px] px-1.5 py-0.2 rounded bg-cyan-400/20 text-cyan-300 font-mono font-medium border border-cyan-400/30">
                   当前账号
                 </span>
               </div>
               <span class="text-xs font-mono text-slate-300 bg-[#030712] px-2 py-0.5 rounded border border-white/5 flex items-center space-x-1">
-                <span v-if="s.deviceCount !== undefined">{{ s.deviceCount }} 台设备</span>
+                <span v-if="!s.hasAuth" class="text-slate-500">未接入</span>
+                <span v-else-if="s.deviceCount !== undefined">{{ s.deviceCount }} 台设备</span>
                 <span v-else class="text-cyan-400 flex items-center space-x-1">
                   <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
                   <span>检测中...</span>
@@ -811,13 +812,19 @@
 
             <!-- 下行：凭据状态 + 刷新凭据/移除 -->
             <div class="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-xs font-mono">
-              <span :class="s.isExpired ? 'text-rose-400 font-bold flex items-center space-x-1.5' : 'text-emerald-400 flex items-center space-x-1.5'">
-                <span :class="s.isExpired ? 'w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse' : 'w-1.5 h-1.5 rounded-full bg-emerald-400'"></span>
-                <span class="text-[11px]">{{ (Boolean(checkingPhone) && checkingPhone === s.account.phone) ? '检测中...' : (s.isExpired ? '凭据过期' : '正常') }}</span>
+              <span :class="!s.hasAuth ? 'text-amber-400 flex items-center space-x-1.5' : (s.isExpired ? 'text-rose-400 font-bold flex items-center space-x-1.5' : 'text-emerald-400 flex items-center space-x-1.5')">
+                <span :class="!s.hasAuth ? 'w-1.5 h-1.5 rounded-full bg-amber-400' : (s.isExpired ? 'w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse' : 'w-1.5 h-1.5 rounded-full bg-emerald-400')"></span>
+                <span class="text-[11px]">{{ (Boolean(checkingPhone) && checkingPhone === s.account.phone) ? '检测中...' : (!s.hasAuth ? '未授权' : (s.isExpired ? '凭据过期' : '正常')) }}</span>
               </span>
 
               <div class="flex items-center space-x-1.5">
-                <button @click="onRefreshAccountCredential(s.account.phone, s.isExpired)"
+                <button v-if="!s.hasAuth"
+                        @click.stop="redirectToOfficialOAuth()"
+                        class="px-2.5 py-1 rounded-lg text-xs font-sans font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition shadow-[0_0_10px_-1px_rgba(0,240,255,0.45)] flex items-center space-x-1 cursor-pointer">
+                  <span>去授权</span>
+                </button>
+                <button v-else
+                        @click.stop="onRefreshAccountCredential(s.account.phone, s.isExpired)"
                         :class="[
                           s.isExpired
                             ? 'px-2.5 py-1 rounded-lg text-xs font-sans font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition shadow-[0_0_10px_-1px_rgba(0,240,255,0.45)] flex items-center space-x-1 cursor-pointer'
@@ -832,7 +839,7 @@
                     <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
                     <path d="M8 16H3v5"/>
                   </svg>
-                  <span>{{ (Boolean(checkingPhone) && checkingPhone === s.account.phone) ? '刷新中' : '刷新凭据' }}</span>
+                  <span>{{ (Boolean(checkingPhone) && checkingPhone === s.account.phone) ? '刷新中' : (s.isExpired ? '刷新凭据' : '刷新') }}</span>
                 </button>
                 <view role="button"
                       @click.stop="onRemoveAccount(s.account.phone)"
@@ -1384,19 +1391,23 @@ const accountDisplayTitle = computed(() => {
   return getAccountDisplayTitle({
     phone: activeAccountPhone.value,
     label: activeAccountLabel.value,
-    cloudProfileName: apiClient.getCloudProfileName(activeAccountPhone.value)
+    cloudProfileName: apiClient.getCloudProfileName(activeAccountPhone.value),
+    hasAuth: activeAccountHasAuth.value
   });
 });
 
 const accountTooltip = computed(() => {
-  return `当前工作空间: ${accountDisplayTitle.value} · 点击切换或管理`;
+  return activeAccountHasAuth.value
+    ? `当前工作空间: ${accountDisplayTitle.value} · 点击切换或管理`
+    : '当前未登录 · 点击接入账号';
 });
 
-function getAccountTitle(acc: AccountDef): string {
+function getAccountTitle(acc: AccountDef, hasAuth?: boolean): string {
   return getAccountDisplayTitle({
     phone: acc.phone,
     label: acc.label,
-    cloudProfileName: apiClient.getCloudProfileName(acc.phone)
+    cloudProfileName: apiClient.getCloudProfileName(acc.phone),
+    hasAuth: hasAuth !== undefined ? hasAuth : apiClient.hasAuth(acc.phone)
   });
 }
 const activeAccountHasAuth = ref(apiClient.hasAuth());
