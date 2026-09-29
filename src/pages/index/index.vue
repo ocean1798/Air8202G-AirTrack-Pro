@@ -509,7 +509,7 @@
     </aside>
 
     <!-- ==================== 6. 底部核心：【双端自适应时间轴控制台】 ==================== -->
-    <div id="timeline-hud-wrapper" class="timeline-hud-safe left-2 right-2 z-20 flex flex-col items-center pointer-events-none transition-all duration-300 md:left-3 md:right-3 md:max-w-5xl md:mx-auto">
+    <div id="timeline-hud-wrapper" :class="['timeline-hud-safe left-2 right-2 z-20 flex flex-col items-center pointer-events-none transition-all duration-300 md:left-3 md:right-3 md:max-w-5xl md:mx-auto', isMobileSheetExpanded ? 'sheet-expanded-hidden' : '']">
       
       <!-- 6.A 桌面端独占：外置悬浮设备定位按钮（右上角外挂，不挤压时间轴内部空间，保持地图穿透） -->
       <div class="hidden md:flex absolute -top-10 right-0 pointer-events-auto z-20">
@@ -592,7 +592,7 @@
             <!-- 静态科技网格微光地平线（纯几何无文字，在无轨迹或静止透明时提供物理地平线底垫，消除死黑空洞） -->
             <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent pointer-events-none z-0"></div>
 
-            <canvas id="speed-wave-canvas" canvas-id="speed-wave-canvas" class="absolute inset-0 w-full h-full rounded-xl pointer-events-none z-0"></canvas>
+            <canvas id="speed-wave-canvas" canvas-id="speed-wave-canvas" :hidden="isMobileSheetExpanded" class="absolute inset-0 w-full h-full rounded-xl pointer-events-none z-0"></canvas>
 
             <div class="absolute inset-0 timeline-ticks pointer-events-none rounded-xl opacity-20"></div>
             <div class="absolute inset-0 timeline-ticks-major pointer-events-none rounded-xl opacity-30"></div>
@@ -635,9 +635,17 @@
               </div>
             </div>
 
-            <div id="playhead-needle" class="absolute top-0 bottom-0 w-0.5 bg-white z-20 pointer-events-none playhead-needle" :style="playheadNeedleStyle">
-              <div class="w-3.5 h-3.5 bg-white rounded-full absolute -top-1.5 -left-1.5 shadow-glow-cyan flex items-center justify-center border-2 border-cyber-950">
+            <div id="playhead-needle" class="absolute top-0 bottom-0 w-0.5 bg-white z-30 playhead-needle" :style="playheadNeedleStyle">
+              <div class="w-3.5 h-3.5 bg-white rounded-full absolute -top-1.5 -left-1.5 shadow-glow-cyan flex items-center justify-center border-2 border-cyber-950 pointer-events-none">
                 <div class="w-1.5 h-1.5 rounded-full bg-cyber-primary transition-colors" id="playhead-inner-dot"></div>
+              </div>
+              <!-- 独立触控物理热区 (左右各延展 24px，总宽 48px，贯穿上下，高优先级捕获) -->
+              <div id="needle-touch-hitbox"
+                   class="absolute -inset-y-2 -left-6 w-12 cursor-ew-resize z-40 touch-none flex items-center justify-center pointer-events-auto"
+                   @touchstart.stop="onNeedleTouchStart($event)"
+                   @touchmove.stop="onNeedleTouchMove($event)"
+                   @touchend.stop="onNeedleTouchEnd($event)"
+                   @touchcancel.stop="onNeedleTouchEnd($event)">
               </div>
             </div>
 
@@ -1127,10 +1135,26 @@ const attitudeState = reactive({
   waveformSvgUri: buildWaveformSvgDataUri([], 0)
 });
 
+let lastPendingAttitude: { timeStr: string; speedKmH: number; headingDeg: number } | null = null;
+
+function shouldSkipAttitudeDynamics(): boolean {
+  // #ifndef MP-WEIXIN
+  if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+    return false; // 桌面端抽屉恒定右侧展开，永不跳过
+  }
+  // #endif
+  return mobileSheetState.value === 'peek';
+}
+
 /**
  * 刷新高频姿态与动力学样本 (由时间轴滑动、回放及设备切换驱动)
  */
-function refreshAttitudeDynamics(timeStr: string, speedKmH: number, headingDeg: number = 0) {
+function refreshAttitudeDynamics(timeStr: string, speedKmH: number, headingDeg: number = 0, force = false) {
+  lastPendingAttitude = { timeStr, speedKmH, headingDeg };
+  if (!force && shouldSkipAttitudeDynamics()) {
+    // 抽屉折叠态熔断：不可见时阻断庞大 SVG Data-URI 序列化与 setData 广播，释放真机 Bridge
+    return;
+  }
   const baseSpeed = Number(speedKmH) || 0;
   const rollEstimate = Number((Math.sin(headingDeg * Math.PI / 180) * 18 * Math.min(1.0, baseSpeed / 50)).toFixed(1));
   const pitchEstimate = Number((Math.cos(headingDeg * Math.PI / 180) * 8 * Math.min(1.0, baseSpeed / 50)).toFixed(1));
@@ -2556,6 +2580,7 @@ function getRealCanvas(): HTMLCanvasElement | null {
 }
 
 function drawSpeedWaveCanvas() {
+  if (isMobileSheetExpanded.value) return;
   // #ifdef MP-WEIXIN
   try {
     const ctx = uni.createCanvasContext('speed-wave-canvas');
@@ -2852,6 +2877,27 @@ function getTrackPointAtViewportPercent(percent: number): { pt: any; idx: number
   return { pt: TRACK_POINTS[chosenIdx], idx: chosenIdx };
 }
 
+let isSpeedWaveDrawScheduled = false;
+
+function scheduleSpeedWaveCanvasDraw() {
+  if (isSpeedWaveDrawScheduled) return;
+  isSpeedWaveDrawScheduled = true;
+  const safeRAF = (cb: any) => {
+    if (typeof (globalThis as any).requestAnimationFrame === 'function') {
+      try {
+        return (globalThis as any).requestAnimationFrame(cb);
+      } catch (e) {
+        return setTimeout(cb, 16);
+      }
+    }
+    return setTimeout(cb, 16);
+  };
+  safeRAF(() => {
+    isSpeedWaveDrawScheduled = false;
+    drawSpeedWaveCanvas();
+  });
+}
+
 function shiftTimeWindow(deltaMs: number) {
   if (!TRACK_POINTS.length) return;
   isViewportActive = true;
@@ -2873,7 +2919,7 @@ function shiftTimeWindow(deltaMs: number) {
   viewportEndMs = newEnd;
   viewportSpanMs = viewportEndMs - viewportStartMs;
 
-  drawSpeedWaveCanvas();
+  scheduleSpeedWaveCanvasDraw();
   updateTimelineScaleTicks();
   renderStateAtPosition(committedPlayhead, false);
   notifyViewportChanged(viewportStartMs, viewportEndMs);
@@ -2909,7 +2955,7 @@ function zoomTimeWindow(zoomFactor: number, centerRatio: number) {
   viewportEndMs = newEnd;
   viewportSpanMs = viewportEndMs - viewportStartMs;
 
-  drawSpeedWaveCanvas();
+  scheduleSpeedWaveCanvasDraw();
   updateTimelineScaleTicks();
   renderStateAtPosition(committedPlayhead, false);
   notifyViewportChanged(viewportStartMs, viewportEndMs);
@@ -3209,7 +3255,11 @@ function renderStateAtPosition(percent: number, isPreview = false) {
     // #ifdef MP-WEIXIN
     if (typeof pt.lat === 'number' && typeof pt.lng === 'number') {
       const prevP = idx > 0 ? TRACK_POINTS[idx - 1] : undefined;
-      wxMarkers.value = [buildWxVehicleMarker(pt, `${pt.speed} km/h`, prevP)];
+      if (isDragging || touchMode === 'scrub' || isNeedleScrubbing) {
+        scheduleWxMarkerUpdate(pt, `${pt.speed} km/h`, prevP);
+      } else {
+        flushWxMarkerUpdateImmediately(pt, `${pt.speed} km/h`, prevP);
+      }
     }
     // #endif
 
@@ -3371,6 +3421,87 @@ let touchInitStart = 0;
 let touchInitEnd = 0;
 let trackContainerWidth = 0;
 
+let needleTouchStartX = 0;
+let needleTouchStartPct = 0;
+let isNeedleScrubbing = false;
+
+function isHitPlayheadNeedle(clientX: number, thresholdPx = 24): boolean {
+  const w = trackContainerWidth || measureTrackContainerWidth();
+  if (w <= 0) return false;
+  let containerLeft = cachedContainerLeft || 16;
+  // #ifndef MP-WEIXIN
+  const container = document.getElementById('timeline-track-container');
+  if (container) {
+    containerLeft = container.getBoundingClientRect().left;
+  }
+  // #endif
+  const touchRelX = clientX - containerLeft;
+  const needleRelX = (committedPlayhead / 100) * w;
+  return Math.abs(touchRelX - needleRelX) <= thresholdPx;
+}
+
+function onNeedleTouchStart(e: any) {
+  const pts = extractTouchPoints(e);
+  if (!pts || !pts.length) return;
+
+  if (isRangePlaying.value) {
+    toggleRangePlay();
+  }
+  if (snapTimeout) {
+    clearTimeout(snapTimeout);
+    snapTimeout = null;
+  }
+
+  isDragging = true;
+  isNeedleScrubbing = true;
+  touchMode = 'scrub';
+  needleTouchStartX = pts[0].clientX;
+  needleTouchStartPct = committedPlayhead;
+  trackContainerWidth = measureTrackContainerWidth();
+  updateContainerMetrics();
+}
+
+function onNeedleTouchMove(e: any) {
+  if (!isNeedleScrubbing) return;
+  const pts = extractTouchPoints(e);
+  if (!pts || !pts.length) return;
+
+  const w = trackContainerWidth || measureTrackContainerWidth();
+  if (w <= 0) return;
+
+  const deltaX = pts[0].clientX - needleTouchStartX;
+  const deltaPct = (deltaX / w) * 100;
+  let newPct = needleTouchStartPct + deltaPct;
+
+  if (masterMode.value === 'range') {
+    newPct = Math.max(rangeStart, Math.min(rangeEnd, newPct));
+  } else {
+    newPct = Math.max(0, Math.min(100, newPct));
+  }
+
+  committedPlayhead = newPct;
+  renderStateAtPosition(newPct, false);
+
+  if (masterMode.value === 'live') {
+    showLiveSnapBtn.value = true;
+    const btnLiveSnap = document.getElementById('btn-live-snap');
+    if (btnLiveSnap) btnLiveSnap.classList.remove('hidden');
+  }
+}
+
+function onNeedleTouchEnd(e?: any) {
+  if (!isNeedleScrubbing) return;
+  isNeedleScrubbing = false;
+  isDragging = false;
+  touchMode = null;
+
+  flushWxMarkerUpdateImmediately();
+
+  if (masterMode.value === 'range') {
+    renderRangeTrackOnMap();
+  }
+}
+
 function measureTrackContainerWidth(): number {
   if (typeof window !== 'undefined' && window.innerWidth) {
     const container = document.getElementById('timeline-track-container');
@@ -3397,6 +3528,13 @@ function measureTrackContainerWidth(): number {
 function onRangeTouchStart(type: 'left' | 'right' | 'body', e: any) {
   const touches = e.touches || (e.mp && e.mp.touches) || (e.detail && e.detail.touches);
   if (!touches || touches.length === 0) return;
+
+  // 游标优先拦截双保险：点击 range-body 且触控点落在游标热区内，转派游标拖拽
+  if (type === 'body' && isHitPlayheadNeedle(touches[0].clientX, 24)) {
+    onNeedleTouchStart(e);
+    return;
+  }
+
   touchDragType = type;
   activeDragType.value = type;
   touchStartX = touches[0].clientX;
@@ -3407,6 +3545,10 @@ function onRangeTouchStart(type: 'left' | 'right' | 'body', e: any) {
 }
 
 function onRangeTouchMove(e: any) {
+  if (isNeedleScrubbing) {
+    onNeedleTouchMove(e);
+    return;
+  }
   if (!touchDragType) return;
   const touches = e.touches || (e.mp && e.mp.touches) || (e.detail && e.detail.touches);
   if (!touches || touches.length === 0) return;
@@ -3441,11 +3583,16 @@ function onRangeTouchMove(e: any) {
   updateRangeDOM();
 }
 
-function onRangeTouchEnd() {
+function onRangeTouchEnd(e?: any) {
+  if (isNeedleScrubbing) {
+    onNeedleTouchEnd(e);
+    return;
+  }
   if (!touchDragType) return;
   touchDragType = null;
   activeDragType.value = null;
   isDragging = false;
+  flushWxMarkerUpdateImmediately();
   if (masterMode.value === 'range') {
     renderRangeTrackOnMap();
   }
@@ -3760,6 +3907,48 @@ let cachedContainerLeft = 16;
 let touchStartTime = 0;
 let touchStartClientY = 0;
 
+let lastMarkerUpdateTime = 0;
+let pendingMarkerPoint: { pt: any; speedText: string; prevPt?: any } | null = null;
+let markerThrottleTimer: any = null;
+
+function scheduleWxMarkerUpdate(pt: any, speedText: string, prevPt?: any) {
+  // #ifdef MP-WEIXIN
+  const now = Date.now();
+  if (now - lastMarkerUpdateTime >= 45) {
+    lastMarkerUpdateTime = now;
+    wxMarkers.value = [buildWxVehicleMarker(pt, speedText, prevPt)];
+  } else {
+    pendingMarkerPoint = { pt, speedText, prevPt };
+    if (!markerThrottleTimer) {
+      markerThrottleTimer = setTimeout(() => {
+        markerThrottleTimer = null;
+        if (pendingMarkerPoint) {
+          lastMarkerUpdateTime = Date.now();
+          wxMarkers.value = [buildWxVehicleMarker(pendingMarkerPoint.pt, pendingMarkerPoint.speedText, pendingMarkerPoint.prevPt)];
+          pendingMarkerPoint = null;
+        }
+      }, 45);
+    }
+  }
+  // #endif
+}
+
+function flushWxMarkerUpdateImmediately(pt?: any, speedText?: string, prevPt?: any) {
+  // #ifdef MP-WEIXIN
+  if (markerThrottleTimer) {
+    clearTimeout(markerThrottleTimer);
+    markerThrottleTimer = null;
+  }
+  lastMarkerUpdateTime = Date.now();
+  if (pt) {
+    wxMarkers.value = [buildWxVehicleMarker(pt, speedText || '', prevPt)];
+  } else if (pendingMarkerPoint) {
+    wxMarkers.value = [buildWxVehicleMarker(pendingMarkerPoint.pt, pendingMarkerPoint.speedText, pendingMarkerPoint.prevPt)];
+  }
+  pendingMarkerPoint = null;
+  // #endif
+}
+
 function updateContainerMetrics() {
   // #ifdef MP-WEIXIN
   try {
@@ -3883,7 +4072,10 @@ function onTimelineContainerTouchMove(e: any) {
     // #endif
 
     const x = pts[0].clientX;
-    const p = Math.max(0, Math.min(100, ((x - containerLeft) / w) * 100));
+    let p = Math.max(0, Math.min(100, ((x - containerLeft) / w) * 100));
+    if (masterMode.value === 'range') {
+      p = Math.max(rangeStart, Math.min(rangeEnd, p));
+    }
     committedPlayhead = p;
     renderStateAtPosition(p, false);
 
@@ -3930,6 +4122,9 @@ function onTimelineContainerTouchEnd(e: any) {
     }
   }
 
+  if (touchMode === 'scrub') {
+    flushWxMarkerUpdateImmediately();
+  }
   touchMode = null;
 
   if (masterMode.value === 'live') {
@@ -4171,8 +4366,32 @@ function renderRangeTrackOnMap() {
 
 const mobileSheetState = ref<'peek' | 'half' | 'full'>('peek');
 
+const isMobileSheetExpanded = computed(() => {
+  // #ifndef MP-WEIXIN
+  if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+    return false; // 桌面端抽屉独立外挂，永远不视为移动端折叠展开
+  }
+  // #endif
+  return mobileSheetState.value !== 'peek';
+});
+
 function setMobileSheetState(state: 'peek' | 'half' | 'full') {
   mobileSheetState.value = state;
+  if (state !== 'peek') {
+    // 展开抽屉时，如果之前有暂存未生成的姿态数据，立即强制补算首帧渲染！
+    if (lastPendingAttitude) {
+      refreshAttitudeDynamics(lastPendingAttitude.timeStr, lastPendingAttitude.speedKmH, lastPendingAttitude.headingDeg, true);
+    }
+  } else {
+    // 折叠回 peek 态时，自愈重绘 Canvas 速度山脉，杜绝白板
+    nextTick(() => {
+      drawSpeedWaveCanvas();
+      updateRangeDOM();
+    });
+    setTimeout(() => {
+      drawSpeedWaveCanvas();
+    }, 50);
+  }
   // #ifndef MP-WEIXIN
   const drawer = document.getElementById('inspector-drawer');
   const chevron = document.getElementById('icon-sheet-chevron');
@@ -4731,6 +4950,10 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (markerThrottleTimer) {
+    clearTimeout(markerThrottleTimer);
+    markerThrottleTimer = null;
+  }
   if (playTimer) clearInterval(playTimer);
   if ((window as any).__map) {
     (window as any).__map.destroy();
@@ -4829,6 +5052,13 @@ html, body, #app {
 .timeline-hud-safe {
   position: fixed;
   bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 767px) {
+  .timeline-hud-safe.sheet-expanded-hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(28px) !important;
+  }
 }
 @media (min-width: 768px) {
   .timeline-hud-safe {
