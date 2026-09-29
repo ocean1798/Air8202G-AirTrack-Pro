@@ -132,7 +132,7 @@
                   <span class="text-xs font-bold text-white">Android 原生客户端</span>
                 </div>
                 <div class="flex items-center space-x-1.5">
-                  <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1 py-0.2 rounded">v1.0.4</span>
+                  <span class="text-[9px] font-mono text-cyber-emerald bg-cyber-emerald/10 border border-cyber-emerald/30 px-1 py-0.2 rounded">v1.0.5</span>
                   <div role="button" @click="showDownloadPopover = false" class="text-slate-400 hover:text-white p-0.5 cursor-pointer">
                     <i data-lucide="x" class="w-3.5 h-3.5"></i>
                   </div>
