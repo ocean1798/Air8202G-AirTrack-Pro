@@ -3421,11 +3421,9 @@ let touchInitStart = 0;
 let touchInitEnd = 0;
 let trackContainerWidth = 0;
 
-let needleTouchStartX = 0;
-let needleTouchStartPct = 0;
 let isNeedleScrubbing = false;
 
-function isHitPlayheadNeedle(clientX: number, thresholdPx = 24): boolean {
+function isHitPlayheadNeedle(clientX: number, thresholdPx = 28): boolean {
   const w = trackContainerWidth || measureTrackContainerWidth();
   if (w <= 0) return false;
   let containerLeft = cachedContainerLeft || 16;
@@ -3444,7 +3442,7 @@ function onNeedleTouchStart(e: any) {
   const pts = extractTouchPoints(e);
   if (!pts || !pts.length) return;
 
-  if (isRangePlaying.value) {
+  if (isPlaying) {
     toggleRangePlay();
   }
   if (snapTimeout) {
@@ -3455,8 +3453,6 @@ function onNeedleTouchStart(e: any) {
   isDragging = true;
   isNeedleScrubbing = true;
   touchMode = 'scrub';
-  needleTouchStartX = pts[0].clientX;
-  needleTouchStartPct = committedPlayhead;
   trackContainerWidth = measureTrackContainerWidth();
   updateContainerMetrics();
 }
@@ -3469,14 +3465,19 @@ function onNeedleTouchMove(e: any) {
   const w = trackContainerWidth || measureTrackContainerWidth();
   if (w <= 0) return;
 
-  const deltaX = pts[0].clientX - needleTouchStartX;
-  const deltaPct = (deltaX / w) * 100;
-  let newPct = needleTouchStartPct + deltaPct;
+  let containerLeft = cachedContainerLeft || 16;
+  // #ifndef MP-WEIXIN
+  const container = document.getElementById('timeline-track-container');
+  if (container) {
+    containerLeft = container.getBoundingClientRect().left;
+  }
+  // #endif
+
+  const x = pts[0].clientX;
+  let newPct = Math.max(0, Math.min(100, ((x - containerLeft) / w) * 100));
 
   if (masterMode.value === 'range') {
     newPct = Math.max(rangeStart, Math.min(rangeEnd, newPct));
-  } else {
-    newPct = Math.max(0, Math.min(100, newPct));
   }
 
   committedPlayhead = newPct;
@@ -3499,6 +3500,12 @@ function onNeedleTouchEnd(e?: any) {
 
   if (masterMode.value === 'range') {
     renderRangeTrackOnMap();
+  }
+  if (masterMode.value === 'live') {
+    showLiveSnapBtn.value = true;
+    snapTimeout = setTimeout(() => {
+      snapToLatestRealtime();
+    }, 1500);
   }
 }
 
